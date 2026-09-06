@@ -44,6 +44,8 @@ export {
 export { bindTool } from './binding.js';
 export type { JsonObject, JsonValue, ToolBinding } from './binding.js';
 export { withChannels } from './channels.js';
+export { Gateway, GATEWAY } from './gateway.js';
+export type { GatewayName, GatewayTool } from './gateway.js';
 export {
   ContainmentCycleError,
   DuplicateNameError,

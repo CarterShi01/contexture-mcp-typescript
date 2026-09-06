@@ -14,10 +14,11 @@ async function sourceFiles(directory: string): Promise<string[]> {
   return files.flat().filter((file) => file.endsWith('.ts'));
 }
 
-test('the core layer does not import the MCP SDK', async () => {
+test('the core layer does not import MCP or HTTP Host SDKs', async () => {
   const core = path.resolve('src/core');
   for (const file of await sourceFiles(core)) {
     const source = await readFile(file, 'utf8');
     assert.equal(source.includes('@modelcontextprotocol/'), false, file);
+    assert.equal(/from ['"](?:node:)?https?['"]/.test(source), false, file);
   }
 });
