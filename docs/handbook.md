@@ -121,7 +121,35 @@ content Tools, so use it only when that local read is intended. Outside a
 project, `inspect` deliberately replays the bundled demo and writes its notice
 to stderr so JSON stdout remains valid.
 
-## 6. Serve through an MCP Host
+## 6. Offer person-controlled navigation
+
+Prompts are for a person choosing from a Host menu, not an alternate surface
+for a model. A declared Prompt opens one fixed ref; every served application
+also publishes `goto`, whose required `ref` argument lets a person browse a
+known path without asking the model to navigate first.
+
+```js
+export const app = defineApplication({
+  // roots: [...],
+  prompts: [
+    {
+      name: 'open-change-window',
+      opens: 'operations/change-window',
+      description: 'Open the change-window procedure.',
+      modelMayOpen: false,
+    },
+  ],
+});
+```
+
+Both the named Prompt and `goto` use the same person-controlled open path. Its
+text identifies the ref, includes ancestor signposts without disclosing their
+contents, then shows the normal node payload. `modelMayOpen: false` reserves a
+declared capability from model navigation; it does not hide it from the person
+who owns the Host. Do not present a Prompt as a business Tool or duplicate its
+procedure in its description.
+
+## 7. Serve through an MCP Host
 
 The declaration does not change when it is served. The server adapter exposes
 four fixed Contexture gateway Tools; business Tools are progressively disclosed
@@ -141,7 +169,7 @@ For Claude Code, Cursor, or Codex configuration, use `Launch` from
 `@contexture/mcp/server`. It renders host configuration from the server command
 instead of duplicating the application's declared context.
 
-## 7. Keep the contract honest
+## 8. Keep the contract honest
 
 Run the full package gate before proposing a change:
 
