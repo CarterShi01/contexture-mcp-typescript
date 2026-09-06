@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { Gateway } from '../core/model/system-api.js';
 import { RootSelection } from '../core/model/root-selection.js';
 import { principalOf } from './identity.js';
-import { GOTO_ARGUMENT, GOTO_PROMPT } from './messages.js';
+import { COMPLETION_LIMIT, GOTO_ARGUMENT, GOTO_PROMPT } from './messages.js';
 import type { GatewayName } from '../core/mcp-interface/tool.js';
 import { Publications } from './surface/publications.js';
 
@@ -190,6 +190,36 @@ function installPublications(
       }),
     );
   }
+  installCompletion(server, publications, selection);
+}
+
+/**
+ * Register the protocol completion handler directly instead of using the SDK's
+ * schema helper. The helper derives `total` from its already-truncated values;
+ * Contexture must report the real selected-graph total to tell a person whether
+ * a ref list is complete.
+ */
+function installCompletion(
+  server: McpServer,
+  publications: Publications,
+  selection: RootSelection,
+): void {
+  server.server.registerCapabilities({ completions: {} });
+  server.server.setRequestHandler('completion/complete', async (request) => {
+    const ref = request.params.ref;
+    const argument = request.params.argument;
+    if (ref.type !== 'ref/prompt' || ref.name !== GOTO_PROMPT || argument.name !== GOTO_ARGUMENT) {
+      return { completion: { values: [], total: 0, hasMore: false } };
+    }
+    const completed = publications.complete(argument.value, selection, COMPLETION_LIMIT);
+    return {
+      completion: {
+        values: [...completed.values],
+        total: completed.total,
+        hasMore: completed.total > completed.values.length,
+      },
+    };
+  });
 }
 
 function promptResult(text: string) {
