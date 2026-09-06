@@ -5,6 +5,7 @@ import test from 'node:test';
 import {
   CONTEXTURE_SPECIFICATION_REVISION,
   CONTEXTURE_SPECIFICATION_VERSION,
+  Contexture,
   ContextureError,
   DeclarationError,
   defineApplication,
@@ -41,6 +42,23 @@ test('application declaration is lazy', () => {
 
   assert.equal(application.name, 'operations');
   assert.equal(constructions, 0);
+});
+
+test('Contexture is the public lazy declaration facade', () => {
+  const application = Contexture({
+    name: 'facade',
+    roots: [
+      () => ({
+        kind: 'tool',
+        name: 'status',
+        description: 'Read status.',
+        readOnly: true,
+        input: {} as never,
+        invoke: () => 'ok',
+      }),
+    ],
+  });
+  assert.equal(application.name, 'facade');
 });
 
 test('application declaration rejects an empty model root set', () => {
