@@ -6,15 +6,21 @@ import { Disclosure } from '../../core/model/disclosure.js';
 import { ApplicationRuntime } from '../../core/model/runtime.js';
 import { RootSelection, SelectedGraph } from '../../core/model/root-selection.js';
 import { buildInstructions } from '../instructions.js';
-
-const OPEN = 'contexture_open';
-const READ_ONLY = 'contexture_invoke_read_only';
-const INVOKE = 'contexture_invoke';
+import {
+  COMMAND_CLOSING,
+  COMMAND_PREAMBLE,
+  commandDescription,
+  COMPLETION_LIMIT,
+  GOTO_ARGUMENT,
+  GOTO_DESCRIPTION,
+  GOTO_PROMPT,
+  signpost,
+} from '../messages.js';
 
 export interface PromptCard {
   readonly name: string;
   readonly description: string;
-  readonly arguments: readonly { readonly name: 'ref'; readonly required: true }[];
+  readonly arguments: readonly { readonly name: typeof GOTO_ARGUMENT; readonly required: true }[];
 }
 
 export interface ResourceCard {
@@ -52,14 +58,15 @@ export class Publications {
         .filter((entry) => effective.containsRef(entry.opens))
         .map((entry) => ({
           name: publicationName(entry),
-          description: `${entry.description} (${entry.opens})`,
+          description: commandDescription(entry.opens, entry.description),
           arguments: Object.freeze([]),
         })),
       {
-        name: 'goto',
-        description:
-          'Open any capability this server holds, by reference. The reference completes as you type, so the whole tree can be browsed here without asking the agent to go and look.',
-        arguments: Object.freeze([{ name: 'ref' as const, required: true as const }]),
+        name: GOTO_PROMPT,
+        description: GOTO_DESCRIPTION,
+        arguments: Object.freeze([
+          { name: GOTO_ARGUMENT as typeof GOTO_ARGUMENT, required: true as const },
+        ]),
       },
     ]);
   }
@@ -94,15 +101,16 @@ export class Publications {
   complete(
     ref: string,
     selection: RootSelection = RootSelection.all(),
-    limit = 100,
+    limit = COMPLETION_LIMIT,
   ): {
     readonly values: readonly string[];
     readonly total: number;
   } {
-    return new SelectedGraph(
+    const result = new SelectedGraph(
       this.disclosure.index,
       this.disclosure.effectiveSelection(selection),
     ).matchingRefs(ref, limit);
+    return Object.freeze({ values: result.values, total: result.total });
   }
 
   async read(uri: string, selection: RootSelection = RootSelection.all()): Promise<unknown> {
@@ -120,12 +128,12 @@ export class Publications {
 
   private async openForPerson(ref: string, selection: RootSelection): Promise<string> {
     const payload = this.disclosure.openForPerson(ref, selection);
-    const signposts = signpost(this.disclosure, ref, selection);
+    const signposts = personSignpost(this.disclosure, ref, selection);
     return [
-      `You are at ${ref}, opened by name at a person's request.`,
+      COMMAND_PREAMBLE.replace('{ref}', ref),
       signposts,
       JSON.stringify(payload, null, 2),
-      `Continue with ${OPEN}, ${READ_ONLY} or ${INVOKE}, using refs taken from what is above. Nothing listed here was reached by navigating, so nothing beside it has been shown to you.`,
+      COMMAND_CLOSING,
     ]
       .filter((section) => section.length > 0)
       .join('\n\n');
@@ -192,24 +200,16 @@ function validateResources(
   }
 }
 
-function signpost(disclosure: Disclosure, ref: string, selection: RootSelection): string {
+function personSignpost(disclosure: Disclosure, ref: string, selection: RootSelection): string {
   const names = ref.split('/');
-  const lines: string[] = [];
+  const levels: [string, number][] = [];
   for (let depth = 1; depth < names.length; depth += 1) {
     const ancestor = names.slice(0, depth).join('/');
     const node = disclosure.openForPerson(ancestor, selection);
     const roles = Array.isArray(node.roles) ? node.roles.length : 0;
-    lines.push(
-      roles > 0
-        ? `- ${ancestor}: ${roles} sub-role(s) here; ${OPEN} to see them.`
-        : `- ${ancestor}: no sub-roles; ${OPEN} to see what it holds.`,
-    );
+    levels.push([ancestor, roles]);
   }
-  if (lines.length === 0) return '';
-  return [
-    `Signposts for the path above it. These are **not disclosed**: you may open one with ${OPEN}, and until you do you know only that it exists. Do not assert anything about what any of them holds.`,
-    ...lines,
-  ].join('\n');
+  return signpost(levels);
 }
 
 function publicationName(entry: PromptDeclaration | ResourceDeclaration): string {

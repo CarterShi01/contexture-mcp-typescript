@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { Gateway } from '../core/model/system-api.js';
 import { RootSelection } from '../core/model/root-selection.js';
 import { principalOf } from './identity.js';
+import { GOTO_ARGUMENT, GOTO_PROMPT } from './messages.js';
 import type { GatewayName } from '../core/mcp-interface/tool.js';
 import { Publications } from './surface/publications.js';
 
@@ -22,6 +23,21 @@ export {
   ROSTER_BUDGET,
   SELF_CONTAINED_PREFIX,
 } from './instructions.js';
+export {
+  COMMAND_CLOSING,
+  COMMAND_PREAMBLE,
+  commandDescription,
+  COMPLETION_LIMIT,
+  GOTO_ARGUMENT,
+  GOTO_ARGUMENT_DESCRIPTION,
+  GOTO_DESCRIPTION,
+  GOTO_PROMPT,
+  PREAMBLE,
+  REF_RULE,
+  SIGNPOST_PREAMBLE,
+  signpost,
+  truncatedCompletion,
+} from './messages.js';
 export {
   ContextureOptions,
   DEFAULT_HOST,
@@ -149,10 +165,13 @@ function installPublications(
   selection: RootSelection,
 ): void {
   for (const prompt of publications.promptCards(selection)) {
-    if (prompt.name === 'goto') {
+    if (prompt.name === GOTO_PROMPT) {
       server.registerPrompt(
         prompt.name,
-        { description: prompt.description, argsSchema: z.strictObject({ ref: z.string() }) },
+        {
+          description: prompt.description,
+          argsSchema: z.strictObject({ [GOTO_ARGUMENT]: z.string() }),
+        },
         async ({ ref }) => promptResult(await publications.goto(ref, selection)),
       );
     } else {

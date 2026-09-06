@@ -1,4 +1,11 @@
 /** Text owned by the server audience rather than the object model. */
+
+/** The one person-controlled command every Contexture server publishes. */
+export const GOTO_PROMPT = 'goto';
+/** The sole argument accepted by the `goto` command. */
+export const GOTO_ARGUMENT = 'ref';
+/** Maximum values returned by one completion response. */
+export const COMPLETION_LIMIT = 100;
 export const PREAMBLE = `Everything this server offers is behind contexture_open. Start from the list
 below: open the role that fits the task to see its skills, tools and
 sub-roles, then open the skill you chose for its procedure. Each call
@@ -11,3 +18,47 @@ not read.`;
 /** The reference rule appended after a server's bootstrap roster. */
 export const REF_RULE =
   'Every card carries a `ref`. Pass it back to contexture_open to open that node; never assemble a ref yourself.';
+
+/** What a person reads beside the universal `goto` command. */
+export const GOTO_DESCRIPTION =
+  'Open any capability this server holds, by reference. The reference completes as you type, so the whole tree can be browsed here without asking the agent to go and look.';
+
+/** What a person reads about the argument accepted by `goto`. */
+export const GOTO_ARGUMENT_DESCRIPTION =
+  'A reference such as payments/ledger/settlement. Completes on any part of the path.';
+
+/** Opening text for a node reached by a person rather than model navigation. */
+export const COMMAND_PREAMBLE = "You are at {ref}, opened by name at a person's request.";
+
+/** Explains that command signposts describe existence, not disclosed contents. */
+export const SIGNPOST_PREAMBLE =
+  'Signposts for the path above it. These are **not disclosed**: you may open one with contexture_open, and until you do you know only that it exists. Do not assert anything about what any of them holds.';
+
+/** Closing text for person-controlled navigation. */
+export const COMMAND_CLOSING =
+  'Continue with contexture_open, contexture_invoke_read_only or contexture_invoke, using refs taken from what is above. Nothing listed here was reached by navigating, so nothing beside it has been shown to you.';
+
+/** Say that a completion response intentionally omitted remaining values. */
+export function truncatedCompletion(shown: number, total: number): string {
+  return `... ${total - shown} more match; keep typing to narrow.`;
+}
+
+/** Render ancestors without disclosing their contents. */
+export function signpost(
+  levels: readonly (readonly [ref: string, subRoleCount: number])[],
+): string {
+  if (levels.length === 0) return '';
+  return [
+    SIGNPOST_PREAMBLE,
+    ...levels.map(([ref, count]) =>
+      count > 0
+        ? `- ${ref}: ${count} sub-role(s) here; contexture_open to see them.`
+        : `- ${ref}: no sub-roles; contexture_open to see what it holds.`,
+    ),
+  ].join('\n');
+}
+
+/** Render the human-facing command description for a declared Prompt. */
+export function commandDescription(ref: string, description: string): string {
+  return `${description} (${ref})`;
+}
