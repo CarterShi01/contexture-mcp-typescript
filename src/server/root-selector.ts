@@ -68,7 +68,7 @@ export class HeaderRootSelector implements RootSelector {
     if (raw !== undefined) {
       if (raw.length > this.maxLength)
         throw new Error(`${this.header} exceeds the ${this.maxLength}-character limit.`);
-      const roots = raw.split(',').map((value) => value.trim());
+      const roots = [...new Set(raw.split(',').map((value) => value.trim()))];
       if (roots.length > this.maxRoots)
         throw new Error(`${this.header} exceeds the ${this.maxRoots}-root limit.`);
       requested = RootSelection.only(roots);

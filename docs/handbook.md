@@ -75,6 +75,13 @@ Both preserve lazy factories and normalize the application name. Use a factory
 for every Role, Skill, and Tool: compilation creates a fresh immutable graph
 snapshot from those factories.
 
+`RootSelection` is an all-roots value or an exact root allowlist: it trims
+requested root names, rejects descendants, and can only attenuate another
+selection. `SelectedGraph` exposes only selected `roots`, `walk`, `find`,
+`refOf`, `parentOf`, `childrenOf`, `usesOf`, and `dependentsOf`; cross-root
+uses and dependents are filtered. Request headers use the same projection and
+cannot disclose roots outside an identity ceiling.
+
 Optional framework telemetry is declared with `telemetry: new InMemoryTelemetry()`.
 It aggregates successful Role and Skill opens plus successful or failed Tool
 invocations as `NodeUsage` (`callCount`, `errorCount`, and `lastUsedAt`). It

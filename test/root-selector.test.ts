@@ -53,3 +53,12 @@ test('header root selection validates size, count, and named roots', () => {
     /Unknown Contexture root selection/,
   );
 });
+
+test('header root selection trims and deduplicates without leaking excluded roots', () => {
+  const selected = new HeaderRootSelector().select(index(), {
+    [ROOTS_HEADER]: ' diagnose, diagnose ',
+  });
+  assert.deepEqual(selected.names, ['diagnose']);
+  assert.equal(selected.containsRef('/diagnose/child'), true);
+  assert.equal(selected.containsRef('release'), false);
+});

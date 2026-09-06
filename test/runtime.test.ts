@@ -124,6 +124,41 @@ test('runtime scopes principal, graph, selection and telemetry to concurrent cal
   assert.throws(() => currentPrincipal(), /No Contexture Tool invocation is active/);
 });
 
+test('runtime scopes the final attenuated selection independently for concurrent calls', async () => {
+  const compiled = compileApplication(
+    defineApplication({
+      name: 'selection-scopes',
+      roots: [
+        () =>
+          defineTool({
+            kind: 'tool',
+            name: 'alpha',
+            description: 'Alpha.',
+            readOnly: true,
+            input: z.strictObject({}),
+            invoke: () => currentRootSelection().names,
+          }),
+        () =>
+          defineTool({
+            kind: 'tool',
+            name: 'beta',
+            description: 'Beta.',
+            readOnly: true,
+            input: z.strictObject({}),
+            invoke: () => currentRootSelection().names,
+          }),
+      ],
+    }),
+  );
+  const service = new ApplicationRuntime(compiled);
+  const [alpha, beta] = await Promise.all([
+    service.invokeReadOnly('alpha', undefined, {}, RootSelection.only('alpha')),
+    service.invokeReadOnly('beta', undefined, {}, RootSelection.only('beta')),
+  ]);
+  assert.deepEqual(alpha, ['alpha']);
+  assert.deepEqual(beta, ['beta']);
+});
+
 test('Principal snapshots claims and exposes identity without authorization policy', () => {
   const claims = { tenant: 'acme' };
   const principal = new Principal({

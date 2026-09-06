@@ -198,6 +198,15 @@ test('root selections are exact, monotonic, and hide cross-root dependency cards
     [...new SelectedGraph(index, RootSelection.only('alpha')).walk()].map(([ref]) => ref),
     ['alpha'],
   );
+  const graph = new SelectedGraph(index, RootSelection.only('alpha'));
+  assert.equal(graph.refOf(index.find('alpha')), 'alpha');
+  assert.deepEqual(
+    graph.childrenOf(index.find('alpha')).map((node) => node.name),
+    [],
+  );
+  assert.deepEqual(graph.usesOf('alpha'), []);
+  assert.deepEqual(graph.dependentsOf('alpha'), []);
+  assert.throws(() => graph.refOf(index.find('beta')), RootOutsideSelectionError);
 });
 
 test('open recovery strings retain the protocol recovery action', () => {

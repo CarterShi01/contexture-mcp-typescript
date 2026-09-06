@@ -36,6 +36,12 @@ export {
 } from './core/model/runtime.js';
 export type { NodeUsage, Telemetry, TelemetryEvent } from './core/model/runtime.js';
 export {
+  RootOutsideSelectionError,
+  RootSelection,
+  RootSelectionError,
+  SelectedGraph,
+} from './core/model/root-selection.js';
+export {
   ContextureError,
   ContainmentCycleError,
   DeclarationError,

@@ -42,7 +42,7 @@ export class RootSelection {
     if (descendants.length > 0) {
       throw new RootSelectionError(
         `Root selection accepts root refs only, not descendant refs: ${descendants
-          .sort()
+          .sort(compareCodePoints)
           .map((name) => JSON.stringify(name))
           .join(', ')}`,
       );
@@ -51,13 +51,15 @@ export class RootSelection {
   }
 
   get names(): readonly string[] | undefined {
-    return this.#names === undefined ? undefined : Object.freeze([...this.#names].sort());
+    return this.#names === undefined
+      ? undefined
+      : Object.freeze([...this.#names].sort(compareCodePoints));
   }
 
   resolve(index: CompiledApplication): RootSelection {
     if (this.#names === undefined) return this;
     const roots = new Set(index.roots.map((node) => index.refOf(node)));
-    const unknown = [...this.#names].filter((name) => !roots.has(name)).sort();
+    const unknown = [...this.#names].filter((name) => !roots.has(name)).sort(compareCodePoints);
     if (unknown.length > 0) {
       throw new RootSelectionError(
         `Unknown Contexture root selection: ${unknown.map((name) => JSON.stringify(name)).join(', ')}`,
@@ -67,7 +69,8 @@ export class RootSelection {
   }
 
   containsRef(ref: string): boolean {
-    return this.#names === undefined || this.#names.has(ref.split(SEPARATOR, 1)[0] ?? '');
+    const root = ref.split(SEPARATOR).find((segment) => segment.length > 0);
+    return this.#names === undefined || root === undefined || this.#names.has(root);
   }
 
   requireRef(ref: string): void {
@@ -117,6 +120,17 @@ export class SelectedGraph {
     return this.index.parentOf(node);
   }
 
+  refOf(node: CompiledNode): string {
+    const ref = this.index.refOf(node);
+    this.selection.requireRef(ref);
+    return ref;
+  }
+
+  childrenOf(node: CompiledNode): readonly CompiledNode[] {
+    this.refOf(node);
+    return this.index.childrenOf(node);
+  }
+
   usesOf(ref: string): readonly string[] {
     this.selection.requireRef(ref);
     return Object.freeze(
@@ -154,11 +168,22 @@ export class SelectedGraph {
     }
     matches.sort(
       ([leftRank, leftLength, left], [rightRank, rightLength, right]) =>
-        leftRank - rightRank || leftLength - rightLength || left.localeCompare(right),
+        leftRank - rightRank || leftLength - rightLength || compareCodePoints(left, right),
     );
     return Object.freeze({
       values: Object.freeze(matches.slice(0, limit).map(([, , ref]) => ref)),
       total: matches.length,
     });
   }
+}
+
+function compareCodePoints(left: string, right: string): number {
+  const leftPoints = [...left];
+  const rightPoints = [...right];
+  for (let index = 0; index < Math.min(leftPoints.length, rightPoints.length); index += 1) {
+    const difference =
+      (leftPoints[index]?.codePointAt(0) ?? 0) - (rightPoints[index]?.codePointAt(0) ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return leftPoints.length - rightPoints.length;
 }
