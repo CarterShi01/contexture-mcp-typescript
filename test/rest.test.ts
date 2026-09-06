@@ -267,6 +267,21 @@ test('REST surface has a fixed allowlist, HEAD fallback, and structured request 
     'urn:contexture:problem:invalid-json',
   );
 
+  for (const body of ['[]', JSON.stringify('scalar')]) {
+    await assertProblem(
+      await rest.fetch(
+        new Request('http://contexture.test/v1/restart', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body,
+        }),
+      ),
+      400,
+      'invalid-body',
+      'Request body must be a JSON object.',
+    );
+  }
+
   const denied = await surface(() => undefined).fetch(
     new Request('http://contexture.test/v1/status?service=api'),
   );
@@ -391,6 +406,7 @@ test('REST rejects invalid route grammar, missing targets, and Fetch-unsafe stat
     assert.throws(() => new RestSurface(service, [route]), ModelValidationError);
   };
   reject({ method: 'TRACE' as never, path: '/trace', ref: 'operations/status' });
+  reject({ method: 'GET', path: 'missing-leading-slash', ref: 'operations/status' });
   reject({ method: 'GET', path: '/hash#fragment', ref: 'operations/status' });
   reject({ method: 'GET', path: '/parameter/{id}', ref: 'operations/status' });
   reject({ method: 'GET', path: '/missing-ref', ref: ' ' });
@@ -446,7 +462,10 @@ test('REST surface validates HTTP route grammar and holds Channels open for its 
       }),
     ),
   );
-  const listener = new RestSurface(live, [{ method: 'GET', path: '/v1/value', ref: 'value' }]);
+  const listener = new RestSurface(live, [
+    { method: 'GET', path: '/v1/value', ref: 'value' },
+    { method: 'HEAD', path: '/v1/value', ref: 'value', status: 202 },
+  ]);
   const handle = await listener.listen();
   try {
     assert.match(handle.url, /^http:\/\/127\.0\.0\.1:[1-9]\d*$/);
@@ -459,6 +478,14 @@ test('REST surface validates HTTP route grammar and holds Channels open for its 
     assert.equal(second.status, 200);
     assert.deepEqual(await first.json(), { hello: 'Ada' });
     assert.deepEqual(await second.json(), { hello: 'Lin' });
+    const head = await fetch(`${handle.url}/v1/value?name=Head`, { method: 'HEAD' });
+    assert.equal(head.status, 202);
+    assert.equal(head.headers.get('content-type'), 'application/json; charset=utf-8');
+    assert.equal(
+      head.headers.get('content-length'),
+      String(new TextEncoder().encode(JSON.stringify({ hello: 'Head' })).byteLength),
+    );
+    assert.equal(await head.text(), '');
     const raw = await getWithIgnoredBody(`${handle.url}/v1/value?name=Query`, '{"name":"Body"}');
     assert.equal(raw.status, 200);
     assert.deepEqual(JSON.parse(raw.body), { hello: 'Query' });
