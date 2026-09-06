@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { Gateway } from '../core/model/system-api.js';
 import { RootSelection } from '../core/model/root-selection.js';
+import { principalOf } from './identity.js';
 import type { GatewayName } from '../core/mcp-interface/tool.js';
 import { Publications } from './surface/publications.js';
 
@@ -34,6 +35,8 @@ export { buildServer, ContextureServer, PACKAGE_VERSION } from './server.js';
 export type { HttpServerHandle } from './server.js';
 export { FixedRootSelector, HeaderRootSelector, ROOTS_HEADER } from './root-selector.js';
 export type { RootCeiling, RootSelector } from './root-selector.js';
+export { Auth, principalOf, PRINCIPAL_EXTRA } from './identity.js';
+export type { TokenVerifier } from './identity.js';
 
 /** Metadata required to identify a Contexture MCP server. */
 export interface ServerIdentity {
@@ -99,8 +102,15 @@ export function createContextureMcpServer(
             inputSchema: invocationSchema,
             annotations: { readOnlyHint: true },
           },
-          async ({ ref, arguments: arguments_ }) =>
-            toolResult(() => gateway.invokeReadOnly(ref, arguments_, {}, selection)),
+          async ({ ref, arguments: arguments_ }, context) =>
+            toolResult(() =>
+              gateway.invokeReadOnly(
+                ref,
+                arguments_,
+                { principal: principalOf(context.http?.authInfo) },
+                selection,
+              ),
+            ),
         );
         break;
       case 'contexture_invoke':
@@ -111,8 +121,15 @@ export function createContextureMcpServer(
             inputSchema: invocationSchema,
             annotations: { readOnlyHint: false },
           },
-          async ({ ref, arguments: arguments_ }) =>
-            toolResult(() => gateway.invoke(ref, arguments_, {}, selection)),
+          async ({ ref, arguments: arguments_ }, context) =>
+            toolResult(() =>
+              gateway.invoke(
+                ref,
+                arguments_,
+                { principal: principalOf(context.http?.authInfo) },
+                selection,
+              ),
+            ),
         );
         break;
     }

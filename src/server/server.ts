@@ -16,6 +16,7 @@ import { RootSelection } from '../core/model/root-selection.js';
 import { compileRuntimeApplication, type RuntimeApplication } from './application.js';
 import { createContextureMcpServer, type ContextureMcpServer } from './index.js';
 import { ContextureOptions } from './options.js';
+import { Auth } from './identity.js';
 
 export const PACKAGE_VERSION = '0.12.0rc1';
 
@@ -31,15 +32,21 @@ export class ContextureServer {
   readonly name: string;
   readonly version: string;
   readonly selection: RootSelection;
+  readonly auth: Auth | undefined;
 
   constructor(
     declaration: ApplicationDeclaration,
-    options: { readonly version?: string; readonly selection?: RootSelection } = {},
+    options: {
+      readonly version?: string;
+      readonly selection?: RootSelection;
+      readonly auth?: Auth;
+    } = {},
   ) {
     this.application = compileRuntimeApplication(declaration);
     this.name = declaration.name;
     this.version = options.version ?? PACKAGE_VERSION;
     this.selection = (options.selection ?? RootSelection.all()).resolve(this.application.index);
+    this.auth = options.auth;
     Object.freeze(this);
   }
 
@@ -101,9 +108,16 @@ export class ContextureServer {
               response.writeHead(404).end('Not Found');
               return;
             }
+            const webRequest = nodeRequest(request, options);
+            const authInfo =
+              this.auth === undefined ? undefined : await this.auth.gate()(webRequest);
+            if (authInfo instanceof Response) {
+              await writeResponse(response, authInfo);
+              return;
+            }
             await writeResponse(
               response,
-              await transport.handleRequest(nodeRequest(request, options)),
+              await transport.handleRequest(webRequest, authInfo === undefined ? {} : { authInfo }),
             );
           } catch (error) {
             response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
@@ -140,7 +154,11 @@ export class ContextureServer {
 /** Compile one declaration into its server-owned application container. */
 export function buildServer(
   declaration: ApplicationDeclaration,
-  options: { readonly version?: string; readonly selection?: RootSelection } = {},
+  options: {
+    readonly version?: string;
+    readonly selection?: RootSelection;
+    readonly auth?: Auth;
+  } = {},
 ): ContextureServer {
   return new ContextureServer(declaration, options);
 }
