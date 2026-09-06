@@ -46,6 +46,10 @@
       "types": "./dist/web/index.d.ts",
       "import": "./dist/web/index.js"
     },
+    "./inspection": {
+      "types": "./dist/inspection.d.ts",
+      "import": "./dist/inspection.js"
+    },
     "./package.json": "./package.json"
   },
   "types": "./dist/index.d.ts",
