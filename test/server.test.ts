@@ -77,5 +77,10 @@ test('the SDK publishes Contexture Prompts and Resources as their native primiti
     'readme',
     'goto',
   ]);
-  assert.deepEqual(Object.keys(Reflect.get(adapter.server, '_registeredResources')), ['readme']);
+  const resources = Reflect.get(adapter.server, '_registeredResources') as Record<
+    string,
+    { readonly name: string }
+  >;
+  assert.deepEqual(Object.keys(resources), ['contexture://readme']);
+  assert.equal(resources['contexture://readme']?.name, 'readme');
 });
