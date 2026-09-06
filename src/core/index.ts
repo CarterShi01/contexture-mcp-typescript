@@ -5,10 +5,26 @@ export {
 export { defineApplication } from './declarations.js';
 export type {
   ApplicationDeclaration,
+  BaseNodeDeclaration,
   Factory,
   NodeDeclaration,
   NodeKind,
   RoleDeclaration,
   SkillDeclaration,
+  ToolCallContext,
   ToolDeclaration,
 } from './declarations.js';
+export { compileApplication } from './compiler.js';
+export type {
+  CompiledApplication,
+  CompiledNode,
+  CompiledRole,
+  CompiledSkill,
+  CompiledTool,
+} from './compiler.js';
+export {
+  ContainmentCycleError,
+  DuplicateNameError,
+  ModelValidationError,
+  UnresolvedReferenceError,
+} from './errors.js';

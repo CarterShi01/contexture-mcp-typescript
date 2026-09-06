@@ -7,8 +7,8 @@
   "implementedRules": [1],
   "rules": {
     "1": { "status": "implemented", "evidence": ["test/declarations.test.ts"] },
-    "2": { "status": "not-started", "evidence": [] },
-    "3": { "status": "not-started", "evidence": [] },
+    "2": { "status": "in-progress", "evidence": ["test/compiler.test.ts"] },
+    "3": { "status": "in-progress", "evidence": ["test/compiler.test.ts"] },
     "4": { "status": "not-started", "evidence": [] },
     "5": { "status": "not-started", "evidence": [] },
     "6": { "status": "not-started", "evidence": [] },
