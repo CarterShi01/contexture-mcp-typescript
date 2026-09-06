@@ -1,5 +1,4 @@
 import type {
-  Channels,
   Factory,
   NodeDeclaration,
   NodeKind,
@@ -7,6 +6,7 @@ import type {
   SkillDeclaration,
   ToolDeclaration,
 } from './declarations.js';
+import { defineApplication, type ApplicationDeclaration } from '../../application.js';
 import {
   ContainmentCycleError,
   DuplicateNameError,
@@ -77,35 +77,30 @@ interface CompilationState {
   readonly bindTools: boolean;
 }
 
-/** The SDK-neutral fields required to construct a canonical model Index. */
-export interface ApplicationCompilation {
-  readonly name: string;
-  readonly roots: readonly Factory<NodeDeclaration>[];
-  readonly promptRoots?: readonly Factory<NodeDeclaration>[];
-  readonly channels?: Channels;
-  readonly resources?: readonly unknown[];
-}
+/** The SDK-neutral declaration normalized before every public compilation route. */
+export type ApplicationCompilation = ApplicationDeclaration;
 
 /** Compile one lazy application into an immutable, canonical forest snapshot. */
 export function compileApplication(application: ApplicationCompilation): CompiledApplication {
-  return compile(application, true);
+  return compile(defineApplication(application), true);
 }
 
 /** Compile an independent structural projection with neither bindings nor Channels. */
 export function compileDisclosureApplication(
   application: ApplicationCompilation,
 ): CompiledApplication {
-  if (application.channels !== undefined) {
+  const declaration = defineApplication(application);
+  if (declaration.channels !== undefined) {
     throw new ModelValidationError(
       'A disclosure-only Contexture application cannot declare Channels.',
     );
   }
-  if ((application.resources?.length ?? 0) > 0) {
+  if ((declaration.resources?.length ?? 0) > 0) {
     throw new ModelValidationError(
       'A disclosure-only Contexture application cannot declare Resources.',
     );
   }
-  return compile(application, false);
+  return compile(declaration, false);
 }
 
 function compile(application: ApplicationCompilation, bindTools: boolean): CompiledApplication {
@@ -417,53 +412,61 @@ class ImmutableIndex implements CompiledApplication {
   }
 
   find(ref: string): CompiledNode {
-    if (ref.length === 0) {
+    const segments = ref.split(SEPARATOR).filter((segment) => segment.length > 0);
+    if (segments.length === 0) {
       throw new NodeNotFoundError({
         reason: LookupFailure.EMPTY_REF,
         ref,
-        known: this.roots.map((root) => root.name),
       });
     }
+    const canonical = segments.join(SEPARATOR);
+    const found = this.#byRef.get(canonical);
+    if (found !== undefined) return found;
+    throw this.diagnose(segments, ref);
+  }
 
-    const segments = ref.split(SEPARATOR);
-    const rootSegment = segments[0] ?? '';
-    const root = this.roots.find((candidate) => candidate.name === rootSegment);
-    if (root === undefined) {
-      throw new NodeNotFoundError({
+  diagnose(segments: readonly string[], ref: string): NodeNotFoundError {
+    const root = segments[0] ?? '';
+    if (!this.#byRef.has(root)) {
+      return new NodeNotFoundError({
         reason: LookupFailure.NO_SUCH_ROOT,
         ref,
-        segment: rootSegment,
-        known: this.roots.map((root) => root.name),
+        segment: root,
+        scope: root,
+        known: sorted(this.roots.map((candidate) => candidate.name)),
       });
     }
-    let node: CompiledNode = root;
-
-    for (const segment of segments.slice(1)) {
-      const scope = this.refOf(node);
-      if (node.kind !== 'role') {
-        throw new NodeNotFoundError({
+    for (let depth = 2; depth <= segments.length; depth += 1) {
+      const candidate = segments.slice(0, depth).join(SEPARATOR);
+      if (this.#byRef.has(candidate)) continue;
+      const parentRef = segments.slice(0, depth - 1).join(SEPARATOR);
+      const held = this.#byRef.get(parentRef);
+      if (held === undefined)
+        throw new ModelValidationError('Index lookup diagnosis lost its parent.');
+      const segment = segments[depth - 1] ?? '';
+      if (held.kind !== 'role') {
+        return new NodeNotFoundError({
           reason: LookupFailure.NOT_A_CONTAINER,
           ref,
           segment,
-          scope,
-          kind: node.kind,
+          scope: held.name,
+          kind: held.kind,
         });
       }
-      const child: CompiledNode | undefined = this.childrenOf(node).find(
-        (candidate) => candidate.name === segment,
-      );
-      if (child === undefined) {
-        throw new NodeNotFoundError({
-          reason: LookupFailure.NO_SUCH_MEMBER,
-          ref,
-          segment,
-          scope,
-          known: this.childrenOf(node).map((candidate) => candidate.name),
-        });
-      }
-      node = child;
+      return new NodeNotFoundError({
+        reason: LookupFailure.NO_SUCH_MEMBER,
+        ref,
+        segment,
+        scope: held.name,
+        kind: held.kind,
+        known: sorted(this.childrenOf(held).map((member) => member.name)),
+      });
     }
-    return node;
+    return new NodeNotFoundError({
+      reason: LookupFailure.NO_SUCH_MEMBER,
+      ref,
+      segment: segments[segments.length - 1] ?? '',
+    });
   }
 
   tool(ref: string): CompiledTool {
@@ -520,3 +523,20 @@ class ImmutableIndex implements CompiledApplication {
 
 const EMPTY_NODES: readonly CompiledNode[] = Object.freeze([]);
 const EMPTY_REFS: readonly string[] = Object.freeze([]);
+
+function sorted(values: readonly string[]): readonly string[] {
+  return [...values].sort(compareCodePoints);
+}
+
+/** Match Python's `sorted(str)` ordering rather than the host locale or UTF-16 units. */
+function compareCodePoints(left: string, right: string): number {
+  const leftPoints = [...left];
+  const rightPoints = [...right];
+  const length = Math.min(leftPoints.length, rightPoints.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference =
+      (leftPoints[index]?.codePointAt(0) ?? 0) - (rightPoints[index]?.codePointAt(0) ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return leftPoints.length - rightPoints.length;
+}

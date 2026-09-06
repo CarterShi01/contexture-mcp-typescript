@@ -5,7 +5,7 @@ import {
 } from '../core/model/compiler.js';
 import { Disclosure } from '../core/model/disclosure.js';
 import { ApplicationRuntime } from '../core/model/runtime.js';
-import type { ApplicationDeclaration } from '../application.js';
+import { defineApplication, type ApplicationDeclaration } from '../application.js';
 import { Publications } from './surface/publications.js';
 
 /** The coordinated runtime projections that share one bound compiled Index. */
@@ -25,14 +25,15 @@ export interface DisclosureApplication {
 
 /** Compile all runtime surfaces with Prompt reservations applied to model navigation. */
 export function compileRuntimeApplication(declaration: ApplicationDeclaration): RuntimeApplication {
-  const index = compileApplication(declaration);
-  const disclosure = new Disclosure(index, { reserved: reservedPromptRefs(declaration) });
+  const normalized = defineApplication(declaration);
+  const index = compileApplication(normalized);
+  const disclosure = new Disclosure(index, { reserved: reservedPromptRefs(normalized) });
   const runtime = new ApplicationRuntime(index);
   return Object.freeze({
     index,
     disclosure,
     runtime,
-    publications: new Publications(disclosure, runtime, declaration),
+    publications: new Publications(disclosure, runtime, normalized),
   });
 }
 
@@ -40,12 +41,13 @@ export function compileRuntimeApplication(declaration: ApplicationDeclaration): 
 export function compileStructuralApplication(
   declaration: ApplicationDeclaration,
 ): DisclosureApplication {
-  const index = compileDisclosureApplication(declaration);
-  const disclosure = new Disclosure(index, { reserved: reservedPromptRefs(declaration) });
+  const normalized = defineApplication(declaration);
+  const index = compileDisclosureApplication(normalized);
+  const disclosure = new Disclosure(index, { reserved: reservedPromptRefs(normalized) });
   return Object.freeze({
     index,
     disclosure,
-    publications: new Publications(disclosure, undefined, declaration),
+    publications: new Publications(disclosure, undefined, normalized),
   });
 }
 

@@ -75,7 +75,9 @@ factory 并规范化 application 名称。每个 Role、Skill、Tool 都应通�
 以及 `Principal` 等 request facts。`Prompt` 和 `Resource` 是 TypeScript object shape，
 而不是 Python 风格的 subclass base。`defineApplication` 会 snapshot 它们，并立即拒绝空白的
 `opens`、`description`、`uri` 或显式提供的 `name`；显式提供的 `modelMayOpen` 也必须为 boolean。
-解析 `opens` ref，以及校验 Resource 是否指向无参数、只读的 Tool，仍然属于 compilation 阶段。
+解析 `opens` ref，以及校验 Resource 是否指向无参数、只读的 Tool，仍然属于 compilation 阶段。每个
+公开 compilation entry point 都会应用同一份规范化，因此直接向 compiler 传入原始 JavaScript object
+也无法绕过 declaration validation 或 Prompt reservation semantics。
 
 TypeScript 中的 `modelMayOpen` 有意使用 boolean：省略或 `true` 表示 Prompt 可由模型导航，
 `false` 则把这个已声明 capability 保留给人控制的 Prompt 或 `goto` 导航。它与 Python declaration
@@ -84,7 +86,9 @@ TypeScript 中的 `modelMayOpen` 有意使用 boolean：省略或 `true` 表示 
 直接使用 compiled index 的调用者可通过 `NodeNotFoundError` 分类 lookup 失败。其 `reason` 是
 `LookupFailure.EMPTY_REF`、`NO_SUCH_ROOT`、`NOT_A_CONTAINER`、`NO_SUCH_MEMBER` 或
 `WRONG_KIND` 之一；稳定 facts 还包括请求的 `ref`、相关的 `segment` 或 `scope`，以及适用时
-可用的 `known` 名称。普通 runtime call 对未知 capability 仍会保持原有的 refusal surface。
+可用的 `known` 名称。lookup 会忽略空 slash segment，但 error facts 保留原始请求的 `ref`；空引用与
+non-container 的 `known` 为空，其他 `known` 会按 canonical 顺序排序，`scope` 是 resolution 停止处的
+node name。普通 runtime call 对未知 capability 仍会保持原有的 refusal surface。
 
 ## 3. 选择正确的节点
 

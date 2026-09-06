@@ -98,7 +98,7 @@ test('compilation creates a fresh canonical forest with both root audiences', ()
   assert.equal(first.executionBound, true);
 });
 
-test('compiled lookup exposes stable NodeNotFoundError facts for missing and wrong-kind references', () => {
+test('compiled lookup carries the Python Index.find failure facts exactly', () => {
   const index = compileApplication(application());
   const failure = (operation: () => unknown): NodeNotFoundError => {
     try {
@@ -109,31 +109,66 @@ test('compiled lookup exposes stable NodeNotFoundError facts for missing and wro
     }
     assert.fail('Expected a NodeNotFoundError.');
   };
+  const facts = (error: NodeNotFoundError) => ({
+    reason: error.reason,
+    ref: error.ref,
+    segment: error.segment,
+    scope: error.scope,
+    kind: error.kind,
+    wanted: error.wanted,
+    known: error.known,
+  });
 
-  const empty = failure(() => index.find(''));
-  assert.equal(empty.reason, LookupFailure.EMPTY_REF);
-  assert.deepEqual(empty.known, ['operations', 'restart']);
+  assert.deepEqual(facts(failure(() => index.find('//'))), {
+    reason: LookupFailure.EMPTY_REF,
+    ref: '//',
+    segment: undefined,
+    scope: undefined,
+    kind: undefined,
+    wanted: undefined,
+    known: [],
+  });
 
-  const root = failure(() => index.find('missing'));
-  assert.equal(root.reason, LookupFailure.NO_SUCH_ROOT);
-  assert.equal(root.segment, 'missing');
-  assert.deepEqual(root.known, ['operations', 'restart']);
+  assert.deepEqual(facts(failure(() => index.find('/missing/path'))), {
+    reason: LookupFailure.NO_SUCH_ROOT,
+    ref: '/missing/path',
+    segment: 'missing',
+    scope: 'missing',
+    kind: undefined,
+    wanted: undefined,
+    known: ['operations', 'restart'],
+  });
 
-  const member = failure(() => index.find('operations/missing'));
-  assert.equal(member.reason, LookupFailure.NO_SUCH_MEMBER);
-  assert.equal(member.scope, 'operations');
-  assert.equal(member.segment, 'missing');
-  assert.deepEqual(member.known, ['platform', 'diagnose', 'status']);
+  assert.deepEqual(facts(failure(() => index.find('operations/missing'))), {
+    reason: LookupFailure.NO_SUCH_MEMBER,
+    ref: 'operations/missing',
+    segment: 'missing',
+    scope: 'operations',
+    kind: 'role',
+    wanted: undefined,
+    known: ['diagnose', 'platform', 'status'],
+  });
 
-  const container = failure(() => index.find('operations/diagnose/deeper'));
-  assert.equal(container.reason, LookupFailure.NOT_A_CONTAINER);
-  assert.equal(container.scope, 'operations/diagnose');
-  assert.equal(container.kind, 'skill');
+  assert.deepEqual(facts(failure(() => index.find('operations/diagnose/deeper'))), {
+    reason: LookupFailure.NOT_A_CONTAINER,
+    ref: 'operations/diagnose/deeper',
+    segment: 'deeper',
+    scope: 'diagnose',
+    kind: 'skill',
+    wanted: undefined,
+    known: [],
+  });
 
-  const kind = failure(() => index.tool('operations/diagnose'));
-  assert.equal(kind.reason, LookupFailure.WRONG_KIND);
-  assert.equal(kind.kind, 'skill');
-  assert.equal(kind.wanted, 'tool');
+  assert.deepEqual(facts(failure(() => index.tool('operations/diagnose'))), {
+    reason: LookupFailure.WRONG_KIND,
+    ref: 'operations/diagnose',
+    segment: undefined,
+    scope: undefined,
+    kind: 'skill',
+    wanted: 'tool',
+    known: [],
+  });
+  assert.strictEqual(index.find('/operations//status/'), index.find('operations/status'));
   assert.equal(index.tool('operations/status').kind, 'tool');
 });
 

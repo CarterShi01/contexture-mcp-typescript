@@ -83,7 +83,9 @@ Python-style subclass bases. `defineApplication` snapshots them and rejects
 blank `opens`, `description`, `uri`, or supplied `name` values immediately;
 it also requires `modelMayOpen` to be a boolean when supplied. Resolving an
 `opens` ref and checking that a Resource targets an argument-free read-only
-Tool remain compilation concerns.
+Tool remain compilation concerns. Every public compilation entry point applies
+this same normalization, so calling a compiler directly with a raw JavaScript
+object cannot bypass declaration validation or Prompt reservation semantics.
 
 `modelMayOpen` is intentionally a boolean in TypeScript: omission or `true`
 keeps a Prompt model-navigable, while `false` reserves that declared capability
@@ -95,8 +97,11 @@ Direct compiled-index callers can classify a failed lookup with
 `NodeNotFoundError`. Its `reason` is one of `LookupFailure.EMPTY_REF`,
 `NO_SUCH_ROOT`, `NOT_A_CONTAINER`, `NO_SUCH_MEMBER`, or `WRONG_KIND`, and its
 stable facts include the requested `ref`, relevant `segment` or `scope`, and
-available `known` names when applicable. Normal runtime calls continue to
-render unknown capabilities as their existing refusal surface.
+available `known` names when applicable. Lookup ignores empty slash segments;
+the original requested `ref` remains in error facts. `known` is empty for an
+empty reference or a non-container, and otherwise is canonically sorted;
+`scope` is the node name where resolution stopped. Normal runtime calls
+continue to render unknown capabilities as their existing refusal surface.
 
 ## 3. Choose the right node
 

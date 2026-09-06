@@ -69,6 +69,11 @@ try {
     "if (typeof Auth !== 'function') throw new Error('missing identity facade');",
     "if (typeof Launch !== 'function' || typeof claudeCodeConfig !== 'function') throw new Error('missing host launch facade');",
     "if (typeof RestRouter !== 'function') throw new Error('missing web facade');",
+    "const rawApplication = { name: ' packed declaration ', roots: [() => ({ kind: 'skill', name: 'approval', description: 'Require approval.', instructions: 'Wait for a person.' })], prompts: [{ opens: 'approval', description: 'Open approval.', modelMayOpen: false }] };",
+    'const rawRuntime = compileRuntimeApplication(rawApplication);',
+    "if (rawRuntime.index.name !== 'packed declaration') throw new Error('server compilation did not normalize a raw declaration');",
+    "let reserved = false; try { rawRuntime.disclosure.open('approval'); } catch (error) { reserved = error instanceof Error && /opened by a person/.test(error.message); } if (!reserved) throw new Error('server compilation did not preserve a raw Prompt reservation');",
+    "for (const invalid of [{ ...rawApplication, prompts: [{ opens: 'approval', description: 'Open approval.', modelMayOpen: 'false' }] }, { ...rawApplication, prompts: [{ name: ' ', opens: 'approval', description: 'Open approval.' }] }, { ...rawApplication, resources: [{ opens: 'approval', uri: 'contexture://approval', description: 'Read approval.', mimeType: 1 }] }]) { let rejected = false; try { compileRuntimeApplication(invalid); } catch (error) { rejected = error instanceof TypeError; } if (!rejected) throw new Error('server compilation accepted an invalid raw declaration'); }",
   ].join('\n');
   await writeFile(path.join(temporaryRoot, 'consumer.mjs'), consumer, 'utf8');
   run(process.execPath, ['consumer.mjs'], temporaryRoot);
