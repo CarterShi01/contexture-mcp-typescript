@@ -164,7 +164,7 @@ export class SelectedGraph {
               : lowered.includes(wanted)
                 ? 3
                 : undefined;
-      if (rank !== undefined) matches.push([rank, ref.length, ref]);
+      if (rank !== undefined) matches.push([rank, codePointLength(ref), ref]);
     }
     matches.sort(
       ([leftRank, leftLength, left], [rightRank, rightLength, right]) =>
@@ -186,4 +186,8 @@ function compareCodePoints(left: string, right: string): number {
     if (difference !== 0) return difference;
   }
   return leftPoints.length - rightPoints.length;
+}
+
+function codePointLength(value: string): number {
+  return [...value].length;
 }

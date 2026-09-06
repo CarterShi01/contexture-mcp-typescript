@@ -125,6 +125,13 @@ test('runtime scopes principal, graph, selection and telemetry to concurrent cal
 });
 
 test('runtime scopes the final attenuated selection independently for concurrent calls', async () => {
+  let arrived = 0;
+  let releaseBoth!: () => void;
+  const bothArrived = new Promise<void>((resolve) => {
+    releaseBoth = resolve;
+  });
+  const graphs: ReturnType<typeof currentGraph>[] = [];
+  const selections: RootSelection[] = [];
   const compiled = compileApplication(
     defineApplication({
       name: 'selection-scopes',
@@ -136,7 +143,19 @@ test('runtime scopes the final attenuated selection independently for concurrent
             description: 'Alpha.',
             readOnly: true,
             input: z.strictObject({}),
-            invoke: () => currentRootSelection().names,
+            invoke: async () => {
+              const graph = currentGraph();
+              const selection = currentRootSelection();
+              graphs.push(graph);
+              selections.push(selection);
+              arrived += 1;
+              if (arrived === 2) releaseBoth();
+              await bothArrived;
+              await Promise.resolve();
+              assert.equal(currentGraph(), graph);
+              assert.equal(currentRootSelection(), selection);
+              return { roots: graph.roots.map((node) => node.name), selection: selection.names };
+            },
           }),
         () =>
           defineTool({
@@ -145,7 +164,19 @@ test('runtime scopes the final attenuated selection independently for concurrent
             description: 'Beta.',
             readOnly: true,
             input: z.strictObject({}),
-            invoke: () => currentRootSelection().names,
+            invoke: async () => {
+              const graph = currentGraph();
+              const selection = currentRootSelection();
+              graphs.push(graph);
+              selections.push(selection);
+              arrived += 1;
+              if (arrived === 2) releaseBoth();
+              await bothArrived;
+              await Promise.resolve();
+              assert.equal(currentGraph(), graph);
+              assert.equal(currentRootSelection(), selection);
+              return { roots: graph.roots.map((node) => node.name), selection: selection.names };
+            },
           }),
       ],
     }),
@@ -155,8 +186,16 @@ test('runtime scopes the final attenuated selection independently for concurrent
     service.invokeReadOnly('alpha', undefined, {}, RootSelection.only('alpha')),
     service.invokeReadOnly('beta', undefined, {}, RootSelection.only('beta')),
   ]);
-  assert.deepEqual(alpha, ['alpha']);
-  assert.deepEqual(beta, ['beta']);
+  assert.deepEqual(alpha, { roots: ['alpha'], selection: ['alpha'] });
+  assert.deepEqual(beta, { roots: ['beta'], selection: ['beta'] });
+  assert.equal(graphs.length, 2);
+  assert.equal(selections.length, 2);
+  assert.notEqual(graphs[0], graphs[1]);
+  assert.notEqual(selections[0], selections[1]);
+});
+
+test('currentRootSelection returns the compatibility all-roots selection outside an invocation', () => {
+  assert.equal(currentRootSelection().names, undefined);
 });
 
 test('Principal snapshots claims and exposes identity without authorization policy', () => {

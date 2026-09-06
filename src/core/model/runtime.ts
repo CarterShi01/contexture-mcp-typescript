@@ -48,7 +48,9 @@ export function currentGraph(): SelectedGraph {
 }
 
 export function currentRootSelection(): RootSelection {
-  return requireScope().selection;
+  // Root selection is also a compatibility fact outside a Tool invocation:
+  // without a request-local attenuation, callers see the all-roots surface.
+  return SCOPE.getStore()?.selection ?? RootSelection.all();
 }
 
 /** Transport-neutral validated invocation over a bound compiled Index. */

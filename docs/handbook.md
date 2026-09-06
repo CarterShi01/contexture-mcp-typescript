@@ -80,7 +80,9 @@ requested root names, rejects descendants, and can only attenuate another
 selection. `SelectedGraph` exposes only selected `roots`, `walk`, `find`,
 `refOf`, `parentOf`, `childrenOf`, `usesOf`, and `dependentsOf`; cross-root
 uses and dependents are filtered. Request headers use the same projection and
-cannot disclose roots outside an identity ceiling.
+cannot disclose roots outside an identity ceiling. `currentRootSelection()`
+returns the request-local projection inside a Tool and the compatibility
+all-roots value outside an invocation.
 
 Optional framework telemetry is declared with `telemetry: new InMemoryTelemetry()`.
 It aggregates successful Role and Skill opens plus successful or failed Tool

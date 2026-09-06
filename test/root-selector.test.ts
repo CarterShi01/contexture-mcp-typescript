@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { defineApplication, Principal } from '../src/index.js';
-import { compileApplication, RootSelection } from '../src/core/index.js';
+import { compileApplication, RootSelection, RootSelectionError } from '../src/core/index.js';
 import { HeaderRootSelector, ROOTS_HEADER } from '../src/server/index.js';
 
 function index() {
@@ -39,6 +39,14 @@ test('header root selection attenuates but cannot widen an identity ceiling', ()
   );
 });
 
+test('a selector without a header or identity ceiling retains the compatibility all-roots surface', () => {
+  const selected = new HeaderRootSelector().select(index());
+
+  assert.equal(selected.names, undefined);
+  assert.equal(selected.containsRef('diagnose/tool'), true);
+  assert.equal(selected.containsRef('release/tool'), true);
+});
+
 test('header root selection validates size, count, and named roots', () => {
   const compiled = index();
   const selector = new HeaderRootSelector({ maxLength: 4, maxRoots: 1 });
@@ -48,10 +56,15 @@ test('header root selection validates size, count, and named roots', () => {
     () => countLimited.select(compiled, { [ROOTS_HEADER]: 'diagnose,release' }),
     /root limit/,
   );
-  assert.throws(
-    () => countLimited.select(compiled, { [ROOTS_HEADER]: 'missing' }),
-    /Unknown Contexture root selection/,
-  );
+  let unknown: unknown;
+  try {
+    countLimited.select(compiled, { [ROOTS_HEADER]: 'missing' });
+  } catch (error) {
+    unknown = error;
+  }
+  assert.ok(unknown instanceof RootSelectionError);
+  assert.match(unknown.message, /Unknown Contexture root selection: "missing"/);
+  assert.doesNotMatch(unknown.message, /diagnose|release/);
 });
 
 test('header root selection trims and deduplicates without leaking excluded roots', () => {

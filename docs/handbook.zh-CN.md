@@ -74,6 +74,8 @@ factory 并规范化 application 名称。每个 Role、Skill、Tool 都应通�
 descendant，并且只能收窄另一个 selection。`SelectedGraph` 只公开选中范围内的 `roots`、`walk`、
 `find`、`refOf`、`parentOf`、`childrenOf`、`usesOf` 与 `dependentsOf`；cross-root uses 和
 dependents 会被过滤。request header 使用同一 projection，不能泄露 identity ceiling 之外的 root。
+`currentRootSelection()` 在 Tool 内返回 request-local projection，在 invocation 外返回兼容的
+all-roots 值。
 
 可选的 framework telemetry 可声明为 `telemetry: new InMemoryTelemetry()`。它会把成功的 Role 和
 Skill open，以及成功或失败的 Tool invocation 聚合成 `NodeUsage`（`callCount`、`errorCount` 和
