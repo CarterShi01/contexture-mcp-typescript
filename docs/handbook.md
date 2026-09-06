@@ -202,6 +202,11 @@ rather than weakening them.
 stderr, so MCP stdio owns stdout exclusively. `configureLogging(level)` is
 available when an embedding Host needs to establish that policy before startup.
 
+Unless an application supplies `instructions`, Contexture returns a compact,
+breadth-first roster with the fixed navigation contract in MCP initialization.
+For HTTP root selection, that roster is generated for the selected root surface
+on each request; it never advertises an omitted root.
+
 For Claude Code, Cursor, or Codex configuration, use `Launch` from
 `@contexture/mcp/server`. It renders host configuration from the server command
 instead of duplicating the application's declared context.

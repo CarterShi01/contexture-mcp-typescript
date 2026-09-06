@@ -180,6 +180,10 @@ stdio 是默认 transport。只有在明确配置 Host 与网络时才使用 `--
 'error'`。Contexture 的生命周期日志始终写入 stderr，因此 MCP stdio 独占 stdout。
 嵌入式 Host 若需在启动前建立该策略，可使用 `configureLogging(level)`。
 
+除非 application 显式提供 `instructions`，Contexture 会在 MCP 初始化响应中返回紧凑的广度优先
+能力清单及固定导航合同。HTTP root selection 时，该清单按每个请求的 selected root surface 生成，
+绝不会宣称被省略的 root。
+
 Claude Code、Cursor 和 Codex 配置请使用 `@contexture/mcp/server` 的 `Launch`。它从 server
 command 渲染 Host configuration，而不是复制 application 已声明的 context。
 

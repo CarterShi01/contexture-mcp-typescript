@@ -20,6 +20,7 @@ import { RootSelection } from '../core/model/root-selection.js';
 
 import { compileRuntimeApplication, type RuntimeApplication } from './application.js';
 import { createContextureMcpServer, type ContextureMcpServer } from './index.js';
+import { buildInstructions } from './instructions.js';
 import { ContextureOptions } from './options.js';
 import { configureLogging, log } from './logging.js';
 import { Auth, principalOf } from './identity.js';
@@ -41,6 +42,7 @@ export class ContextureServer {
   readonly version: string;
   readonly selection: RootSelection;
   readonly auth: Auth | undefined;
+  readonly instructions: string | undefined;
   readonly rootSelector: RootSelector | undefined;
 
   constructor(
@@ -49,6 +51,7 @@ export class ContextureServer {
       readonly version?: string;
       readonly selection?: RootSelection;
       readonly auth?: Auth;
+      readonly instructions?: string;
       readonly rootSelector?: RootSelector;
     } = {},
   ) {
@@ -57,6 +60,7 @@ export class ContextureServer {
     this.version = options.version ?? PACKAGE_VERSION;
     this.selection = (options.selection ?? RootSelection.all()).resolve(this.application.index);
     this.auth = options.auth;
+    this.instructions = options.instructions;
     this.rootSelector = options.rootSelector;
     Object.freeze(this);
   }
@@ -73,7 +77,11 @@ export class ContextureServer {
       { name: this.name, version: this.version },
       new Gateway(this.application.disclosure, this.application.runtime),
       this.application.publications,
-      { selection },
+      {
+        selection,
+        instructions:
+          this.instructions ?? buildInstructions(this.application.disclosure.select(selection)),
+      },
     );
   }
 
@@ -192,6 +200,7 @@ export function buildServer(
     readonly version?: string;
     readonly selection?: RootSelection;
     readonly auth?: Auth;
+    readonly instructions?: string;
     readonly rootSelector?: RootSelector;
   } = {},
 ): ContextureServer {

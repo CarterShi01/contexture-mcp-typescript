@@ -69,8 +69,11 @@ export interface ServerIdentity {
  * Keeping the SDK import here proves and enforces that the authoring core is
  * SDK-neutral.
  */
-export function createMcpServer(identity: ServerIdentity): McpServer {
-  return new McpServer({ name: identity.name, version: identity.version });
+export function createMcpServer(
+  identity: ServerIdentity,
+  options: { readonly instructions?: string } = {},
+): McpServer {
+  return new McpServer({ name: identity.name, version: identity.version }, options);
 }
 
 /** Official-SDK adapter whose only model-controlled tools are Contexture's gateway. */
@@ -85,10 +88,13 @@ export function createContextureMcpServer(
   identity: ServerIdentity,
   gateway: Gateway,
   publications?: Publications,
-  options: { readonly selection?: RootSelection } = {},
+  options: { readonly selection?: RootSelection; readonly instructions?: string } = {},
 ): ContextureMcpServer {
   const selection = options.selection ?? RootSelection.all();
-  const server = createMcpServer(identity);
+  const server = createMcpServer(
+    identity,
+    options.instructions === undefined ? {} : { instructions: options.instructions },
+  );
   for (const tool of gateway.tools) {
     switch (tool.name) {
       case 'contexture_discover':

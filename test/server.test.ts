@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { McpServer } from '@modelcontextprotocol/server';
+import {
+  InMemoryTransport,
+  LATEST_PROTOCOL_VERSION,
+  McpServer,
+} from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
 import { defineApplication } from '../src/index.js';
@@ -38,6 +42,29 @@ test('a sealed Contexture server builds its default adapter exactly once', () =>
   });
   const server = buildServer(declaration);
   assert.strictEqual(server.build(), server.build());
+});
+
+test('the official initialization response carries generated or explicit Contexture instructions', async () => {
+  const declaration = defineApplication({
+    name: 'instruction-server',
+    roots: [
+      () => ({
+        kind: 'skill' as const,
+        name: 'operations',
+        description: 'Operate services.',
+        instructions: 'Inspect first.',
+      }),
+    ],
+  });
+  const generated = await initializeInstructions(buildServer(declaration).build().server);
+  assert.match(generated, /Everything this server offers is behind contexture_open\./);
+  assert.match(generated, /- operations: Operate services\./);
+
+  const explicit = await initializeInstructions(
+    buildServer(declaration, { instructions: 'Use the owner-provided introduction.' }).build()
+      .server,
+  );
+  assert.equal(explicit, 'Use the owner-provided introduction.');
 });
 
 test('the SDK receives exactly the four Contexture gateway tools, never a business Tool', () => {
@@ -143,3 +170,39 @@ test('a fixed server root selection registers only publications inside its surfa
     'contexture://included',
   ]);
 });
+
+async function initializeInstructions(server: McpServer): Promise<string> {
+  const [client, host] = InMemoryTransport.createLinkedPair();
+  const replies = new Map<number, unknown>();
+  client.onmessage = (message) => {
+    if ('id' in message && typeof message.id === 'number') replies.set(message.id, message);
+  };
+  await client.start();
+  await server.connect(host);
+  try {
+    await client.send({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: {
+        protocolVersion: LATEST_PROTOCOL_VERSION,
+        capabilities: {},
+        clientInfo: { name: 'instruction-client', version: '0.0.0' },
+      },
+    });
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const reply = replies.get(1) as
+        { readonly result?: { readonly instructions?: unknown } } | undefined;
+      if (reply?.result?.instructions !== undefined) {
+        if (typeof reply.result.instructions !== 'string')
+          throw new Error('Instructions were not text.');
+        return reply.result.instructions;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1));
+    }
+    throw new Error('Timed out waiting for MCP initialization instructions.');
+  } finally {
+    await client.close();
+    await server.close();
+  }
+}

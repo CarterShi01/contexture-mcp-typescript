@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { LATEST_PROTOCOL_VERSION } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
 import { defineApplication, Principal } from '../src/index.js';
@@ -116,7 +117,51 @@ test('the HTTP root selector constructs independent root surfaces per request', 
     assert.doesNotMatch(alphaBody, /beta/);
     assert.match(betaBody, /beta/);
     assert.doesNotMatch(betaBody, /alpha/);
+
+    const initialize = (root: string) =>
+      fetch(handle.url, {
+        method: 'POST',
+        headers: {
+          accept: 'application/json, text/event-stream',
+          'content-type': 'application/json',
+          'contexture-roots': root,
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: root === 'alpha' ? 101 : 102,
+          method: 'initialize',
+          params: {
+            protocolVersion: LATEST_PROTOCOL_VERSION,
+            capabilities: {},
+            clientInfo: { name: `instruction-${root}`, version: '0.0.0' },
+          },
+        }),
+      });
+    const [alphaInstructions, betaInstructions] = await Promise.all([
+      initialize('alpha'),
+      initialize('beta'),
+    ]);
+    assert.equal(alphaInstructions.status, 200);
+    assert.equal(betaInstructions.status, 200);
+    const [alphaDiscover, betaDiscover] = await Promise.all([
+      sseResponse(alphaInstructions),
+      sseResponse(betaInstructions),
+    ]);
+    assert.ok(alphaDiscover.result?.instructions, JSON.stringify(alphaDiscover));
+    assert.match(alphaDiscover.result.instructions, /alpha/);
+    assert.doesNotMatch(alphaDiscover.result?.instructions ?? '', /beta/);
+    assert.match(betaDiscover.result?.instructions ?? '', /beta/);
+    assert.doesNotMatch(betaDiscover.result?.instructions ?? '', /alpha/);
   } finally {
     await handle.close();
   }
 });
+
+async function sseResponse(
+  response: Response,
+): Promise<{ readonly result?: { readonly instructions?: string } }> {
+  const text = await response.text();
+  const data = text.match(/^data: (.+)$/m)?.[1];
+  if (data === undefined) throw new Error(`MCP streamable response carried no JSON event: ${text}`);
+  return JSON.parse(data) as { readonly result?: { readonly instructions?: string } };
+}
