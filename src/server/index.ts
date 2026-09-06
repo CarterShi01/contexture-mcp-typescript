@@ -10,8 +10,15 @@ import { Publications } from './surface/publications.js';
 
 export { compileRuntimeApplication, compileStructuralApplication } from './application.js';
 export type { DisclosureApplication, RuntimeApplication } from './application.js';
-export { RestRouter } from './rest.js';
-export type { RestMethod, RestRoute } from './rest.js';
+export { RestRouter, RestSurface } from './rest.js';
+export type {
+  Authenticator,
+  RestListenOptions,
+  RestMethod,
+  RestRoute,
+  RestServerHandle,
+  WebRequest,
+} from './rest.js';
 export { Gateway, GATEWAY } from '../core/model/system-api.js';
 export type { GatewayTool } from '../core/model/system-api.js';
 export { Publications } from './surface/publications.js';

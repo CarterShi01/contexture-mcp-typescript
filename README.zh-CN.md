@@ -84,8 +84,9 @@ const adapter = createContextureMcpServer({ name: 'operations', version: '0.1.0'
 ```
 
 业务 Tool 始终位于 Contexture 的四个固定网关 Tool 后面。核心层不依赖 MCP
-SDK；`@contexture/mcp/server` 是官方 SDK 适配边界。`RestRouter` 提供显式
-allowlist REST 适配器。
+SDK；`@contexture/mcp/server` 是官方 SDK 适配边界。`@contexture/mcp/web` 的
+`RestSurface` 提供显式 allowlist REST 适配器，可挂载 Fetch handler 或启动可选 Node
+listener，并与 Tool Binding 复用同一验证路径。`RestRouter` 保留为较低层的内存兼容适配器。
 
 `Contexture(declaration)` 是 `defineApplication` 的具名公开别名；两者创建相同的
 惰性 application 声明。

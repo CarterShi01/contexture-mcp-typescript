@@ -162,7 +162,46 @@ export const app = defineApplication({
 位于 Host selected root surface 外的 Resource 既不会被列出，也不可读取。不要用 Resource 实现带参数的
 查询、写操作，或再实现一次 Tool；这类能力应当通过 Contexture gateway 使用已声明的 Tool。
 
-## 8. 通过 MCP Host 提供服务
+## 8. 发布显式 REST surface
+
+只有在明确要发布给人或服务的 API 时才使用 `RestSurface`。它不会创建可任意传 ref
+的 dispatcher：每个固定 path 都必须指向一个已存在的 Tool。GET 和 HEAD 只能调用
+read-only Tool；POST、PUT、PATCH 与 DELETE 只能调用 writing Tool。REST 与 MCP gateway
+复用同一个 runtime Binding 来校验输入，因此不存在第二份业务实现。
+
+```js
+import { Principal } from '@contexture/mcp';
+import { compileRuntimeApplication } from '@contexture/mcp/server';
+import { RestSurface } from '@contexture/mcp/web';
+
+const runtime = compileRuntimeApplication(app).runtime;
+const rest = new RestSurface(
+  runtime,
+  [
+    { method: 'GET', path: '/v1/status', ref: 'operations/status' },
+    { method: 'POST', path: '/v1/restart', ref: 'operations/restart', status: 202 },
+  ],
+  async (request) =>
+    request.headers.authorization === 'Bearer local-token'
+      ? new Principal({ subject: 'operator' })
+      : undefined,
+);
+const listener = await rest.listen({ host: '127.0.0.1', port: 8080 });
+```
+
+`fetch(request)` 可挂载到 Fetch-compatible Host。`listen()` 是内置的轻量 Node adapter，
+它在整个 listener 生命周期内只打开一次 application Channels；关闭时调用
+`await listener.close()`。GET/HEAD 输入来自 query parameter（重复 key 会成为 string
+array）；command 接受可选的 `application/json` object body，默认最大 1 MiB。HEAD 会
+fallback 到已声明的 GET route，保留 header 但永不发送 response body。
+
+可选 authenticator 会拿到规范化的小写 header 和全部 query value，随后必须返回一个
+`Principal`。没有 identity 时返回 401，未发布的 path 返回 404。无效 JSON、body shape、
+content type、body size、Binding argument 和授权失败都会返回 no-store 的结构化
+`application/problem+json` response。没有 authenticator 时不要信任自称 principal 的
+header，也不要因为 Tool 在 application graph 中有效就发布它。
+
+## 9. 通过 MCP Host 提供服务
 
 服务时不改变 declaration。server adapter 提供四个固定的 Contexture gateway Tool；业务 Tool
 不会注册为 MCP 顶层 Tool，而是被渐进披露在 gateway 后面。
@@ -187,7 +226,7 @@ stdio 是默认 transport。只有在明确配置 Host 与网络时才使用 `--
 Claude Code、Cursor 和 Codex 配置请使用 `@contexture/mcp/server` 的 `Launch`。它从 server
 command 渲染 Host configuration，而不是复制 application 已声明的 context。
 
-## 9. 保持合同真实
+## 10. 保持合同真实
 
 提出改动前运行完整 package gate：
 

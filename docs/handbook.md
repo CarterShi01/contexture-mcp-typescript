@@ -181,7 +181,51 @@ readable. Do not use a Resource for a parameterized lookup, a write, or a
 second implementation of a Tool; use the declared Tool through Contexture's
 gateway instead.
 
-## 8. Serve through an MCP Host
+## 8. Publish an explicit REST surface
+
+Use `RestSurface` only for a deliberately published human or service API. It
+does not create a ref dispatcher: every fixed path names one existing Tool.
+GET and HEAD may invoke only read-only Tools; POST, PUT, PATCH, and DELETE may
+invoke only writing Tools. The same runtime Binding validates REST input and
+the MCP gateway input, so there is no second business implementation.
+
+```js
+import { Principal } from '@contexture/mcp';
+import { compileRuntimeApplication } from '@contexture/mcp/server';
+import { RestSurface } from '@contexture/mcp/web';
+
+const runtime = compileRuntimeApplication(app).runtime;
+const rest = new RestSurface(
+  runtime,
+  [
+    { method: 'GET', path: '/v1/status', ref: 'operations/status' },
+    { method: 'POST', path: '/v1/restart', ref: 'operations/restart', status: 202 },
+  ],
+  async (request) =>
+    request.headers.authorization === 'Bearer local-token'
+      ? new Principal({ subject: 'operator' })
+      : undefined,
+);
+const listener = await rest.listen({ host: '127.0.0.1', port: 8080 });
+```
+
+`fetch(request)` is mountable in a Fetch-compatible Host. `listen()` is the
+small built-in Node adapter and opens application Channels once for the whole
+listener lifetime; call `await listener.close()` during shutdown. GET/HEAD
+inputs come from query parameters (a repeated key becomes a string array);
+commands accept an optional `application/json` object body up to 1 MiB by
+default. HEAD falls back to a declared GET route and preserves its headers but
+never sends its response body.
+
+The optional authenticator receives normalized lower-case headers and all query
+values, then must return a `Principal`. A missing identity receives 401; an
+unpublished path receives 404. Invalid JSON, body shape, content type, body
+size, binding arguments, and authorization failures receive structured
+`application/problem+json` responses with no-store caching. Do not trust a
+claimed principal header without an authenticator, and do not publish a Tool
+merely because it is valid in the application graph.
+
+## 9. Serve through an MCP Host
 
 The declaration does not change when it is served. The server adapter exposes
 four fixed Contexture gateway Tools; business Tools are progressively disclosed
@@ -211,7 +255,7 @@ For Claude Code, Cursor, or Codex configuration, use `Launch` from
 `@contexture/mcp/server`. It renders host configuration from the server command
 instead of duplicating the application's declared context.
 
-## 9. Keep the contract honest
+## 10. Keep the contract honest
 
 Run the full package gate before proposing a change:
 

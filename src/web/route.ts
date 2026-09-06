@@ -5,5 +5,8 @@ export type RestMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export interface RestRoute {
   readonly method: RestMethod;
   readonly path: string;
+  /** The canonical Contexture Tool reference this route may invoke. */
   readonly ref: string;
+  /** Successful response status; defaults to 200. */
+  readonly status?: number;
 }

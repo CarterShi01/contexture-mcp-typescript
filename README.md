@@ -90,7 +90,10 @@ const adapter = createContextureMcpServer({ name: 'operations', version: '0.1.0'
 
 Business Tools remain behind Contexture's four fixed gateway Tools. The core is
 SDK-neutral; `@contexture/mcp/server` is the official MCP SDK adapter boundary.
-An explicit REST allowlist is also available through `RestRouter`.
+An explicit REST allowlist is available through `RestSurface` from
+`@contexture/mcp/web`; it offers mountable Fetch handling and an optional Node
+listener over the same validated Tool Binding. `RestRouter` remains the
+lower-level in-memory compatibility adapter.
 
 `Contexture(declaration)` is the named public alias for `defineApplication`;
 both create the same lazy application declaration.
