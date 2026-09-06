@@ -106,6 +106,25 @@ npx contexture inspect --all --json > contexture-trace.json
 调用一个无参数、只读的内容 Tool，因此只应在确实需要本地读取时使用。未找到项目配置且
 未指定 target 时，`inspect` 会重放内置 demo，并在 stderr 报告此回退。
 
+## 创建并运行项目
+
+原生命令会创建唯一支持的 `project` 模板。生成的 application 自己拥有本地工作流，
+因此应在新项目中执行这些命令，而不是在本仓库中执行：
+
+```bash
+npx contexture new operations --template project
+cd operations
+npm install
+npm run check
+npm run list
+npm run inspect -- --all --summary
+npx contexture call operations-assistant/ping --input '{"target":"local"}'
+```
+
+`contexture new` 会拒绝已经存在的目标目录和未知模板。生成项目的 `check` 会校验而不
+打开 application dependency；`call` 复用正式服务相同的 runtime Binding，写 Tool 则必须
+显式传入 `--allow-write`。
+
 ## Host 配置
 
 Host 配置应当指向启动服务器的命令，而不是复制应用已经声明的 context。`Launch`

@@ -67,9 +67,10 @@
   },
   "scripts": {
     "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.build.json",
-    "check": "npm run conformance:check && npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run pack:check && npm run consumer:check",
+    "check": "npm run conformance:check && npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run pack:check && npm run consumer:check && npm run scaffold:consumer:check",
     "conformance:check": "node scripts/verify-conformance.mjs",
     "consumer:check": "node scripts/verify-package-consumer.mjs",
+    "scaffold:consumer:check": "node scripts/verify-scaffold-consumer.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
