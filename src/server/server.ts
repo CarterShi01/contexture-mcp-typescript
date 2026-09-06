@@ -34,6 +34,7 @@ export interface HttpServerHandle {
 
 /** One compiled application and its transport-specific MCP assembly. */
 export class ContextureServer {
+  #built: ContextureMcpServer | undefined;
   readonly application: RuntimeApplication;
   readonly name: string;
   readonly version: string;
@@ -61,7 +62,8 @@ export class ContextureServer {
 
   /** Build a fresh official-SDK adapter for one transport connection or HTTP service. */
   build(): ContextureMcpServer {
-    return this.buildForSelection(this.selection);
+    if (this.#built === undefined) this.#built = this.buildForSelection(this.selection);
+    return this.#built;
   }
 
   /** Build one fresh adapter whose complete public surface is fixed by selection. */

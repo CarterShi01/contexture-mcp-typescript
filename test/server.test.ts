@@ -12,6 +12,7 @@ import {
   RootSelection,
 } from '../src/core/index.js';
 import {
+  buildServer,
   createContextureMcpServer,
   createMcpServer,
   Gateway,
@@ -21,6 +22,22 @@ import {
 test('the server seam uses the official MCP SDK', () => {
   const server = createMcpServer({ name: 'contexture-test', version: '0.0.0' });
   assert.ok(server instanceof McpServer);
+});
+
+test('a sealed Contexture server builds its default adapter exactly once', () => {
+  const declaration = defineApplication({
+    name: 'stable-server',
+    roots: [
+      () => ({
+        kind: 'skill' as const,
+        name: 'read',
+        description: 'Read.',
+        instructions: 'Read.',
+      }),
+    ],
+  });
+  const server = buildServer(declaration);
+  assert.strictEqual(server.build(), server.build());
 });
 
 test('the SDK receives exactly the four Contexture gateway tools, never a business Tool', () => {
