@@ -66,6 +66,10 @@ try {
   ].join('\n');
   await writeFile(path.join(temporaryRoot, 'consumer.mjs'), consumer, 'utf8');
   run(process.execPath, ['consumer.mjs'], temporaryRoot);
+  assert.equal(
+    run(path.join(temporaryRoot, 'node_modules', '.bin', 'contexture'), ['--version'], temporaryRoot).trim(),
+    '0.12.0rc1',
+  );
 
   const installedPackage = JSON.parse(
     await readFile(

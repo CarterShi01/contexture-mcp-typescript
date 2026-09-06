@@ -33,6 +33,9 @@
     "README.md",
     "README.zh-CN.md"
   ],
+  "bin": {
+    "contexture": "./dist/cli/main.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
