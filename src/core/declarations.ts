@@ -66,6 +66,23 @@ export interface CleanupRegistrar {
   defer(cleanup: () => void | Promise<void>): void;
 }
 
+/** A person-controlled MCP Prompt pointing at one existing Contexture node. */
+export interface PromptDeclaration {
+  readonly opens: string;
+  readonly description: string;
+  readonly name?: string;
+  readonly modelMayOpen?: boolean;
+}
+
+/** A host-controlled MCP Resource backed by an argument-free read-only Tool. */
+export interface ResourceDeclaration {
+  readonly opens: string;
+  readonly uri: string;
+  readonly description: string;
+  readonly name?: string;
+  readonly mimeType?: string;
+}
+
 /** The closed union accepted at an application root or inside a compiled Index. */
 export type NodeDeclaration = RoleDeclaration | SkillDeclaration | ToolDeclaration<never, unknown>;
 
@@ -75,6 +92,8 @@ export interface ApplicationDeclaration {
   readonly roots: readonly Factory<NodeDeclaration>[];
   readonly promptRoots?: readonly Factory<NodeDeclaration>[];
   readonly channels?: Channels;
+  readonly prompts?: readonly PromptDeclaration[];
+  readonly resources?: readonly ResourceDeclaration[];
 }
 
 /**
@@ -106,5 +125,17 @@ export function defineApplication(declaration: ApplicationDeclaration): Applicat
       ? {}
       : { promptRoots: Object.freeze([...declaration.promptRoots]) }),
     ...(declaration.channels === undefined ? {} : { channels: declaration.channels }),
+    ...(declaration.prompts === undefined
+      ? {}
+      : {
+          prompts: Object.freeze(declaration.prompts.map((prompt) => Object.freeze({ ...prompt }))),
+        }),
+    ...(declaration.resources === undefined
+      ? {}
+      : {
+          resources: Object.freeze(
+            declaration.resources.map((resource) => Object.freeze({ ...resource })),
+          ),
+        }),
   });
 }

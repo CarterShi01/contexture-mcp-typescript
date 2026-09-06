@@ -88,6 +88,11 @@ export function compileDisclosureApplication(
       'A disclosure-only Contexture application cannot declare Channels.',
     );
   }
+  if ((application.resources?.length ?? 0) > 0) {
+    throw new ModelValidationError(
+      'A disclosure-only Contexture application cannot declare Resources.',
+    );
+  }
   return compile(application, false);
 }
 

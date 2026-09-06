@@ -3,6 +3,9 @@ import { z } from 'zod';
 
 import { Gateway, type GatewayName } from '../core/index.js';
 
+export { RestRouter } from './rest.js';
+export type { RestMethod, RestRoute } from './rest.js';
+
 /** Metadata required to identify a Contexture MCP server. */
 export interface ServerIdentity {
   readonly name: string;
