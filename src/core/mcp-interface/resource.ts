@@ -6,3 +6,6 @@ export interface ResourceDeclaration {
   readonly name?: string;
   readonly mimeType?: string;
 }
+
+/** Native TypeScript name for one declared host-backed MCP Resource. */
+export type Resource = ResourceDeclaration;

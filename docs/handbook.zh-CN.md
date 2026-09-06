@@ -70,6 +70,22 @@ export const app = defineApplication({
 factory 并规范化 application 名称。每个 Role、Skill、Tool 都应通过 factory 声明；编译会
 从这些 factory 创建新的不可变 graph snapshot。
 
+声明门面保持 SDK-neutral。它公开 `Contexture`、`defineApplication`、
+`ApplicationDeclaration`、原生 `Prompt` 与 `Resource` 数据 interface、node declaration，
+以及 `Principal` 等 request facts。`Prompt` 和 `Resource` 是 TypeScript object shape，
+而不是 Python 风格的 subclass base。`defineApplication` 会 snapshot 它们，并立即拒绝空白的
+`opens`、`description`、`uri` 或显式提供的 `name`；显式提供的 `modelMayOpen` 也必须为 boolean。
+解析 `opens` ref，以及校验 Resource 是否指向无参数、只读的 Tool，仍然属于 compilation 阶段。
+
+TypeScript 中的 `modelMayOpen` 有意使用 boolean：省略或 `true` 表示 Prompt 可由模型导航，
+`false` 则把这个已声明 capability 保留给人控制的 Prompt 或 `goto` 导航。它与 Python declaration
+有相同的可观察保留语义，但不复制 Python 的语法。
+
+直接使用 compiled index 的调用者可通过 `NodeNotFoundError` 分类 lookup 失败。其 `reason` 是
+`LookupFailure.EMPTY_REF`、`NO_SUCH_ROOT`、`NOT_A_CONTAINER`、`NO_SUCH_MEMBER` 或
+`WRONG_KIND` 之一；稳定 facts 还包括请求的 `ref`、相关的 `segment` 或 `scope`，以及适用时
+可用的 `known` 名称。普通 runtime call 对未知 capability 仍会保持原有的 refusal surface。
+
 ## 3. 选择正确的节点
 
 | 使用  | 适用情形                                         |

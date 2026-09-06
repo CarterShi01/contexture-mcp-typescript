@@ -10,7 +10,9 @@ import type {
 import {
   ContainmentCycleError,
   DuplicateNameError,
+  LookupFailure,
   ModelValidationError,
+  NodeNotFoundError,
   UnresolvedReferenceError,
 } from '../foundation/errors.js';
 import { bindTool, type ToolBinding } from './binding.js';
@@ -55,6 +57,7 @@ export interface CompiledApplication {
   readonly executionBound: boolean;
   readonly size: number;
   find(ref: string): CompiledNode;
+  tool(ref: string): CompiledTool;
   refOf(node: CompiledNode): string;
   parentOf(node: CompiledNode): CompiledRole | undefined;
   childrenOf(node: CompiledNode): readonly CompiledNode[];
@@ -414,9 +417,65 @@ class ImmutableIndex implements CompiledApplication {
   }
 
   find(ref: string): CompiledNode {
-    const node = this.#byRef.get(ref);
-    if (node === undefined)
-      throw new ModelValidationError(`Unknown Contexture reference ${JSON.stringify(ref)}.`);
+    if (ref.length === 0) {
+      throw new NodeNotFoundError({
+        reason: LookupFailure.EMPTY_REF,
+        ref,
+        known: this.roots.map((root) => root.name),
+      });
+    }
+
+    const segments = ref.split(SEPARATOR);
+    const rootSegment = segments[0] ?? '';
+    const root = this.roots.find((candidate) => candidate.name === rootSegment);
+    if (root === undefined) {
+      throw new NodeNotFoundError({
+        reason: LookupFailure.NO_SUCH_ROOT,
+        ref,
+        segment: rootSegment,
+        known: this.roots.map((root) => root.name),
+      });
+    }
+    let node: CompiledNode = root;
+
+    for (const segment of segments.slice(1)) {
+      const scope = this.refOf(node);
+      if (node.kind !== 'role') {
+        throw new NodeNotFoundError({
+          reason: LookupFailure.NOT_A_CONTAINER,
+          ref,
+          segment,
+          scope,
+          kind: node.kind,
+        });
+      }
+      const child: CompiledNode | undefined = this.childrenOf(node).find(
+        (candidate) => candidate.name === segment,
+      );
+      if (child === undefined) {
+        throw new NodeNotFoundError({
+          reason: LookupFailure.NO_SUCH_MEMBER,
+          ref,
+          segment,
+          scope,
+          known: this.childrenOf(node).map((candidate) => candidate.name),
+        });
+      }
+      node = child;
+    }
+    return node;
+  }
+
+  tool(ref: string): CompiledTool {
+    const node = this.find(ref);
+    if (node.kind !== 'tool') {
+      throw new NodeNotFoundError({
+        reason: LookupFailure.WRONG_KIND,
+        ref,
+        kind: node.kind,
+        wanted: 'tool',
+      });
+    }
     return node;
   }
 

@@ -75,6 +75,29 @@ Both preserve lazy factories and normalize the application name. Use a factory
 for every Role, Skill, and Tool: compilation creates a fresh immutable graph
 snapshot from those factories.
 
+The declaration facade is SDK-neutral: its public inventory is `Contexture`,
+`defineApplication`, `ApplicationDeclaration`, the native `Prompt` and
+`Resource` data interfaces, node declarations, and request facts such as
+`Principal`. `Prompt` and `Resource` are TypeScript object shapes rather than
+Python-style subclass bases. `defineApplication` snapshots them and rejects
+blank `opens`, `description`, `uri`, or supplied `name` values immediately;
+it also requires `modelMayOpen` to be a boolean when supplied. Resolving an
+`opens` ref and checking that a Resource targets an argument-free read-only
+Tool remain compilation concerns.
+
+`modelMayOpen` is intentionally a boolean in TypeScript: omission or `true`
+keeps a Prompt model-navigable, while `false` reserves that declared capability
+for person-controlled Prompt or `goto` navigation. This has the same
+observable reservation meaning as the Python declaration, without copying its
+syntax.
+
+Direct compiled-index callers can classify a failed lookup with
+`NodeNotFoundError`. Its `reason` is one of `LookupFailure.EMPTY_REF`,
+`NO_SUCH_ROOT`, `NOT_A_CONTAINER`, `NO_SUCH_MEMBER`, or `WRONG_KIND`, and its
+stable facts include the requested `ref`, relevant `segment` or `scope`, and
+available `known` names when applicable. Normal runtime calls continue to
+render unknown capabilities as their existing refusal surface.
+
 ## 3. Choose the right node
 
 | Use   | When it belongs there                                                 |

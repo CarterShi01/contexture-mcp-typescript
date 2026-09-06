@@ -23,8 +23,8 @@ export type {
   ToolCallContext,
   ToolDeclaration,
 } from './core/model/declarations.js';
-export type { PromptDeclaration } from './core/mcp-interface/prompt.js';
-export type { ResourceDeclaration } from './core/mcp-interface/resource.js';
+export type { Prompt, PromptDeclaration } from './core/mcp-interface/prompt.js';
+export type { Resource, ResourceDeclaration } from './core/mcp-interface/resource.js';
 export { Principal } from './core/foundation/principal.js';
 export type { PrincipalOptions } from './core/foundation/principal.js';
 export { currentGraph, currentPrincipal, currentTelemetry } from './core/model/runtime.js';
@@ -35,8 +35,10 @@ export {
   DuplicateNameError,
   ModelValidationError,
   InputValidationError,
+  LookupFailure,
   NodeNotFoundError,
   PermissionError,
   RejectedError,
   UnresolvedReferenceError,
 } from './core/foundation/errors.js';
+export type { NodeNotFoundFacts } from './core/foundation/errors.js';

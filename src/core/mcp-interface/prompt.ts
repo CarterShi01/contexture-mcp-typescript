@@ -5,3 +5,6 @@ export interface PromptDeclaration {
   readonly name?: string;
   readonly modelMayOpen?: boolean;
 }
+
+/** Native TypeScript name for one declared person-facing MCP Prompt. */
+export type Prompt = PromptDeclaration;

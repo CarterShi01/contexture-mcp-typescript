@@ -33,6 +33,8 @@ export function defineApplication(declaration: ApplicationDeclaration): Applicat
   ) {
     throw new TypeError('Application promptRoots must be lazy factories.');
   }
+  const prompts = snapshotPrompts(declaration.prompts);
+  const resources = snapshotResources(declaration.resources);
 
   return Object.freeze({
     name: declaration.name.trim(),
@@ -41,22 +43,63 @@ export function defineApplication(declaration: ApplicationDeclaration): Applicat
       ? {}
       : { promptRoots: Object.freeze([...declaration.promptRoots]) }),
     ...(declaration.channels === undefined ? {} : { channels: declaration.channels }),
-    ...(declaration.prompts === undefined
-      ? {}
-      : {
-          prompts: Object.freeze(declaration.prompts.map((prompt) => Object.freeze({ ...prompt }))),
-        }),
-    ...(declaration.resources === undefined
-      ? {}
-      : {
-          resources: Object.freeze(
-            declaration.resources.map((resource) => Object.freeze({ ...resource })),
-          ),
-        }),
+    ...(prompts === undefined ? {} : { prompts }),
+    ...(resources === undefined ? {} : { resources }),
   });
 }
 
 /** Python's `Contexture(...)` declaration concept, expressed as a native factory. */
 export function Contexture(declaration: ApplicationDeclaration): ApplicationDeclaration {
   return defineApplication(declaration);
+}
+
+function snapshotPrompts(
+  declarations: readonly PromptDeclaration[] | undefined,
+): readonly PromptDeclaration[] | undefined {
+  if (declarations === undefined) return undefined;
+  if (!Array.isArray(declarations)) throw new TypeError('Application prompts must be an array.');
+  return Object.freeze(
+    declarations.map((prompt, index) => {
+      if (typeof prompt !== 'object' || prompt === null || Array.isArray(prompt)) {
+        throw new TypeError(`Application prompt ${index} must be an object.`);
+      }
+      requireDeclarationText(prompt.opens, `Application prompt ${index} opens`);
+      requireDeclarationText(prompt.description, `Application prompt ${index} description`);
+      if (prompt.name !== undefined)
+        requireDeclarationText(prompt.name, `Application prompt ${index} name`);
+      if (prompt.modelMayOpen !== undefined && typeof prompt.modelMayOpen !== 'boolean') {
+        throw new TypeError(`Application prompt ${index} modelMayOpen must be a boolean.`);
+      }
+      return Object.freeze({ ...prompt });
+    }),
+  );
+}
+
+function snapshotResources(
+  declarations: readonly ResourceDeclaration[] | undefined,
+): readonly ResourceDeclaration[] | undefined {
+  if (declarations === undefined) return undefined;
+  if (!Array.isArray(declarations)) throw new TypeError('Application resources must be an array.');
+  return Object.freeze(
+    declarations.map((resource, index) => {
+      if (typeof resource !== 'object' || resource === null || Array.isArray(resource)) {
+        throw new TypeError(`Application resource ${index} must be an object.`);
+      }
+      requireDeclarationText(resource.opens, `Application resource ${index} opens`);
+      requireDeclarationText(resource.uri, `Application resource ${index} uri`);
+      requireDeclarationText(resource.description, `Application resource ${index} description`);
+      if (resource.name !== undefined)
+        requireDeclarationText(resource.name, `Application resource ${index} name`);
+      if (resource.mimeType !== undefined && typeof resource.mimeType !== 'string') {
+        throw new TypeError(`Application resource ${index} mimeType must be a string.`);
+      }
+      return Object.freeze({ ...resource });
+    }),
+  );
+}
+
+function requireDeclarationText(value: unknown, subject: string): asserts value is string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new TypeError(`${subject} must not be empty.`);
+  }
 }

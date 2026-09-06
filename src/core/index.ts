@@ -48,8 +48,8 @@ export { Gateway, GATEWAY } from './model/system-api.js';
 export type { GatewayTool } from './model/system-api.js';
 export { GATEWAY_TOOL_NAMES } from './mcp-interface/tool.js';
 export type { GatewayName } from './mcp-interface/tool.js';
-export type { PromptDeclaration } from './mcp-interface/prompt.js';
-export type { ResourceDeclaration } from './mcp-interface/resource.js';
+export type { Prompt, PromptDeclaration } from './mcp-interface/prompt.js';
+export type { Resource, ResourceDeclaration } from './mcp-interface/resource.js';
 export { Principal } from './foundation/principal.js';
 export type { PrincipalOptions } from './foundation/principal.js';
 export {
@@ -59,8 +59,10 @@ export {
   DuplicateNameError,
   ModelValidationError,
   InputValidationError,
+  LookupFailure,
   NodeNotFoundError,
   PermissionError,
   RejectedError,
   UnresolvedReferenceError,
 } from './foundation/errors.js';
+export type { NodeNotFoundFacts } from './foundation/errors.js';

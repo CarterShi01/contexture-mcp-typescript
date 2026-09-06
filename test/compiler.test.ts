@@ -6,7 +6,9 @@ import {
   ContainmentCycleError,
   defineApplication,
   DuplicateNameError,
+  LookupFailure,
   ModelValidationError,
+  NodeNotFoundError,
   UnresolvedReferenceError,
 } from '../src/index.js';
 import { compileApplication } from '../src/core/index.js';
@@ -94,6 +96,45 @@ test('compilation creates a fresh canonical forest with both root audiences', ()
     ['status', 'restart'],
   );
   assert.equal(first.executionBound, true);
+});
+
+test('compiled lookup exposes stable NodeNotFoundError facts for missing and wrong-kind references', () => {
+  const index = compileApplication(application());
+  const failure = (operation: () => unknown): NodeNotFoundError => {
+    try {
+      operation();
+    } catch (error) {
+      assert.ok(error instanceof NodeNotFoundError);
+      return error;
+    }
+    assert.fail('Expected a NodeNotFoundError.');
+  };
+
+  const empty = failure(() => index.find(''));
+  assert.equal(empty.reason, LookupFailure.EMPTY_REF);
+  assert.deepEqual(empty.known, ['operations', 'restart']);
+
+  const root = failure(() => index.find('missing'));
+  assert.equal(root.reason, LookupFailure.NO_SUCH_ROOT);
+  assert.equal(root.segment, 'missing');
+  assert.deepEqual(root.known, ['operations', 'restart']);
+
+  const member = failure(() => index.find('operations/missing'));
+  assert.equal(member.reason, LookupFailure.NO_SUCH_MEMBER);
+  assert.equal(member.scope, 'operations');
+  assert.equal(member.segment, 'missing');
+  assert.deepEqual(member.known, ['platform', 'diagnose', 'status']);
+
+  const container = failure(() => index.find('operations/diagnose/deeper'));
+  assert.equal(container.reason, LookupFailure.NOT_A_CONTAINER);
+  assert.equal(container.scope, 'operations/diagnose');
+  assert.equal(container.kind, 'skill');
+
+  const kind = failure(() => index.tool('operations/diagnose'));
+  assert.equal(kind.reason, LookupFailure.WRONG_KIND);
+  assert.equal(kind.kind, 'skill');
+  assert.equal(kind.wanted, 'tool');
+  assert.equal(index.tool('operations/status').kind, 'tool');
 });
 
 test('compilation rejects a declaration object reused at different addresses', () => {

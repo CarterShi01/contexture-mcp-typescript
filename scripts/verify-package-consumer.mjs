@@ -52,13 +52,15 @@ try {
   run('npm', ['install', '--ignore-scripts', '--no-package-lock', tarball], temporaryRoot);
 
   const consumer = [
-    "import { Contexture, Principal, currentPrincipal, defineApplication } from '@contexture/mcp';",
+    "import { Contexture, LookupFailure, NodeNotFoundError, Principal, currentPrincipal, defineApplication } from '@contexture/mcp';",
     "import { trace } from '@contexture/mcp/inspection';",
     "import { newProject } from '@contexture/mcp/cli';",
     "import { Auth, claudeCodeConfig, compileRuntimeApplication, HeaderRootSelector, Launch } from '@contexture/mcp/server';",
     "import { RestRouter } from '@contexture/mcp/web';",
     "if (typeof defineApplication !== 'function') throw new Error('missing declaration facade');",
     "if (typeof Contexture !== 'function') throw new Error('missing Contexture facade');",
+    "if (typeof LookupFailure !== 'object' || LookupFailure.NO_SUCH_MEMBER !== 'no_such_member') throw new Error('missing lookup classification');",
+    "if (!(new NodeNotFoundError({ reason: LookupFailure.EMPTY_REF }) instanceof Error)) throw new Error('missing lookup error');",
     "if (typeof Principal !== 'function' || typeof currentPrincipal !== 'function') throw new Error('missing root request facts');",
     "if (typeof trace !== 'function') throw new Error('missing inspection API');",
     "if (typeof newProject !== 'function') throw new Error('missing CLI scaffold API');",
@@ -70,6 +72,30 @@ try {
   ].join('\n');
   await writeFile(path.join(temporaryRoot, 'consumer.mjs'), consumer, 'utf8');
   run(process.execPath, ['consumer.mjs'], temporaryRoot);
+  const typeConsumer = [
+    "import { Contexture, LookupFailure, type Prompt, type Resource } from '@contexture/mcp';",
+    "const prompt: Prompt = { opens: 'approval', description: 'Open approval.', modelMayOpen: false };",
+    "const resource: Resource = { opens: 'runbook', uri: 'contexture://runbook', description: 'Read runbook.' };",
+    'const reason: LookupFailure = LookupFailure.NO_SUCH_MEMBER;',
+    "Contexture({ name: 'typed-consumer', roots: [() => ({}) as never], prompts: [prompt], resources: [resource] });",
+    'void reason;',
+  ].join('\n');
+  await writeFile(path.join(temporaryRoot, 'consumer.ts'), typeConsumer, 'utf8');
+  run(
+    path.join(repositoryRoot, 'node_modules', '.bin', 'tsc'),
+    [
+      '--module',
+      'NodeNext',
+      '--moduleResolution',
+      'NodeNext',
+      '--target',
+      'ES2022',
+      '--strict',
+      '--noEmit',
+      'consumer.ts',
+    ],
+    temporaryRoot,
+  );
   assert.equal(
     run(
       path.join(temporaryRoot, 'node_modules', '.bin', 'contexture'),

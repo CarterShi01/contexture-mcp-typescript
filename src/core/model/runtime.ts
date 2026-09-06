@@ -1,7 +1,11 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 import type { CompiledApplication, CompiledTool } from './compiler.js';
-import { InputValidationError, ModelValidationError } from '../foundation/errors.js';
+import {
+  InputValidationError,
+  ModelValidationError,
+  NodeNotFoundError,
+} from '../foundation/errors.js';
 import type { Principal } from '../foundation/principal.js';
 import { RefusedError } from './disclosure.js';
 import { RootSelection, SelectedGraph } from './root-selection.js';
@@ -167,7 +171,9 @@ export class ApplicationRuntime {
     try {
       node = this.index.find(ref);
     } catch (error) {
-      if (error instanceof ModelValidationError) throw new RefusedError(error.message);
+      if (error instanceof ModelValidationError || error instanceof NodeNotFoundError) {
+        throw new RefusedError(error.message);
+      }
       throw error;
     }
     if (node.kind !== 'tool') {
