@@ -84,6 +84,15 @@ cannot disclose roots outside an identity ceiling. `currentRootSelection()`
 returns the request-local projection inside a Tool and the compatibility
 all-roots value outside an invocation.
 
+For an imperative embedding phase, `ControllerManager` captures a root factory
+once through `registerRole`, `registerSkill`, `registerTool`, or `registerRoot`.
+It validates the complete captured tree and owns a deep snapshot; `roles`,
+`skills`, `tools`, and `roots` return defensive snapshots (with roots ordered
+Role, Skill, Tool). `application(name)` and `compile(name)` always issue fresh
+trees, so later registration or `rebindChannels()` cannot change an older
+Application or compiled Index. Channels are intentionally identity snapshots:
+rebinding affects only Applications produced afterward.
+
 Every executable server exposes the same ordered four-tool `Gateway`: discover,
 open, read-only invoke, and invoke. A disclosure-only host exposes its first
 two navigation entries. Lookup and wrong-door failures are rendered there as

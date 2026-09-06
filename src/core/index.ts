@@ -46,6 +46,8 @@ export {
 export { bindTool } from './model/binding.js';
 export type { JsonObject, JsonValue, ToolBinding } from './model/binding.js';
 export { withChannels } from './model/channels.js';
+export { ControllerManager } from './model/manager.js';
+export type { RoleFactory, SkillFactory, ToolFactory } from './model/manager.js';
 export {
   DISCLOSURE_GATEWAY,
   EXECUTION_GATEWAY,

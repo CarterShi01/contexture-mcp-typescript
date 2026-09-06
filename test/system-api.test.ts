@@ -9,9 +9,12 @@ import {
   EXECUTION_GATEWAY,
   Gateway,
   GATEWAY,
+  LookupFailure,
+  NodeNotFoundError,
   RefusedError,
   RootOutsideSelectionError,
   RootSelection,
+  WrongDoorError,
   compileApplication,
   Disclosure,
 } from '../src/core/index.js';
@@ -90,25 +93,28 @@ test('Gateway owns one fixed ordered inventory and its independently installable
 test('Gateway makes every canonical lookup failure actionable without retaining traversal state', async () => {
   const calls = { value: 0 };
   const api = gateway(calls);
-  for (const [ref, fragment] of [
-    ['', 'contexture_discover'],
-    ['missing', 'This server serves: alpha, beta'],
-    ['alpha/nope', 'It holds nothing.'],
-    ['beta/nope', 'It holds: read, write.'],
-    ['beta/read/again', "Open 'read' itself with contexture_open"],
+  for (const [ref, fragment, reason] of [
+    ['', 'contexture_discover', LookupFailure.EMPTY_REF],
+    ['missing', 'This server serves: alpha, beta', LookupFailure.NO_SUCH_ROOT],
+    ['alpha/nope', 'It holds nothing.', LookupFailure.NO_SUCH_MEMBER],
+    ['beta/nope', 'It holds: read, write.', LookupFailure.NO_SUCH_MEMBER],
+    ['beta/read/again', "Open 'read' itself with contexture_open", LookupFailure.NOT_A_CONTAINER],
   ] as const) {
     await assert.rejects(
       api.open(ref),
       (error: unknown) =>
         error instanceof RefusedError &&
         error.message.includes(fragment) &&
-        error.cause instanceof Error,
+        error.cause instanceof NodeNotFoundError &&
+        error.cause.reason === reason,
     );
   }
-  assert.deepEqual(await api.discover(), await api.discover());
-  const opened = await api.open('beta');
-  assert.ok(typeof opened === 'object' && opened !== null && 'name' in opened);
-  assert.equal(opened.name, 'beta');
+  const before = await api.open('beta');
+  await api.discover();
+  await api.open('alpha');
+  await api.invokeReadOnly('beta/read', {});
+  const after = await api.open('beta');
+  assert.deepEqual(after, before);
 });
 
 test('Gateway renders wrong-kind and wrong-door errors before a business handler runs', async () => {
@@ -119,12 +125,18 @@ test('Gateway renders wrong-kind and wrong-door errors before a business handler
     (error: unknown) =>
       error instanceof RefusedError &&
       error.message.includes('beta names a role, not a tool') &&
-      error.message.includes('contexture_open'),
+      error.message.includes('contexture_open') &&
+      error.cause instanceof NodeNotFoundError &&
+      error.cause.reason === LookupFailure.WRONG_KIND,
   );
   await assert.rejects(
     api.invoke('beta/read', {}),
     (error: unknown) =>
-      error instanceof RefusedError && error.message.includes('contexture_invoke_read_only'),
+      error instanceof RefusedError &&
+      error.message.includes('contexture_invoke_read_only') &&
+      error.cause instanceof WrongDoorError &&
+      error.cause.ref === 'beta/read' &&
+      error.cause.readOnly,
   );
   assert.equal(calls.value, 0);
 });

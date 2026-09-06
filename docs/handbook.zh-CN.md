@@ -77,6 +77,13 @@ dependents 会被过滤。request header 使用同一 projection，不能泄露 
 `currentRootSelection()` 在 Tool 内返回 request-local projection，在 invocation 外返回兼容的
 all-roots 值。
 
+对于 imperative embedding phase，可使用 `ControllerManager` 通过 `registerRole`、
+`registerSkill`、`registerTool` 或 `registerRoot` 一次性捕获 root factory。它会校验完整的
+captured tree 并拥有 deep snapshot；`roles`、`skills`、`tools` 与 `roots` 返回 defensive snapshot
+（root 的顺序是 Role、Skill、Tool）。`application(name)` 和 `compile(name)` 总会生成新的 tree，
+因此后续 registration 或 `rebindChannels()` 不会改变更早的 Application 或 compiled Index。Channels
+有意按 identity snapshot：rebind 只影响之后生成的 Application。
+
 每个可执行 server 都暴露同一个有序四工具 `Gateway`：discover、open、read-only invoke 和
 invoke。disclosure-only host 只暴露前两个 navigation entry。lookup 和 wrong-door failure 会在
 这里被渲染为可执行下一步的 `RefusedError` recovery；`RootOutsideSelectionError` 保持 typed，

@@ -11,6 +11,8 @@ export {
 export { Contexture, defineApplication } from './application.js';
 export type { ApplicationDeclaration } from './application.js';
 export { defineTool } from './core/model/declarations.js';
+export { ControllerManager } from './core/model/manager.js';
+export type { RoleFactory, SkillFactory, ToolFactory } from './core/model/manager.js';
 export type {
   BaseNodeDeclaration,
   Channels,

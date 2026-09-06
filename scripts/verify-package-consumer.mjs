@@ -52,13 +52,14 @@ try {
   run('npm', ['install', '--ignore-scripts', '--no-package-lock', tarball], temporaryRoot);
 
   const consumer = [
-    "import { Contexture, InMemoryTelemetry, LookupFailure, NodeNotFoundError, Principal, RootSelection, currentPrincipal, defineApplication, reportTelemetry } from '@contexture/mcp';",
+    "import { Contexture, ControllerManager, InMemoryTelemetry, LookupFailure, NodeNotFoundError, Principal, RootSelection, currentPrincipal, defineApplication, reportTelemetry } from '@contexture/mcp';",
     "import { trace } from '@contexture/mcp/inspection';",
     "import { newProject } from '@contexture/mcp/cli';",
-    "import { Auth, claudeCodeConfig, compileRuntimeApplication, DISCLOSURE_GATEWAY, EXECUTION_GATEWAY, HeaderRootSelector, Launch } from '@contexture/mcp/server';",
+    "import { Auth, claudeCodeConfig, compileRuntimeApplication, DISCLOSURE_GATEWAY, EXECUTION_GATEWAY, Gateway, GATEWAY, HeaderRootSelector, Launch, unresolvedMessage } from '@contexture/mcp/server';",
     "import { RestRouter } from '@contexture/mcp/web';",
     "if (typeof defineApplication !== 'function') throw new Error('missing declaration facade');",
     "if (typeof Contexture !== 'function') throw new Error('missing Contexture facade');",
+    "if (typeof ControllerManager !== 'function') throw new Error('missing manager facade');",
     "if (typeof LookupFailure !== 'object' || LookupFailure.NO_SUCH_MEMBER !== 'no_such_member') throw new Error('missing lookup classification');",
     "if (!(new NodeNotFoundError({ reason: LookupFailure.EMPTY_REF }) instanceof Error)) throw new Error('missing lookup error');",
     "if (typeof Principal !== 'function' || typeof currentPrincipal !== 'function') throw new Error('missing root request facts');",
@@ -70,7 +71,9 @@ try {
     "if (typeof Launch !== 'function' || typeof claudeCodeConfig !== 'function') throw new Error('missing host launch facade');",
     "if (typeof RestRouter !== 'function') throw new Error('missing web facade');",
     "if (DISCLOSURE_GATEWAY.length !== 2 || EXECUTION_GATEWAY.length !== 2) throw new Error('missing fixed gateway halves');",
+    "if (typeof Gateway !== 'function' || GATEWAY.length !== 4 || typeof unresolvedMessage !== 'function') throw new Error('missing Gateway recovery facade');",
     "if (!RootSelection.only(['consumer']).containsRef('/consumer/tool')) throw new Error('missing root selection projection');",
+    "const manager = new ControllerManager(); manager.registerSkill(() => ({ kind: 'skill', name: 'managed', description: 'Managed.', instructions: 'Read.' })); if (manager.compile('consumer-manager').find('managed').kind !== 'skill') throw new Error('missing manager registration');",
     "const telemetry = new InMemoryTelemetry(); reportTelemetry(telemetry, 'consumer/check'); if (telemetry.usage('consumer/check').callCount !== 1) throw new Error('missing telemetry aggregate');",
     "const rawApplication = { name: ' packed declaration ', roots: [() => ({ kind: 'skill', name: 'approval', description: 'Require approval.', instructions: 'Wait for a person.' })], prompts: [{ opens: 'approval', description: 'Open approval.', modelMayOpen: false }] };",
     'const rawRuntime = compileRuntimeApplication(rawApplication);',
