@@ -150,7 +150,10 @@ export function connectStep(
   const roots = disclosure.index.modelRoots.filter((node) =>
     disclosure.modelCanSee(disclosure.index.refOf(node)),
   ).length;
-  const { listed, cut } = rosterLines(instructions);
+  const { listed, cut } = rosterLines(
+    instructions,
+    new Set(disclosure.index.modelRoots.map((node) => disclosure.index.refOf(node))),
+  );
   const checks: readonly Check[] = Object.freeze([
     Object.freeze({
       ok: cost.bytes <= INSTRUCTIONS_LIMIT,
@@ -337,13 +340,16 @@ function objectPropertyCount(schema: unknown): number {
   return Object.keys(schema.properties).length;
 }
 
-function rosterLines(text: string): { readonly listed: number; readonly cut: boolean } {
+function rosterLines(
+  text: string,
+  roots: ReadonlySet<string>,
+): { readonly listed: number; readonly cut: boolean } {
   let listed = 0;
   let cut = false;
   for (const line of text.split('\n')) {
     if (!line.startsWith('- ')) continue;
     if (line.startsWith('- ...and ')) cut = true;
-    else listed += 1;
+    else if (roots.has(line.slice(2, line.indexOf(':')))) listed += 1;
   }
   return { listed, cut };
 }

@@ -38,6 +38,18 @@ test('CLI sends usage errors to stderr with status two', async () => {
   assert.match(invalid.error[0] ?? '', /^contexture: /);
 });
 
+test('inspect uses the bundled demo when no project configuration exists', async () => {
+  const temporary = await mkdtemp(path.join(tmpdir(), 'contexture-no-project-'));
+  try {
+    const inspected = output();
+    assert.equal(await main(['inspect', '--json'], inspected.writer, { cwd: temporary }), 0);
+    assert.equal(JSON.parse(inspected.out[0] ?? '{}').steps.length, 2);
+    assert.match(inspected.error[0] ?? '', /bundled demo/);
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});
+
 test('CLI compiles, lists, inspects, and invokes a native project declaration', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'contexture-cli-project-'));
   try {

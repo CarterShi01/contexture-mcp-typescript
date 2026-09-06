@@ -4,10 +4,11 @@ import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
 import { asJson, everyRef, render, trace } from '../inspection.js';
+import { app as demoApplication } from '../demo/server.js';
 import { compileRuntimeApplication } from '../server/application.js';
 import { buildInstructions } from '../server/instructions.js';
 
-import { loadApplication } from './project.js';
+import { findProject, loadApplication } from './project.js';
 import { newProject } from './scaffold.js';
 import { UsageError } from './usage.js';
 
@@ -259,7 +260,11 @@ async function commandInspect(
     index += 1;
   }
   if (all && refs.length > 0) throw new UsageError('Pass named refs or --all, not both.');
-  const application = await compiled(target, environment);
+  const useDemo = target === undefined && (await findProject(environment.cwd)) === undefined;
+  if (useDemo) output.error('No Contexture project was found, so this is the bundled demo.');
+  const application = useDemo
+    ? compileRuntimeApplication(demoApplication)
+    : await compiled(target, environment);
   const selected = all ? [...everyRef(application.disclosure)] : refs;
   const operation = () =>
     trace(application.disclosure, selected, {
