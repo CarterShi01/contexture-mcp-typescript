@@ -1,4 +1,4 @@
-import type { ZodType } from 'zod';
+import type { output, ZodType } from 'zod';
 
 /** A lazy factory. Calling it belongs to compilation, never declaration. */
 export type Factory<T> = () => T;
@@ -33,19 +33,30 @@ export interface SkillDeclaration extends BaseNodeDeclaration {
 export interface ToolCallContext {
   readonly signal?: AbortSignal;
   readonly host?: unknown;
+  readonly principal?: unknown;
+  readonly telemetry?: unknown;
+  readonly graph?: unknown;
+  readonly selection?: unknown;
 }
 
 /** A tool is an executable capability; its Binding owns schema and validation. */
-export interface ToolDeclaration<Input = unknown, Output = unknown> extends BaseNodeDeclaration {
+export interface ToolDeclaration<Input = never, Output = unknown> extends BaseNodeDeclaration {
   readonly kind: 'tool';
   readonly readOnly: boolean;
   /** The one schema used for both the disclosed contract and invocation validation. */
-  readonly input: ZodType<Input>;
+  readonly input: ZodType;
   readonly invoke: (input: Input, context: ToolCallContext) => Output | Promise<Output>;
 }
 
+/** Preserve a Zod input type when declaring a Tool inside a heterogeneous tree. */
+export function defineTool<Schema extends ZodType, Output>(
+  declaration: Omit<ToolDeclaration<output<Schema>, Output>, 'input'> & { readonly input: Schema },
+): ToolDeclaration<output<Schema>, Output> {
+  return Object.freeze({ ...declaration }) as ToolDeclaration<output<Schema>, Output>;
+}
+
 /** The closed union accepted at an application root or inside a compiled Index. */
-export type NodeDeclaration = RoleDeclaration | SkillDeclaration | ToolDeclaration;
+export type NodeDeclaration = RoleDeclaration | SkillDeclaration | ToolDeclaration<never, unknown>;
 
 /** The lazy application composition root. */
 export interface ApplicationDeclaration {

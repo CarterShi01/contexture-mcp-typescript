@@ -17,7 +17,7 @@ export interface ToolBinding {
 
 /** Create the only schema/validation/invocation binding for a declared Tool. */
 export function bindTool<Input, Output>(declaration: ToolDeclaration<Input, Output>): ToolBinding {
-  const schema = requireObjectSchema(declaration.input);
+  const schema = requireObjectSchema(declaration.input) as ZodType<Input>;
   const jsonSchema = normalizeSchema(z.toJSONSchema(schema, { io: 'input' }));
   return Object.freeze({
     schema: Object.freeze(jsonSchema),
@@ -31,8 +31,10 @@ export function bindTool<Input, Output>(declaration: ToolDeclaration<Input, Outp
 
 function requireObjectSchema<Input>(schema: ZodType<Input>): ZodType<Input> {
   const rendered = z.toJSONSchema(schema, { io: 'input' });
-  if (rendered.type !== 'object') {
-    throw new ModelValidationError('A Contexture Tool input schema must describe a JSON object.');
+  if (rendered.type !== 'object' || rendered.additionalProperties !== false) {
+    throw new ModelValidationError(
+      'A Contexture Tool input schema must be a strict JSON object; unknown properties are not permitted.',
+    );
   }
   return schema;
 }

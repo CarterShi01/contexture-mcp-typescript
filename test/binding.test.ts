@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { z } from 'zod';
 
-import { compileApplication, defineApplication, InputValidationError } from '../src/index.js';
+import {
+  compileApplication,
+  defineApplication,
+  InputValidationError,
+  ModelValidationError,
+} from '../src/index.js';
 
 test('one Tool Binding discloses the schema it validates before calling its handler', async () => {
   let calls = 0;
@@ -87,5 +92,27 @@ test('Tool input schemas cover nullable values, arrays, enums, nested objects, a
   await assert.rejects(
     tool.binding.call({ nullable: null, items: [{ id: 'wrong' }], status: 'other', choice: 2 }, {}),
     InputValidationError,
+  );
+});
+
+test('a Tool rejects a permissive object schema before it can disclose a misleading contract', () => {
+  assert.throws(
+    () =>
+      compileApplication(
+        defineApplication({
+          name: 'permissive',
+          roots: [
+            () => ({
+              kind: 'tool',
+              name: 'bad',
+              description: 'Bad schema.',
+              readOnly: true,
+              input: z.object({ value: z.string() }),
+              invoke: () => undefined,
+            }),
+          ],
+        }),
+      ),
+    ModelValidationError,
   );
 });
