@@ -24,6 +24,7 @@ export interface DisclosureApplication {
   readonly index: CompiledApplication;
   readonly disclosure: Disclosure;
   readonly publications: Publications;
+  readonly telemetry: Telemetry;
 }
 
 /** Compile all runtime surfaces with Prompt reservations applied to model navigation. */
@@ -51,10 +52,15 @@ export function compileStructuralApplication(
 ): DisclosureApplication {
   const normalized = defineApplication(declaration);
   const index = compileDisclosureApplication(normalized);
-  const disclosure = new Disclosure(index, { reserved: reservedPromptRefs(normalized) });
+  const telemetry = normalized.telemetry ?? new InMemoryTelemetry();
+  const disclosure = new Disclosure(index, {
+    reserved: reservedPromptRefs(normalized),
+    telemetry,
+  });
   return Object.freeze({
     index,
     disclosure,
+    telemetry,
     publications: new Publications(disclosure, undefined, normalized),
   });
 }

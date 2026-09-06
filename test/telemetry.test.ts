@@ -14,7 +14,7 @@ import {
   Disclosure,
   type Telemetry,
 } from '../src/core/index.js';
-import { compileRuntimeApplication } from '../src/server/index.js';
+import { compileRuntimeApplication, compileStructuralApplication } from '../src/server/index.js';
 
 test('telemetry aggregates actual Role/Skill opens and Tool outcomes, never discover or Tool open', async () => {
   const collector = new InMemoryTelemetry();
@@ -82,6 +82,11 @@ test('telemetry aggregates actual Role/Skill opens and Tool outcomes, never disc
     errorCount: 1,
     lastUsedAt: collector.usage('operations/fail').lastUsedAt,
   });
+  for (const ref of ['operations', 'operations/diagnose', 'operations/status', 'operations/fail']) {
+    const timestamp = collector.usage(ref).lastUsedAt;
+    if (typeof timestamp !== 'string') assert.fail(`Expected a timestamp for ${ref}.`);
+    assert.equal(Number.isNaN(Date.parse(timestamp)), false);
+  }
   assert.deepEqual(collector.usage('missing'), {
     ref: 'missing',
     callCount: 0,
@@ -122,5 +127,59 @@ test('telemetry is concurrent and exporter failures or throws cannot replace out
     await new ApplicationRuntime(index, { telemetry: broken }).invokeReadOnly('status'),
     'ok',
   );
+  const failingIndex = compileApplication(
+    defineApplication({
+      name: 'failing',
+      roots: [
+        () => ({
+          kind: 'tool',
+          name: 'fail',
+          description: 'Fail.',
+          readOnly: true,
+          input: z.strictObject({}),
+          invoke: () => {
+            throw new Error('original business failure');
+          },
+        }),
+      ],
+    }),
+  );
+  await assert.rejects(
+    new ApplicationRuntime(failingIndex, { telemetry: broken }).invokeReadOnly('fail'),
+    /original business failure/,
+  );
   await reportTelemetry(broken, 'ignored', true);
+  assert.throws(() => currentTelemetry(), /No Contexture Tool invocation is active/);
+});
+
+test('disclosure-only compilation shares its declared collector for Role and Skill opens', () => {
+  const collector = new InMemoryTelemetry();
+  const application = compileStructuralApplication(
+    defineApplication({
+      name: 'structural-telemetry',
+      telemetry: collector,
+      roots: [
+        () => ({
+          kind: 'role',
+          name: 'operations',
+          description: 'Operate.',
+          instructions: 'Inspect.',
+          skills: [
+            () => ({
+              kind: 'skill',
+              name: 'diagnose',
+              description: 'Diagnose.',
+              instructions: 'Read.',
+            }),
+          ],
+        }),
+      ],
+    }),
+  );
+  assert.strictEqual(application.telemetry, collector);
+  assert.strictEqual(application.disclosure.telemetry, collector);
+  application.disclosure.open('operations');
+  application.disclosure.open('operations/diagnose');
+  assert.equal(collector.usage('operations').callCount, 1);
+  assert.equal(collector.usage('operations/diagnose').callCount, 1);
 });
