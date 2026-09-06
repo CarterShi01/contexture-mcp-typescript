@@ -35,7 +35,7 @@ export function defineApplication(declaration: ApplicationDeclaration): Applicat
   }
 
   return Object.freeze({
-    name: declaration.name,
+    name: declaration.name.trim(),
     roots: Object.freeze([...declaration.roots]),
     ...(declaration.promptRoots === undefined
       ? {}

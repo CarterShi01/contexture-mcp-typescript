@@ -26,7 +26,7 @@ test('the public specification identity matches the conformance lock', async () 
 test('application declaration is lazy', () => {
   let constructions = 0;
   const application = defineApplication({
-    name: 'operations',
+    name: ' operations ',
     roots: [
       () => {
         constructions += 1;
@@ -65,6 +65,13 @@ test('application declaration rejects an empty model root set', () => {
   assert.throws(
     () => defineApplication({ name: 'empty', roots: [] }),
     /at least one model-visible root/,
+  );
+});
+
+test('application declaration rejects a blank name', () => {
+  assert.throws(
+    () => defineApplication({ name: ' \t', roots: [() => ({}) as never] }),
+    /name must not be empty/,
   );
 });
 
