@@ -55,3 +55,8 @@ export function defineApplication(declaration: ApplicationDeclaration): Applicat
         }),
   });
 }
+
+/** Python's `Contexture(...)` declaration concept, expressed as a native factory. */
+export function Contexture(declaration: ApplicationDeclaration): ApplicationDeclaration {
+  return defineApplication(declaration);
+}

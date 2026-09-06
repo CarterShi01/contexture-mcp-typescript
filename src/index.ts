@@ -8,7 +8,7 @@ export {
   CONTEXTURE_SPECIFICATION_REVISION,
   CONTEXTURE_SPECIFICATION_VERSION,
 } from './core/foundation/specification.js';
-export { defineApplication } from './application.js';
+export { Contexture, defineApplication } from './application.js';
 export type { ApplicationDeclaration } from './application.js';
 export { defineTool } from './core/model/declarations.js';
 export type {
