@@ -1,4 +1,5 @@
 import { ContextureError } from '../core/foundation/errors.js';
+import { isLogLevel, type LogLevel } from './logging.js';
 
 export type Transport = 'stdio' | 'streamable-http';
 
@@ -21,6 +22,7 @@ export class ContextureOptions {
   readonly allowedHosts: readonly string[];
   readonly allowedOrigins: readonly string[];
   readonly allowAnonymous: boolean;
+  readonly logLevel: LogLevel;
 
   constructor(
     options: {
@@ -31,6 +33,7 @@ export class ContextureOptions {
       readonly allowedHosts?: Iterable<string>;
       readonly allowedOrigins?: Iterable<string>;
       readonly allowAnonymous?: boolean;
+      readonly logLevel?: LogLevel;
     } = {},
   ) {
     this.transport = options.transport ?? 'stdio';
@@ -40,6 +43,7 @@ export class ContextureOptions {
     this.allowedHosts = Object.freeze([...(options.allowedHosts ?? [])]);
     this.allowedOrigins = Object.freeze([...(options.allowedOrigins ?? [])]);
     this.allowAnonymous = options.allowAnonymous ?? false;
+    this.logLevel = options.logLevel ?? 'info';
     this.validate();
     Object.freeze(this);
   }
@@ -61,6 +65,8 @@ export class ContextureOptions {
   }
 
   private validate(): void {
+    if (!isLogLevel(this.logLevel))
+      throw new ServeError(`Unknown Contexture log level ${JSON.stringify(this.logLevel)}.`);
     if (this.transport !== 'stdio' && this.transport !== 'streamable-http') {
       throw new ServeError(`Unknown Contexture transport ${JSON.stringify(this.transport)}.`);
     }

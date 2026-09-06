@@ -197,6 +197,11 @@ Host/network configuration. Non-loopback startup requires the corresponding
 Host, origin, and anonymous-access decisions; see the server option errors
 rather than weakening them.
 
+`ContextureOptions` also accepts `logLevel: 'debug' | 'info' | 'warn' |
+'error'` for programmatic startup. Contexture lifecycle records always use
+stderr, so MCP stdio owns stdout exclusively. `configureLogging(level)` is
+available when an embedding Host needs to establish that policy before startup.
+
 For Claude Code, Cursor, or Codex configuration, use `Launch` from
 `@contexture/mcp/server`. It renders host configuration from the server command
 instead of duplicating the application's declared context.

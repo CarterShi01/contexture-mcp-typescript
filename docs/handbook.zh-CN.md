@@ -176,6 +176,10 @@ stdio 是默认 transport。只有在明确配置 Host 与网络时才使用 `--
 非 loopback 启动需要对应的 Host、origin 和 anonymous-access 决策；应处理 server option error，
 而不是放宽这些限制。
 
+程序化启动时，`ContextureOptions` 还接受 `logLevel: 'debug' | 'info' | 'warn' |
+'error'`。Contexture 的生命周期日志始终写入 stderr，因此 MCP stdio 独占 stdout。
+嵌入式 Host 若需在启动前建立该策略，可使用 `configureLogging(level)`。
+
 Claude Code、Cursor 和 Codex 配置请使用 `@contexture/mcp/server` 的 `Launch`。它从 server
 command 渲染 Host configuration，而不是复制 application 已声明的 context。
 

@@ -21,6 +21,7 @@ import { RootSelection } from '../core/model/root-selection.js';
 import { compileRuntimeApplication, type RuntimeApplication } from './application.js';
 import { createContextureMcpServer, type ContextureMcpServer } from './index.js';
 import { ContextureOptions } from './options.js';
+import { configureLogging, log } from './logging.js';
 import { Auth, principalOf } from './identity.js';
 import type { RootSelector } from './root-selector.js';
 
@@ -80,6 +81,7 @@ export class ContextureServer {
   async start(
     options: ContextureOptions = new ContextureOptions(),
   ): Promise<HttpServerHandle | undefined> {
+    configureLogging(options.logLevel);
     return options.transport === 'stdio' ? this.serveStdio() : this.listenHttp(options);
   }
 
@@ -163,6 +165,7 @@ export class ContextureServer {
             stop?.();
           },
         });
+        log('info', `Serving MCP on ${handle.url}`);
         started?.(handle);
         await stopped;
         await handler.close();

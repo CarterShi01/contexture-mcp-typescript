@@ -46,6 +46,8 @@ export {
   LOOPBACK,
   ServeError,
 } from './options.js';
+export { configureLogging, LOG_LEVELS } from './logging.js';
+export type { LogLevel } from './logging.js';
 export type { Transport } from './options.js';
 export { buildServer, ContextureServer, PACKAGE_VERSION } from './server.js';
 export type { HttpServerHandle } from './server.js';
