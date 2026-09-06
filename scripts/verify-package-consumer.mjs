@@ -55,7 +55,7 @@ try {
     "import { Principal, currentPrincipal, defineApplication } from '@contexture/mcp';",
     "import { trace } from '@contexture/mcp/inspection';",
     "import { newProject } from '@contexture/mcp/cli';",
-    "import { compileRuntimeApplication, HeaderRootSelector } from '@contexture/mcp/server';",
+    "import { Auth, compileRuntimeApplication, HeaderRootSelector } from '@contexture/mcp/server';",
     "import { RestRouter } from '@contexture/mcp/web';",
     "if (typeof defineApplication !== 'function') throw new Error('missing declaration facade');",
     "if (typeof Principal !== 'function' || typeof currentPrincipal !== 'function') throw new Error('missing root request facts');",
@@ -63,6 +63,7 @@ try {
     "if (typeof newProject !== 'function') throw new Error('missing CLI scaffold API');",
     "if (typeof compileRuntimeApplication !== 'function') throw new Error('missing server facade');",
     "if (typeof HeaderRootSelector !== 'function') throw new Error('missing root selection facade');",
+    "if (typeof Auth !== 'function') throw new Error('missing identity facade');",
     "if (typeof RestRouter !== 'function') throw new Error('missing web facade');",
   ].join('\n');
   await writeFile(path.join(temporaryRoot, 'consumer.mjs'), consumer, 'utf8');
