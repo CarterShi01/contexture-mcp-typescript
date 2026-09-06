@@ -6,7 +6,12 @@ import {
 } from 'node:http';
 import { Readable } from 'node:stream';
 
-import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/server';
+import {
+  createMcpHandler,
+  hostHeaderValidationResponse,
+  originValidationResponse,
+  type McpRequestContext,
+} from '@modelcontextprotocol/server';
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
 import type { ApplicationDeclaration } from '../application.js';
@@ -16,7 +21,8 @@ import { RootSelection } from '../core/model/root-selection.js';
 import { compileRuntimeApplication, type RuntimeApplication } from './application.js';
 import { createContextureMcpServer, type ContextureMcpServer } from './index.js';
 import { ContextureOptions } from './options.js';
-import { Auth } from './identity.js';
+import { Auth, principalOf } from './identity.js';
+import type { RootSelector } from './root-selector.js';
 
 export const PACKAGE_VERSION = '0.12.0rc1';
 
@@ -33,6 +39,7 @@ export class ContextureServer {
   readonly version: string;
   readonly selection: RootSelection;
   readonly auth: Auth | undefined;
+  readonly rootSelector: RootSelector | undefined;
 
   constructor(
     declaration: ApplicationDeclaration,
@@ -40,6 +47,7 @@ export class ContextureServer {
       readonly version?: string;
       readonly selection?: RootSelection;
       readonly auth?: Auth;
+      readonly rootSelector?: RootSelector;
     } = {},
   ) {
     this.application = compileRuntimeApplication(declaration);
@@ -47,16 +55,22 @@ export class ContextureServer {
     this.version = options.version ?? PACKAGE_VERSION;
     this.selection = (options.selection ?? RootSelection.all()).resolve(this.application.index);
     this.auth = options.auth;
+    this.rootSelector = options.rootSelector;
     Object.freeze(this);
   }
 
   /** Build a fresh official-SDK adapter for one transport connection or HTTP service. */
   build(): ContextureMcpServer {
+    return this.buildForSelection(this.selection);
+  }
+
+  /** Build one fresh adapter whose complete public surface is fixed by selection. */
+  private buildForSelection(selection: RootSelection): ContextureMcpServer {
     return createContextureMcpServer(
       { name: this.name, version: this.version },
       new Gateway(this.application.disclosure, this.application.runtime),
       this.application.publications,
-      { selection: this.selection },
+      { selection },
     );
   }
 
@@ -90,18 +104,13 @@ export class ContextureServer {
     });
     void this.application.runtime
       .serve(async () => {
-        const adapter = this.build();
-        const transport = new WebStandardStreamableHTTPServerTransport({
-          sessionIdGenerator: undefined,
-          enableJsonResponse: true,
-          ...(options.allowedHosts.length === 0 ? {} : { allowedHosts: [...options.allowedHosts] }),
-          ...(options.allowedOrigins.length === 0
-            ? {}
-            : { allowedOrigins: [...options.allowedOrigins] }),
-          enableDnsRebindingProtection:
-            options.allowedHosts.length > 0 || options.allowedOrigins.length > 0,
-        });
-        await adapter.server.connect(transport);
+        const handler = createMcpHandler(
+          (context) => this.buildForSelection(this.selectionForRequest(context)).server,
+          {
+            responseMode: 'json',
+          },
+        );
+        const gate = this.auth?.gate();
         const node = createServer(async (request, response) => {
           try {
             if (new URL(request.url ?? '/', options.url).pathname !== options.resolvedPath) {
@@ -109,15 +118,25 @@ export class ContextureServer {
               return;
             }
             const webRequest = nodeRequest(request, options);
-            const authInfo =
-              this.auth === undefined ? undefined : await this.auth.gate()(webRequest);
+            const rejected =
+              (options.allowedHosts.length === 0
+                ? undefined
+                : hostHeaderValidationResponse(webRequest, [...options.allowedHosts])) ??
+              (options.allowedOrigins.length === 0
+                ? undefined
+                : originValidationResponse(webRequest, [...options.allowedOrigins]));
+            if (rejected !== undefined) {
+              await writeResponse(response, rejected);
+              return;
+            }
+            const authInfo = gate === undefined ? undefined : await gate(webRequest);
             if (authInfo instanceof Response) {
               await writeResponse(response, authInfo);
               return;
             }
             await writeResponse(
               response,
-              await transport.handleRequest(webRequest, authInfo === undefined ? {} : { authInfo }),
+              await handler.fetch(webRequest, authInfo === undefined ? {} : { authInfo }),
             );
           } catch (error) {
             response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
@@ -129,7 +148,7 @@ export class ContextureServer {
         try {
           await listen(node, options.resolvedHost, options.resolvedPort);
         } catch (error) {
-          await adapter.server.close();
+          await handler.close();
           throw error;
         }
         const address = node.address();
@@ -144,10 +163,20 @@ export class ContextureServer {
         });
         started?.(handle);
         await stopped;
-        await adapter.server.close();
+        await handler.close();
       })
       .catch((error: unknown) => failed?.(error));
     return ready;
+  }
+
+  /** Resolve the request-local root surface only for HTTP factory instances. */
+  private selectionForRequest(context: McpRequestContext): RootSelection {
+    if (this.rootSelector === undefined || context.requestInfo === undefined) return this.selection;
+    return this.rootSelector.select(
+      this.application.index,
+      Object.fromEntries(context.requestInfo.headers.entries()),
+      principalOf(context.authInfo),
+    );
   }
 }
 
@@ -158,6 +187,7 @@ export function buildServer(
     readonly version?: string;
     readonly selection?: RootSelection;
     readonly auth?: Auth;
+    readonly rootSelector?: RootSelector;
   } = {},
 ): ContextureServer {
   return new ContextureServer(declaration, options);

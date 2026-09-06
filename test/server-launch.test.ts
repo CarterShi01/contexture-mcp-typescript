@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { Principal } from '../src/index.js';
+import { z } from 'zod';
+
+import { defineApplication, Principal } from '../src/index.js';
 import { app } from '../src/demo/server.js';
-import { Auth, buildServer, ContextureOptions } from '../src/server/index.js';
+import { Auth, buildServer, ContextureOptions, HeaderRootSelector } from '../src/server/index.js';
 
 test('the native streamable HTTP launcher binds the official MCP transport and closes cleanly', async () => {
   const server = buildServer(app);
@@ -58,6 +60,62 @@ test('the HTTP launcher rejects an unauthenticated request before MCP dispatch',
       body: '{}',
     });
     assert.notEqual(accepted.status, 401);
+  } finally {
+    await handle.close();
+  }
+});
+
+test('the HTTP root selector constructs independent root surfaces per request', async () => {
+  const selected = defineApplication({
+    name: 'per-request-roots',
+    roots: [
+      () => ({
+        kind: 'tool',
+        name: 'alpha',
+        description: 'Alpha root.',
+        readOnly: true,
+        input: z.strictObject({}),
+        invoke: () => 'alpha',
+      }),
+      () => ({
+        kind: 'tool',
+        name: 'beta',
+        description: 'Beta root.',
+        readOnly: true,
+        input: z.strictObject({}),
+        invoke: () => 'beta',
+      }),
+    ],
+  });
+  const server = buildServer(selected, { rootSelector: new HeaderRootSelector() });
+  const handle = await server.start(
+    new ContextureOptions({ transport: 'streamable-http', port: 0 }),
+  );
+  if (handle === undefined) throw new Error('HTTP startup unexpectedly returned no listener.');
+  try {
+    const callDiscover = (root: string) =>
+      fetch(handle.url, {
+        method: 'POST',
+        headers: {
+          accept: 'application/json, text/event-stream',
+          'content-type': 'application/json',
+          'contexture-roots': root,
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: root,
+          method: 'tools/call',
+          params: { name: 'contexture_discover', arguments: {} },
+        }),
+      });
+    const [alpha, beta] = await Promise.all([callDiscover('alpha'), callDiscover('beta')]);
+    assert.equal(alpha.status, 200);
+    assert.equal(beta.status, 200);
+    const [alphaBody, betaBody] = await Promise.all([alpha.text(), beta.text()]);
+    assert.match(alphaBody, /alpha/);
+    assert.doesNotMatch(alphaBody, /beta/);
+    assert.match(betaBody, /beta/);
+    assert.doesNotMatch(betaBody, /alpha/);
   } finally {
     await handle.close();
   }
