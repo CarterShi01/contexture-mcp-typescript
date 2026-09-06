@@ -22,6 +22,14 @@ export type {
   CompiledSkill,
   CompiledTool,
 } from './compiler.js';
+export { Disclosure, RefusedError } from './disclosure.js';
+export type { Discovery, RoutingCard } from './disclosure.js';
+export {
+  RootOutsideSelectionError,
+  RootSelection,
+  RootSelectionError,
+  SelectedGraph,
+} from './root-selection.js';
 export { bindTool } from './binding.js';
 export type { JsonObject, JsonValue, ToolBinding } from './binding.js';
 export {
