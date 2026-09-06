@@ -1,0 +1,13 @@
+/** Text owned by the server audience rather than the object model. */
+export const PREAMBLE = `Everything this server offers is behind contexture_open. Start from the list
+below: open the role that fits the task to see its skills, tools and
+sub-roles, then open the skill you chose for its procedure. Each call
+reveals one level; keep opening down the branch that fits.
+Run a tool with contexture_invoke_read_only or contexture_invoke, whichever its
+card says, passing the ref and arguments from that card.
+Collect evidence before stating a cause; never assert system state you have
+not read.`;
+
+/** The reference rule appended after a server's bootstrap roster. */
+export const REF_RULE =
+  'Every card carries a `ref`. Pass it back to contexture_open to open that node; never assemble a ref yourself.';

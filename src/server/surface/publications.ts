@@ -5,6 +5,7 @@ import type { ResourceDeclaration } from '../../core/mcp-interface/resource.js';
 import { Disclosure } from '../../core/model/disclosure.js';
 import { ApplicationRuntime } from '../../core/model/runtime.js';
 import { RootSelection, SelectedGraph } from '../../core/model/root-selection.js';
+import { buildInstructions } from '../instructions.js';
 
 const OPEN = 'contexture_open';
 const READ_ONLY = 'contexture_invoke_read_only';
@@ -111,34 +112,7 @@ export class Publications {
   }
 
   instructions(selection: RootSelection = RootSelection.all()): string {
-    const view = this.disclosure.select(selection);
-    const lines = [
-      `Everything this server offers is behind ${OPEN}. Start from the list`,
-      'below: open the role that fits the task to see its skills, tools and',
-      'sub-roles, then open the skill you chose for its procedure. Each call',
-      'reveals one level; keep opening down the branch that fits.',
-      `Run a tool with ${READ_ONLY} or ${INVOKE}, whichever its`,
-      'card says, passing the ref and arguments from that card.',
-      'Collect evidence before stating a cause; never assert system state you have',
-      'not read.',
-      '',
-      'Capabilities:',
-    ];
-    const queue = [...view.index.modelRoots].filter((node) =>
-      view.modelCanSee(view.index.refOf(node)),
-    );
-    while (queue.length > 0) {
-      const node = queue.shift();
-      if (node === undefined) break;
-      const ref = view.index.refOf(node);
-      lines.push(`- ${ref}: ${node.description}`);
-      if (node.kind === 'role') queue.push(...node.children);
-    }
-    lines.push(
-      '',
-      `Every card carries a \`ref\`. Pass it back to ${OPEN} to open that node; never assemble a ref yourself.`,
-    );
-    return lines.join('\n');
+    return buildInstructions(this.disclosure.select(selection));
   }
 
   private async openForPerson(ref: string, selection: RootSelection): Promise<string> {

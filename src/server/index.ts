@@ -13,6 +13,13 @@ export { Gateway, GATEWAY } from '../core/model/system-api.js';
 export type { GatewayTool } from '../core/model/system-api.js';
 export { Publications } from './surface/publications.js';
 export type { PromptCard, ResourceCard } from './surface/publications.js';
+export {
+  buildInstructions,
+  INSTRUCTIONS_LIMIT,
+  neutralInstructions,
+  ROSTER_BUDGET,
+  SELF_CONTAINED_PREFIX,
+} from './instructions.js';
 
 /** Metadata required to identify a Contexture MCP server. */
 export interface ServerIdentity {
