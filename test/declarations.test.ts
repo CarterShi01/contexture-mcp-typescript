@@ -5,7 +5,11 @@ import test from 'node:test';
 import {
   CONTEXTURE_SPECIFICATION_REVISION,
   CONTEXTURE_SPECIFICATION_VERSION,
+  ContextureError,
+  DeclarationError,
   defineApplication,
+  ModelValidationError,
+  NodeNotFoundError,
 } from '../src/index.js';
 
 test('the binding identifies its Contexture specification', () => {
@@ -44,4 +48,10 @@ test('application declaration rejects an empty model root set', () => {
     () => defineApplication({ name: 'empty', roots: [] }),
     /at least one model-visible root/,
   );
+});
+
+test('the declaration facade exports the documented Contexture error hierarchy', () => {
+  assert.ok(new ModelValidationError('invalid') instanceof ContextureError);
+  assert.ok(new DeclarationError('invalid') instanceof ModelValidationError);
+  assert.ok(new NodeNotFoundError('missing') instanceof ContextureError);
 });

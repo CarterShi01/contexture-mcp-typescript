@@ -1,10 +1,10 @@
 import { z, type ZodType } from 'zod';
 
 import type { ToolCallContext, ToolDeclaration } from './declarations.js';
-import { InputValidationError, ModelValidationError } from './errors.js';
+import { InputValidationError, ModelValidationError } from '../foundation/errors.js';
 
 /** JSON values admitted by a Contexture wire boundary. */
-export type JsonValue = boolean | number | string | null | JsonObject | JsonValue[];
+export type JsonValue = boolean | number | string | null | JsonObject | readonly JsonValue[];
 export interface JsonObject {
   readonly [key: string]: JsonValue;
 }
@@ -25,7 +25,7 @@ export function bindTool<Input, Output>(declaration: ToolDeclaration<Input, Outp
   const schema = requireObjectSchema(declaration.input) as ZodType<Input>;
   const jsonSchema = normalizeSchema(z.toJSONSchema(schema, { io: 'input' }));
   return Object.freeze({
-    schema: Object.freeze(jsonSchema),
+    schema: jsonSchema,
     async call(arguments_: unknown, context: ToolCallContext): Promise<Output> {
       const parsed = schema.safeParse(arguments_ ?? {});
       if (!parsed.success) throw new InputValidationError(declaration.name, parsed.error.issues);
@@ -66,7 +66,7 @@ function normalizeObject(value: Record<string, unknown>): JsonObject {
       continue;
     result[key] = normalizeValue(item);
   }
-  return result;
+  return Object.freeze(result);
 }
 
 function orderedEntries(value: Record<string, unknown>): readonly (readonly [string, unknown])[] {
@@ -94,7 +94,7 @@ function normalizeValue(value: unknown): JsonValue {
   ) {
     return value;
   }
-  if (Array.isArray(value)) return value.map(normalizeValue);
+  if (Array.isArray(value)) return Object.freeze(value.map(normalizeValue));
   if (typeof value === 'object') return normalizeObject(value as Record<string, unknown>);
   throw new ModelValidationError('A Tool input schema contains a non-JSON value.');
 }

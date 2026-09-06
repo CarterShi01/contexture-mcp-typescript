@@ -2,12 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { z } from 'zod';
 
-import {
-  compileApplication,
-  defineApplication,
-  InputValidationError,
-  ModelValidationError,
-} from '../src/index.js';
+import { defineApplication, InputValidationError, ModelValidationError } from '../src/index.js';
+import { compileApplication } from '../src/core/index.js';
 
 test('one Tool Binding discloses the schema it validates before calling its handler', async () => {
   let calls = 0;
@@ -51,6 +47,21 @@ test('one Tool Binding discloses the schema it validates before calling its hand
       },
     },
     required: ['service'],
+  });
+  assert.throws(() => {
+    const properties = binding.schema.properties as Record<string, { type: string }>;
+    const service = properties.service;
+    if (service === undefined) throw new Error('Expected service schema.');
+    service.type = 'number';
+  }, TypeError);
+  assert.deepEqual(binding.schema.properties, {
+    service: { type: 'string' },
+    retries: { type: 'integer' },
+    labels: {
+      type: 'object',
+      propertyNames: { type: 'string' },
+      additionalProperties: { type: 'string' },
+    },
   });
   await assert.rejects(binding.call({ service: 'api', extra: true }, {}), InputValidationError);
   assert.equal(calls, 0);

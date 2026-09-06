@@ -2,15 +2,15 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { z } from 'zod';
 
+import { defineApplication } from '../src/index.js';
 import {
   compileApplication,
-  defineApplication,
   Disclosure,
   RefusedError,
   RootOutsideSelectionError,
   RootSelection,
   SelectedGraph,
-} from '../src/index.js';
+} from '../src/core/index.js';
 
 function view(): Disclosure {
   return new Disclosure(

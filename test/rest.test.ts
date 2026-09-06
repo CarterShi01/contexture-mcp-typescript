@@ -2,14 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { z } from 'zod';
 
-import {
-  ApplicationRuntime,
-  compileApplication,
-  defineApplication,
-  defineTool,
-  ModelValidationError,
-} from '../src/index.js';
-import { RestRouter } from '../src/server/index.js';
+import { defineApplication, defineTool, ModelValidationError } from '../src/index.js';
+import { ApplicationRuntime, compileApplication } from '../src/core/index.js';
+import { RestRouter } from '../src/web/index.js';
 
 function runtime(): ApplicationRuntime {
   return new ApplicationRuntime(

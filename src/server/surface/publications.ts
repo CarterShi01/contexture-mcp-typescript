@@ -1,12 +1,10 @@
-import type {
-  ApplicationDeclaration,
-  PromptDeclaration,
-  ResourceDeclaration,
-} from './declarations.js';
-import { ModelValidationError } from './errors.js';
-import { Disclosure } from './disclosure.js';
-import { ApplicationRuntime } from './runtime.js';
-import { RootSelection, SelectedGraph } from './root-selection.js';
+import type { ApplicationDeclaration } from '../../application.js';
+import { ModelValidationError } from '../../core/foundation/errors.js';
+import type { PromptDeclaration } from '../../core/mcp-interface/prompt.js';
+import type { ResourceDeclaration } from '../../core/mcp-interface/resource.js';
+import { Disclosure } from '../../core/model/disclosure.js';
+import { ApplicationRuntime } from '../../core/model/runtime.js';
+import { RootSelection, SelectedGraph } from '../../core/model/root-selection.js';
 
 const OPEN = 'contexture_open';
 const READ_ONLY = 'contexture_invoke_read_only';
@@ -35,8 +33,12 @@ export class Publications {
     readonly runtime: ApplicationRuntime | undefined,
     declaration: Pick<ApplicationDeclaration, 'prompts' | 'resources'> = {},
   ) {
-    this.prompts = Object.freeze([...(declaration.prompts ?? [])]);
-    this.resources = Object.freeze([...(declaration.resources ?? [])]);
+    this.prompts = Object.freeze(
+      (declaration.prompts ?? []).map((entry) => Object.freeze({ ...entry })),
+    );
+    this.resources = Object.freeze(
+      (declaration.resources ?? []).map((entry) => Object.freeze({ ...entry })),
+    );
     validatePrompts(disclosure, this.prompts);
     validateResources(disclosure, runtime, this.resources);
     Object.freeze(this);

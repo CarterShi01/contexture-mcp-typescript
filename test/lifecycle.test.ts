@@ -2,13 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { z } from 'zod';
 
+import { defineApplication, type Channels } from '../src/index.js';
 import {
   ApplicationRuntime,
   compileApplication,
   compileDisclosureApplication,
-  defineApplication,
-  type Channels,
-} from '../src/index.js';
+} from '../src/core/index.js';
 
 test('Channels opens before serving, closes while acquisitions live, then unwinds in reverse', async () => {
   const events: string[] = [];
@@ -87,6 +86,39 @@ test('partial Channel open unwinds acquisitions, preserves its primary failure, 
     (error: unknown) => error === primary,
   );
   assert.deepEqual(events, ['cleanup']);
+});
+
+test('cleanup reporting cannot replace a frozen primary failure', async () => {
+  const primary = Object.freeze(new Error('serve failed'));
+  const runtime = new ApplicationRuntime(
+    compileApplication(
+      defineApplication({
+        name: 'frozen-primary',
+        channels: {
+          open(registrar) {
+            registrar.defer(() => {
+              throw new Error('cleanup failed');
+            });
+          },
+          close: () => undefined,
+        },
+        roots: [
+          () => ({
+            kind: 'skill',
+            name: 'read',
+            description: 'Read.',
+            instructions: 'Read.',
+          }),
+        ],
+      }),
+    ),
+  );
+  await assert.rejects(
+    runtime.serve(async () => {
+      throw primary;
+    }),
+    (error: unknown) => error === primary,
+  );
 });
 
 test('disclosure-only compilation is fresh, unbound, and never acquires Channels or schemas', () => {

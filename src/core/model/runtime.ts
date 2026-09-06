@@ -1,7 +1,8 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 import type { CompiledApplication, CompiledTool } from './compiler.js';
-import { InputValidationError, ModelValidationError } from './errors.js';
+import { InputValidationError, ModelValidationError } from '../foundation/errors.js';
+import type { Principal } from '../foundation/principal.js';
 import { RefusedError } from './disclosure.js';
 import { RootSelection, SelectedGraph } from './root-selection.js';
 import type { ToolCallContext } from './declarations.js';
@@ -32,7 +33,7 @@ export class InMemoryTelemetry implements Telemetry {
 }
 
 interface RuntimeScope {
-  readonly principal: unknown;
+  readonly principal: Principal | undefined;
   readonly telemetry: Telemetry;
   readonly graph: SelectedGraph;
   readonly selection: RootSelection;
@@ -50,7 +51,7 @@ function requireScope(): RuntimeScope {
 }
 
 /** Request-local Contexture facts, available only while a Tool is running. */
-export function currentPrincipal(): unknown {
+export function currentPrincipal(): Principal | undefined {
   return requireScope().principal;
 }
 

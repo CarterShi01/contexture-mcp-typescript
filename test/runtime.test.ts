@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { z } from 'zod';
 
+import { defineApplication, defineTool, InputValidationError, Principal } from '../src/index.js';
 import {
   ApplicationRuntime,
   compileApplication,
@@ -9,15 +10,12 @@ import {
   currentPrincipal,
   currentRootSelection,
   currentTelemetry,
-  defineApplication,
-  defineTool,
   InMemoryTelemetry,
-  InputValidationError,
   RefusedError,
   RootOutsideSelectionError,
   RootSelection,
   type Telemetry,
-} from '../src/index.js';
+} from '../src/core/index.js';
 
 function runtime(telemetry: Telemetry = new InMemoryTelemetry()): ApplicationRuntime {
   return new ApplicationRuntime(
@@ -103,25 +101,48 @@ test('runtime validates via the disclosed Binding and enforces the fixed read/wr
 
 test('runtime scopes principal, graph, selection and telemetry to concurrent calls', async () => {
   const service = runtime();
+  const alice = new Principal({ subject: 'alice', scopes: ['status.read'] });
+  const bob = new Principal({ subject: 'bob', claims: { tenant: 'acme' } });
   const [first, second] = await Promise.all([
-    service.invokeReadOnly('operations/status', { value: 'one' }, { principal: 'alice' }),
-    service.invokeReadOnly('operations/status', { value: 'two' }, { principal: 'bob' }),
+    service.invokeReadOnly('operations/status', { value: 'one' }, { principal: alice }),
+    service.invokeReadOnly('operations/status', { value: 'two' }, { principal: bob }),
   ]);
   assert.deepEqual(first, {
     value: 'one',
-    principal: 'alice',
+    principal: alice,
     roots: ['operations', 'other'],
     selection: undefined,
     telemetry: currentTelemetryOutsideValue(first),
   });
   assert.deepEqual(second, {
     value: 'two',
-    principal: 'bob',
+    principal: bob,
     roots: ['operations', 'other'],
     selection: undefined,
     telemetry: currentTelemetryOutsideValue(second),
   });
   assert.throws(() => currentPrincipal(), /No Contexture Tool invocation is active/);
+});
+
+test('Principal snapshots claims and exposes identity without authorization policy', () => {
+  const claims = { tenant: 'acme' };
+  const principal = new Principal({
+    subject: 'ada',
+    clientId: 'codex',
+    issuer: 'https://issuer.example',
+    scopes: ['tools.read'],
+    claims,
+  });
+  claims.tenant = 'mutated';
+
+  assert.equal(principal.subject, 'ada');
+  assert.equal(principal.scopes.has('tools.read'), true);
+  assert.equal('add' in principal.scopes, false);
+  assert.deepEqual(principal.claims, { tenant: 'acme' });
+  assert.throws(() => {
+    (principal.claims as { tenant: string }).tenant = 'forbidden';
+  }, TypeError);
+  assert.match(principal.toString(), /Principal\(subject="ada"/);
 });
 
 test('requested selection can only attenuate an identity ceiling and governs the handler graph', async () => {

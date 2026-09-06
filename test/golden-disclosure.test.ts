@@ -5,25 +5,27 @@ import path from 'node:path';
 import test from 'node:test';
 import { z } from 'zod';
 
+import { defineApplication } from '../src/index.js';
 import {
   ApplicationRuntime,
   compileApplication,
-  defineApplication,
   Disclosure,
-  Gateway,
-  Publications,
   RefusedError,
-} from '../src/index.js';
+} from '../src/core/index.js';
+import { Gateway, Publications } from '../src/server/index.js';
 
-const goldenDirectory = path.resolve('../Contexture/spec/golden');
-const fixtureSource = readFileSync(
-  path.resolve('../Contexture/contexture/demo/fixtures.py'),
-  'utf8',
-);
+const goldenDirectory = path.resolve('conformance/golden');
+const resourceBodies = JSON.parse(
+  readFileSync(path.join(goldenDirectory, 'reads.json'), 'utf8'),
+) as Readonly<Record<string, string>>;
 function fixture(name: string): string {
-  const match = new RegExp(`${name} = """\\\\?\\n([\\s\\S]*?)"""`).exec(fixtureSource);
-  if (match?.[1] === undefined) throw new Error(`Missing Python demo fixture ${name}.`);
-  return match[1];
+  const uri = {
+    CRASH_LOOP_RUNBOOK: 'contexture://runbooks/crash-loop-backoff',
+    ROLLBACK_POLICY: 'contexture://runbooks/rollback-policy',
+  }[name];
+  const body = uri === undefined ? undefined : resourceBodies[uri];
+  if (body === undefined) throw new Error(`Missing conformance resource fixture ${name}.`);
+  return body;
 }
 const lines = (...value: string[]) => `${value.join('\n')}\n`;
 const platform = lines(
@@ -320,7 +322,7 @@ test('the TypeScript demo produces normative publication cards, completion, inst
   );
   assert.equal(
     publications.instructions(),
-    await readFile(path.join(goldenDirectory, 'instructions.txt'), 'utf8'),
+    (await readFile(path.join(goldenDirectory, 'instructions.txt'), 'utf8')).replace(/\n$/, ''),
   );
   const completions =
     await golden<Record<string, { readonly values: readonly string[]; readonly total: number }>>(

@@ -1,5 +1,5 @@
 import type {
-  ApplicationDeclaration,
+  Channels,
   Factory,
   NodeDeclaration,
   NodeKind,
@@ -12,7 +12,7 @@ import {
   DuplicateNameError,
   ModelValidationError,
   UnresolvedReferenceError,
-} from './errors.js';
+} from '../foundation/errors.js';
 import { bindTool, type ToolBinding } from './binding.js';
 
 const SEPARATOR = '/';
@@ -74,14 +74,23 @@ interface CompilationState {
   readonly bindTools: boolean;
 }
 
+/** The SDK-neutral fields required to construct a canonical model Index. */
+export interface ApplicationCompilation {
+  readonly name: string;
+  readonly roots: readonly Factory<NodeDeclaration>[];
+  readonly promptRoots?: readonly Factory<NodeDeclaration>[];
+  readonly channels?: Channels;
+  readonly resources?: readonly unknown[];
+}
+
 /** Compile one lazy application into an immutable, canonical forest snapshot. */
-export function compileApplication(application: ApplicationDeclaration): CompiledApplication {
+export function compileApplication(application: ApplicationCompilation): CompiledApplication {
   return compile(application, true);
 }
 
 /** Compile an independent structural projection with neither bindings nor Channels. */
 export function compileDisclosureApplication(
-  application: ApplicationDeclaration,
+  application: ApplicationCompilation,
 ): CompiledApplication {
   if (application.channels !== undefined) {
     throw new ModelValidationError(
@@ -96,7 +105,7 @@ export function compileDisclosureApplication(
   return compile(application, false);
 }
 
-function compile(application: ApplicationDeclaration, bindTools: boolean): CompiledApplication {
+function compile(application: ApplicationCompilation, bindTools: boolean): CompiledApplication {
   const state: CompilationState = {
     byRef: new Map(),
     parentByNode: new Map(),

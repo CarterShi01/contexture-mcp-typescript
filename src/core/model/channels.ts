@@ -1,4 +1,13 @@
-import type { Channels, CleanupRegistrar } from './declarations.js';
+/** Application-wide dependencies with an explicitly managed lifetime. */
+export interface Channels {
+  open(registrar: CleanupRegistrar): void | Promise<void>;
+  close(): void | Promise<void>;
+}
+
+/** Register cleanup immediately after acquiring a dependency. */
+export interface CleanupRegistrar {
+  defer(cleanup: () => void | Promise<void>): void;
+}
 
 /** Hold application dependencies open around one served operation. */
 export async function withChannels<Result>(
@@ -44,7 +53,14 @@ export async function withChannels<Result>(
 
 function attachSuppressed(primary: unknown, cleanup: unknown): void {
   if (typeof primary !== 'object' || primary === null) return;
-  const target = primary as { suppressed?: unknown[] };
-  target.suppressed ??= [];
-  target.suppressed.push(cleanup);
+  const target = primary as { suppressed?: readonly unknown[] };
+  try {
+    Object.defineProperty(target, 'suppressed', {
+      configurable: true,
+      value: Object.freeze([...(target.suppressed ?? []), cleanup]),
+    });
+  } catch {
+    // A frozen primary error still remains the primary error. Suppression
+    // metadata is best-effort and must never replace the failure being served.
+  }
 }

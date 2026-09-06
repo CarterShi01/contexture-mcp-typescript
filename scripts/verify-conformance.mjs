@@ -3,7 +3,7 @@ import process from 'node:process';
 
 const manifest = JSON.parse(readFileSync('conformance/specification.json', 'utf8'));
 const schema = JSON.parse(readFileSync('conformance/specification.schema.json', 'utf8'));
-const specificationSource = readFileSync('src/core/specification.ts', 'utf8');
+const specificationSource = readFileSync('src/core/foundation/specification.ts', 'utf8');
 
 const expectedRevision = 'e107a81a933c5eb5b4530e762311619be3a7a80f';
 const expectedVersion = '0.12';
@@ -113,6 +113,12 @@ for (const number of ruleNumbers) {
     }
     implemented.push(number);
   }
+}
+for (const fixture of expectedFixtures) {
+  if (!existsSync(`conformance/fixtures/${fixture}`)) fail(`fixture asset is missing: ${fixture}`);
+}
+for (const golden of expectedGolden) {
+  if (!existsSync(`conformance/golden/${golden}`)) fail(`golden asset is missing: ${golden}`);
 }
 if (!equalArray(manifest.implementedRules, implemented))
   fail('implementedRules disagrees with rule statuses');

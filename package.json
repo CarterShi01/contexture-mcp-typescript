@@ -42,6 +42,10 @@
       "types": "./dist/server/index.d.ts",
       "import": "./dist/server/index.js"
     },
+    "./web": {
+      "types": "./dist/web/index.d.ts",
+      "import": "./dist/web/index.js"
+    },
     "./package.json": "./package.json"
   },
   "types": "./dist/index.d.ts",
@@ -51,9 +55,10 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "check": "npm run conformance:check && npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run pack:check",
+    "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.build.json",
+    "check": "npm run conformance:check && npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run pack:check && npm run consumer:check",
     "conformance:check": "node scripts/verify-conformance.mjs",
+    "consumer:check": "node scripts/verify-package-consumer.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",

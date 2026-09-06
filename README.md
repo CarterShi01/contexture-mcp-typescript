@@ -3,7 +3,7 @@
 [简体中文](README.zh-CN.md)
 
 TypeScript implementation of Contexture, a progressive-disclosure framework
-for building MCP applications whose capabilities stay navigable as they grow.
+for building MCP applications whose capabilities remain navigable as they grow.
 
 Implementations:
 [Python](https://github.com/CarterShi01/contexture-mcp) ·
@@ -11,32 +11,87 @@ Implementations:
 [Go](https://github.com/CarterShi01/contexture-mcp-go) ·
 [Specification](https://github.com/CarterShi01/contexture-mcp/tree/master/spec)
 
-> **Status: scaffold, not released.** The package is intentionally marked
-> `private` until it satisfies the release gate. It currently establishes the
-> language-native API boundary, dependency layering, CI, and conformance lock;
-> it is not yet a usable replacement for the Python implementation.
+> **Status: 0.12 kernel-conformant prototype; full Python-product parity is in
+> progress.** All 16 conformance rules have focused execution evidence, but
+> CLI, scaffolding, inspection, demo, and full product-test parity remain
+> incomplete. The npm package stays private until those release gates pass.
 
-## Design boundary
+## Node model
 
-Contexture keeps business declarations separate from Host adapters:
+TypeScript uses declarations rather than Python-style runtime classes. The
+closed node set has explicit modules — `node.ts`, `role.ts`, `skill.ts`,
+and `tool.ts` — under `src/core/model/`; `declarations.ts` remains their
+compatibility barrel. The application composition root lives in
+`src/application.ts`:
 
-```text
-application declarations
-        ↓
-SDK-neutral core
-        ↓
-compile → disclose → invoke
-        ↓
-MCP and optional HTTP surfaces
+- `RoleDeclaration` is a responsibility and containment boundary.
+- `SkillDeclaration` is procedure followed by a model.
+- `ToolDeclaration` is an executable capability with one Zod-backed Binding.
+- `NodeDeclaration` is their discriminated union.
+
+The `kind` field performs the same distinction that the Python `Role`, `Skill`,
+and `Tool` classes perform. Interfaces disappear from emitted JavaScript; this
+is intentional TypeScript-native syntax, not a missing implementation.
+
+## Example
+
+```ts
+import { z } from 'zod';
+import { defineApplication, defineTool } from '@contexture/mcp';
+import {
+  compileRuntimeApplication,
+  createContextureMcpServer,
+  Gateway,
+} from '@contexture/mcp/server';
+
+const status = defineTool({
+  kind: 'tool',
+  name: 'status',
+  description: 'Return one service status.',
+  readOnly: true,
+  input: z.strictObject({ service: z.string() }),
+  invoke: ({ service }) => ({ service, healthy: true }),
+});
+
+const application = defineApplication({
+  name: 'operations',
+  roots: [
+    () => ({
+      kind: 'role',
+      name: 'operations',
+      description: 'Operate services.',
+      instructions: 'Inspect before changing anything.',
+      skills: [
+        () => ({
+          kind: 'skill',
+          name: 'diagnose',
+          description: 'Diagnose an unhealthy service.',
+          instructions: 'Read status and explain the evidence.',
+          uses: ['operations/status'],
+        }),
+      ],
+      tools: [() => status],
+    }),
+  ],
+});
+
+const compiled = compileRuntimeApplication(application);
+const gateway = new Gateway(compiled.disclosure, compiled.runtime);
+
+await gateway.open('operations');
+await gateway.invokeReadOnly('operations/status', { service: 'api' });
+
+const adapter = createContextureMcpServer({ name: 'operations', version: '0.1.0' }, gateway);
+// Connect adapter.server to an official MCP SDK transport chosen by the Host.
 ```
 
-The core must not import an MCP SDK. The `server` export is the adapter seam
-and currently proves integration with the official MCP TypeScript SDK without
-claiming that Contexture's fixed gateway has been implemented.
+Business Tools remain behind Contexture's four fixed gateway Tools. The core is
+SDK-neutral; `@contexture/mcp/server` is the official MCP SDK adapter boundary.
+An explicit REST allowlist is also available through `RestRouter`.
 
-## Development
+## Development and conformance
 
-Prerequisites are Node.js 20.19 or newer and npm 11.
+Requires Node.js 20.19 or newer and npm 11.
 
 ```bash
 git clone https://github.com/CarterShi01/contexture-mcp-typescript.git
@@ -45,60 +100,26 @@ npm ci
 npm run check
 ```
 
-The current declaration seam is deliberately small:
-
-```ts
-import { defineApplication } from '@contexture/mcp';
-
-const application = defineApplication({
-  name: 'operations',
-  roots: [
-    () => ({
-      kind: 'role',
-      name: 'operations',
-      description: 'Handle routine operational questions.',
-      instructions: 'Inspect first.',
-    }),
-  ],
-});
-```
-
-Constructing this declaration does not call the root factory. Compilation,
-Index construction, disclosure, and invocation are upcoming milestones.
-
-## Conformance
-
 The binding targets Contexture Specification 0.12 at the immutable revision in
-[`conformance/specification.json`](conformance/specification.json). The status
-file lists implemented rules explicitly; copied prose or an incomplete golden
-run does not count as conformance.
-
-The normative contract remains in the
-[reference repository](https://github.com/CarterShi01/contexture-mcp/tree/master/spec).
-TypeScript APIs should follow TypeScript conventions while producing the same
-observable behavior and protocol payloads.
-
-Implementation sessions begin with the reference repository's
-[`spec/porting/TERRA_GOAL.md`](https://github.com/CarterShi01/contexture-mcp/blob/master/spec/porting/TERRA_GOAL.md)
-and use its conformance matrix as the task ledger. `npm run conformance:check`
-verifies this repository's revision pin, all 16 rule states, and the required
-fixture and golden inventories; it does not claim those assets were executed.
+[`conformance/specification.json`](conformance/specification.json). Pinned
+fixtures and golden outputs are stored under `conformance/`; tests construct and
+run the TypeScript implementation before comparing its observations with them.
 
 ## Repository map
 
 ```text
-src/core/       SDK-neutral declarations and future compiler
-src/server/     MCP and future Host adapters
-test/           unit, layering, and package tests
-conformance/    pinned specification identity and implementation status
-docs/           architecture and implementation plans
+src/application.ts        Contexture application declaration and composition root
+src/core/foundation/      Shared constants and errors
+src/core/model/           Role, Skill, Tool, Node, Binding, Index, and runtime model
+src/core/mcp-interface/   Prompt, Resource, and fixed MCP Tool-plane declarations
+src/server/               Runtime compilation, MCP SDK adapter, and Host surfaces
+src/web/                  Explicit REST route and surface adapter
+test/                     focused conformance and package tests
+conformance/              pinned specification identity, fixtures, and golden data
 ```
 
-## Language policy
-
-English is the primary project language. Source comments, identifiers, errors,
-API documentation, release notes, and the authoritative README are English.
-Simplified Chinese user documentation is maintained as a translation.
+English is the primary project language. Simplified Chinese documentation is a
+maintained translation.
 
 ## License
 

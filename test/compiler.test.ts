@@ -3,13 +3,13 @@ import test from 'node:test';
 import { z } from 'zod';
 
 import {
-  compileApplication,
   ContainmentCycleError,
   defineApplication,
   DuplicateNameError,
   ModelValidationError,
   UnresolvedReferenceError,
 } from '../src/index.js';
+import { compileApplication } from '../src/core/index.js';
 
 function application() {
   return defineApplication({

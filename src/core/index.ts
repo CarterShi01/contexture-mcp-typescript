@@ -1,35 +1,31 @@
 export {
   CONTEXTURE_SPECIFICATION_REVISION,
   CONTEXTURE_SPECIFICATION_VERSION,
-} from './specification.js';
-export { defineApplication, defineTool } from './declarations.js';
+} from './foundation/specification.js';
 export type {
-  ApplicationDeclaration,
   BaseNodeDeclaration,
   Channels,
   CleanupRegistrar,
   Factory,
   NodeDeclaration,
   NodeKind,
-  PromptDeclaration,
-  ResourceDeclaration,
   RoleDeclaration,
   SkillDeclaration,
   ToolCallContext,
   ToolDeclaration,
-} from './declarations.js';
-export { compileApplication, compileDisclosureApplication } from './compiler.js';
+} from './model/declarations.js';
+export { defineTool } from './model/declarations.js';
+export { compileApplication, compileDisclosureApplication } from './model/compiler.js';
 export type {
+  ApplicationCompilation,
   CompiledApplication,
   CompiledNode,
   CompiledRole,
   CompiledSkill,
   CompiledTool,
-} from './compiler.js';
-export { compileRuntimeApplication, compileStructuralApplication } from './application.js';
-export type { DisclosureApplication, RuntimeApplication } from './application.js';
-export { Disclosure, RefusedError } from './disclosure.js';
-export type { Discovery, RoutingCard } from './disclosure.js';
+} from './model/compiler.js';
+export { Disclosure, RefusedError } from './model/disclosure.js';
+export type { Discovery, RoutingCard } from './model/disclosure.js';
 export {
   ApplicationRuntime,
   currentGraph,
@@ -37,25 +33,32 @@ export {
   currentRootSelection,
   currentTelemetry,
   InMemoryTelemetry,
-} from './runtime.js';
-export type { Telemetry, TelemetryEvent } from './runtime.js';
+} from './model/runtime.js';
+export type { Telemetry, TelemetryEvent } from './model/runtime.js';
 export {
   RootOutsideSelectionError,
   RootSelection,
   RootSelectionError,
   SelectedGraph,
-} from './root-selection.js';
-export { bindTool } from './binding.js';
-export type { JsonObject, JsonValue, ToolBinding } from './binding.js';
-export { withChannels } from './channels.js';
-export { Gateway, GATEWAY } from './gateway.js';
-export type { GatewayName, GatewayTool } from './gateway.js';
-export { Publications } from './publications.js';
-export type { PromptCard, ResourceCard } from './publications.js';
+} from './model/root-selection.js';
+export { bindTool } from './model/binding.js';
+export type { JsonObject, JsonValue, ToolBinding } from './model/binding.js';
+export { withChannels } from './model/channels.js';
+export { Gateway, GATEWAY } from './model/system-api.js';
+export type { GatewayTool } from './model/system-api.js';
+export { GATEWAY_TOOL_NAMES } from './mcp-interface/tool.js';
+export type { GatewayName } from './mcp-interface/tool.js';
+export type { PromptDeclaration } from './mcp-interface/prompt.js';
+export type { ResourceDeclaration } from './mcp-interface/resource.js';
+export { Principal } from './foundation/principal.js';
+export type { PrincipalOptions } from './foundation/principal.js';
 export {
+  ContextureError,
   ContainmentCycleError,
+  DeclarationError,
   DuplicateNameError,
   ModelValidationError,
   InputValidationError,
+  NodeNotFoundError,
   UnresolvedReferenceError,
-} from './errors.js';
+} from './foundation/errors.js';

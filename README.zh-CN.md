@@ -3,7 +3,7 @@
 [English](README.md)
 
 Contexture 的 TypeScript 实现。Contexture 是一个面向 MCP 应用的渐进披露框架，
-目标是在能力持续增长时仍保持上下文可导航。
+用于在能力不断增长时保持上下文可导航。
 
 语言实现：
 [Python](https://github.com/CarterShi01/contexture-mcp) ·
@@ -11,28 +11,82 @@ Contexture 的 TypeScript 实现。Contexture 是一个面向 MCP 应用的渐�
 [Go](https://github.com/CarterShi01/contexture-mcp-go) ·
 [跨语言规范](https://github.com/CarterShi01/contexture-mcp/tree/master/spec)
 
-> **当前状态：工程骨架，尚未发布。** 在满足发布门槛前，npm 包会保持
-> `private`。目前已建立语言原生 API 边界、依赖分层、CI 和规范版本锁定，
-> 但还不能替代 Python 参考实现。
+> **当前状态：0.12 内核一致性原型，完整 Python 产品等价工作进行中。** 16 条一致性
+> 规则均已有定向执行证据，但 CLI、脚手架、inspection、demo 与完整产品测试对齐尚未
+> 完成；在全部发布门禁通过前，npm 包仍保持 private。
 
-## 架构边界
+## 节点模型
 
-业务声明和 Host 适配器保持分离：
+TypeScript 使用声明对象，而不是照搬 Python 的运行时类。封闭节点集合在
+`src/core/model/` 下拥有明确模块：`node.ts`、`role.ts`、`skill.ts` 和
+`tool.ts`；`declarations.ts` 保留为兼容 barrel。应用组合根位于
+`src/application.ts`：
 
-```text
-应用声明
-   ↓
-不依赖 MCP SDK 的核心层
-   ↓
-编译 → 披露 → 调用
-   ↓
-MCP 与可选 HTTP 表面
+- `RoleDeclaration`：职责与容器边界；
+- `SkillDeclaration`：由模型遵循的操作过程；
+- `ToolDeclaration`：拥有同一份 Zod schema、校验和处理函数的可执行能力；
+- `NodeDeclaration`：上述三者的可辨识联合类型。
+
+`kind` 字段承担 Python 中 `Role`、`Skill`、`Tool` 类的区分作用。TypeScript
+接口在编译后的 JavaScript 中会被擦除，这是语言原生设计，并非缺少实现。
+
+## 示例
+
+```ts
+import { z } from 'zod';
+import { defineApplication, defineTool } from '@contexture/mcp';
+import {
+  compileRuntimeApplication,
+  createContextureMcpServer,
+  Gateway,
+} from '@contexture/mcp/server';
+
+const status = defineTool({
+  kind: 'tool',
+  name: 'status',
+  description: 'Return one service status.',
+  readOnly: true,
+  input: z.strictObject({ service: z.string() }),
+  invoke: ({ service }) => ({ service, healthy: true }),
+});
+
+const application = defineApplication({
+  name: 'operations',
+  roots: [
+    () => ({
+      kind: 'role',
+      name: 'operations',
+      description: 'Operate services.',
+      instructions: 'Inspect before changing anything.',
+      skills: [
+        () => ({
+          kind: 'skill',
+          name: 'diagnose',
+          description: 'Diagnose an unhealthy service.',
+          instructions: 'Read status and explain the evidence.',
+          uses: ['operations/status'],
+        }),
+      ],
+      tools: [() => status],
+    }),
+  ],
+});
+
+const compiled = compileRuntimeApplication(application);
+const gateway = new Gateway(compiled.disclosure, compiled.runtime);
+
+await gateway.open('operations');
+await gateway.invokeReadOnly('operations/status', { service: 'api' });
+
+const adapter = createContextureMcpServer({ name: 'operations', version: '0.1.0' }, gateway);
+// 由 Host 将 adapter.server 连接到官方 MCP SDK transport。
 ```
 
-`core` 不得导入 MCP SDK。`server` 是适配层边界；当前只验证官方 MCP
-TypeScript SDK 可以被正确集成，并不声称已经实现 Contexture 固定网关。
+业务 Tool 始终位于 Contexture 的四个固定网关 Tool 后面。核心层不依赖 MCP
+SDK；`@contexture/mcp/server` 是官方 SDK 适配边界。`RestRouter` 提供显式
+allowlist REST 适配器。
 
-## 本地开发
+## 开发与一致性验证
 
 需要 Node.js 20.19 或更新版本，以及 npm 11。
 
@@ -43,34 +97,24 @@ npm ci
 npm run check
 ```
 
-当前可以声明惰性应用：
+本实现锁定 `conformance/specification.json` 中记录的 Contexture Specification
+0.12 提交。固定 fixtures 和 golden 输出保存在 `conformance/`；测试会先通过
+TypeScript 实现生成真实观察结果，再与这些资产比较。
 
-```ts
-import { defineApplication } from '@contexture/mcp';
+## 仓库结构
 
-const application = defineApplication({
-  name: 'operations',
-  roots: [
-    () => ({
-      kind: 'role',
-      name: 'operations',
-      description: 'Handle routine operational questions.',
-      instructions: 'Inspect first.',
-    }),
-  ],
-});
+```text
+src/application.ts        Contexture 应用声明与组合根
+src/core/foundation/      共享常量与错误
+src/core/model/           Role、Skill、Tool、Node、Binding、Index 与运行时模型
+src/core/mcp-interface/   Prompt、Resource 与固定 MCP Tool 平面声明
+src/server/               运行期编译、MCP SDK 适配器与 Host surface
+src/web/                  显式 REST route 与 surface 适配器
+test/                     定向一致性及包测试
+conformance/              固定规范身份、fixtures 与 golden 数据
 ```
 
-声明应用不会执行 root factory。编译、Index、披露和调用仍属于后续里程碑。
-
-## 一致性状态
-
-本实现锁定 Contexture Specification 0.12，具体提交记录在
-[`conformance/specification.json`](conformance/specification.json)。只有通过共同
-fixture 和 golden 输出的行为才算实现，不能用复制文档代替验证。
-
-英文是项目第一语言，也是发生歧义时的权威文本。源代码注释、标识符、错误信息、
-API 文档和发布说明默认使用英文；简体中文文档作为用户翻译持续维护。
+英文是项目第一语言；简体中文文档作为翻译持续维护。
 
 ## 许可证
 

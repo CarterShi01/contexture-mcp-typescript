@@ -20,5 +20,30 @@ test('the core layer does not import MCP or HTTP Host SDKs', async () => {
     const source = await readFile(file, 'utf8');
     assert.equal(source.includes('@modelcontextprotocol/'), false, file);
     assert.equal(/from ['"](?:node:)?https?['"]/.test(source), false, file);
+    assert.equal(/from ['"].*\/(?:server|web|cli)\//.test(source), false, file);
   }
+});
+
+test('the shared foundation has no dependency on higher Contexture layers', async () => {
+  const foundation = path.resolve('src/core/foundation');
+  for (const file of await sourceFiles(foundation)) {
+    const source = await readFile(file, 'utf8');
+    assert.equal(/from ['"].*\/(?:model|server|web|cli)\//.test(source), false, file);
+    assert.equal(source.includes('@modelcontextprotocol/'), false, file);
+  }
+});
+
+test('the MCP interface does not reach into the model or Host layers', async () => {
+  const mcpInterface = path.resolve('src/core/mcp-interface');
+  for (const file of await sourceFiles(mcpInterface)) {
+    const source = await readFile(file, 'utf8');
+    assert.equal(/from ['"].*\/(?:model|server|web|cli)\//.test(source), false, file);
+    assert.equal(source.includes('@modelcontextprotocol/'), false, file);
+  }
+});
+
+test('the declaration facade does not load a Host adapter', async () => {
+  const source = await readFile(path.resolve('src/index.ts'), 'utf8');
+  assert.equal(/from ['"].*\/(?:server|web|cli)\//.test(source), false);
+  assert.equal(source.includes('@modelcontextprotocol/'), false);
 });

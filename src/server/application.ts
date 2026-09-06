@@ -2,11 +2,11 @@ import {
   compileApplication,
   compileDisclosureApplication,
   type CompiledApplication,
-} from './compiler.js';
-import type { ApplicationDeclaration } from './declarations.js';
-import { Disclosure } from './disclosure.js';
-import { Publications } from './publications.js';
-import { ApplicationRuntime } from './runtime.js';
+} from '../core/model/compiler.js';
+import { Disclosure } from '../core/model/disclosure.js';
+import { ApplicationRuntime } from '../core/model/runtime.js';
+import type { ApplicationDeclaration } from '../application.js';
+import { Publications } from './surface/publications.js';
 
 /** The coordinated runtime projections that share one bound compiled Index. */
 export interface RuntimeApplication {

@@ -2,6 +2,7 @@ import { Disclosure } from './disclosure.js';
 import { ApplicationRuntime } from './runtime.js';
 import { RootSelection } from './root-selection.js';
 import type { ToolCallContext } from './declarations.js';
+import type { GatewayName } from '../mcp-interface/tool.js';
 
 /** One immutable system-controlled tool in Contexture's MCP plane. */
 export interface GatewayTool {
@@ -9,9 +10,6 @@ export interface GatewayTool {
   readonly description: string;
   readonly readOnly: boolean;
 }
-
-export type GatewayName =
-  'contexture_discover' | 'contexture_open' | 'contexture_invoke_read_only' | 'contexture_invoke';
 
 /** The fixed system plane, ordered independently of all business declarations. */
 export const GATEWAY: readonly GatewayTool[] = Object.freeze([
@@ -51,7 +49,7 @@ export class Gateway {
   }
 
   get tools(): readonly GatewayTool[] {
-    return this.runtime === undefined ? GATEWAY.slice(0, 2) : GATEWAY;
+    return this.runtime === undefined ? Object.freeze(GATEWAY.slice(0, 2)) : GATEWAY;
   }
 
   async discover(selection: RootSelection = RootSelection.all()): Promise<unknown> {

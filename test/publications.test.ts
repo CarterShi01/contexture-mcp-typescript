@@ -2,17 +2,15 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { z } from 'zod';
 
+import { defineApplication, ModelValidationError } from '../src/index.js';
 import {
   ApplicationRuntime,
   compileApplication,
   compileDisclosureApplication,
-  compileRuntimeApplication,
-  defineApplication,
   Disclosure,
-  ModelValidationError,
-  Publications,
   RootSelection,
-} from '../src/index.js';
+} from '../src/core/index.js';
+import { compileRuntimeApplication, Publications } from '../src/server/index.js';
 
 function publications() {
   const declaration = defineApplication({
@@ -109,6 +107,17 @@ test('Prompt navigation, completion, instructions, and Resources project one com
     surface.promptCards(RootSelection.only('operations')).map((card) => card.name),
     ['goto'],
   );
+});
+
+test('publication declarations are snapshotted before serving', () => {
+  const { declaration } = publications();
+  const index = compileApplication(declaration);
+  const prompt = { name: 'mutable', opens: 'command', description: 'Original.' };
+  const surface = new Publications(new Disclosure(index), new ApplicationRuntime(index), {
+    prompts: [prompt],
+  });
+  prompt.description = 'Changed.';
+  assert.equal(surface.promptCards()[0]?.description, 'Original. (command)');
 });
 
 test('Resources reject non-Tool, argument-taking, and writing targets', () => {

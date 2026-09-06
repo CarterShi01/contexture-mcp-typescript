@@ -1,10 +1,18 @@
 import { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
-import { Gateway, Publications, type GatewayName } from '../core/index.js';
+import { Gateway } from '../core/model/system-api.js';
+import type { GatewayName } from '../core/mcp-interface/tool.js';
+import { Publications } from './surface/publications.js';
 
+export { compileRuntimeApplication, compileStructuralApplication } from './application.js';
+export type { DisclosureApplication, RuntimeApplication } from './application.js';
 export { RestRouter } from './rest.js';
 export type { RestMethod, RestRoute } from './rest.js';
+export { Gateway, GATEWAY } from '../core/model/system-api.js';
+export type { GatewayTool } from '../core/model/system-api.js';
+export { Publications } from './surface/publications.js';
+export type { PromptCard, ResourceCard } from './surface/publications.js';
 
 /** Metadata required to identify a Contexture MCP server. */
 export interface ServerIdentity {
@@ -15,8 +23,8 @@ export interface ServerIdentity {
 /**
  * Construct the official MCP server adapter without registering capabilities.
  *
- * Gateway registration belongs to the upcoming compilation layer. Keeping the
- * SDK import here proves and enforces that the authoring core is SDK-neutral.
+ * Keeping the SDK import here proves and enforces that the authoring core is
+ * SDK-neutral.
  */
 export function createMcpServer(identity: ServerIdentity): McpServer {
   return new McpServer({ name: identity.name, version: identity.version });

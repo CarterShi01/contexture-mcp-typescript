@@ -4,15 +4,14 @@ import test from 'node:test';
 import { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
+import { defineApplication } from '../src/index.js';
+import { ApplicationRuntime, compileApplication, Disclosure } from '../src/core/index.js';
 import {
-  ApplicationRuntime,
-  compileApplication,
-  defineApplication,
-  Disclosure,
+  createContextureMcpServer,
+  createMcpServer,
   Gateway,
   Publications,
-} from '../src/index.js';
-import { createContextureMcpServer, createMcpServer } from '../src/server/index.js';
+} from '../src/server/index.js';
 
 test('the server seam uses the official MCP SDK', () => {
   const server = createMcpServer({ name: 'contexture-test', version: '0.0.0' });
