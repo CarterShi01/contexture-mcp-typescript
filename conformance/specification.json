@@ -3,12 +3,15 @@
   "repository": "https://github.com/CarterShi01/contexture-mcp",
   "revision": "e107a81a933c5eb5b4530e762311619be3a7a80f",
   "specificationVersion": "0.12",
-  "status": "scaffold",
-  "implementedRules": [1],
+  "status": "partial",
+  "implementedRules": [1, 2, 3],
   "rules": {
     "1": { "status": "implemented", "evidence": ["test/declarations.test.ts"] },
-    "2": { "status": "in-progress", "evidence": ["test/compiler.test.ts"] },
-    "3": { "status": "in-progress", "evidence": ["test/compiler.test.ts"] },
+    "2": { "status": "implemented", "evidence": ["test/compiler.test.ts"] },
+    "3": {
+      "status": "implemented",
+      "evidence": ["test/declarations.test.ts", "test/compiler.test.ts"]
+    },
     "4": { "status": "in-progress", "evidence": ["test/binding.test.ts"] },
     "5": { "status": "not-started", "evidence": [] },
     "6": { "status": "in-progress", "evidence": ["test/disclosure.test.ts"] },

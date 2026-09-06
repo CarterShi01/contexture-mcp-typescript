@@ -70,6 +70,7 @@ interface CompilationState {
   readonly refByNode: Map<CompiledNode, string>;
   readonly byKind: Map<NodeKind, CompiledNode[]>;
   readonly activeFactories: Set<Factory<NodeDeclaration>>;
+  readonly declarations: WeakSet<object>;
 }
 
 /** Compile one lazy application into an immutable, canonical forest snapshot. */
@@ -80,6 +81,7 @@ export function compileApplication(application: ApplicationDeclaration): Compile
     refByNode: new Map(),
     byKind: new Map<NodeKind, CompiledNode[]>(),
     activeFactories: new Set(),
+    declarations: new WeakSet(),
   };
 
   const modelRoots = application.roots.map((factory) =>
@@ -129,6 +131,12 @@ function compileDeclaration(
   state: CompilationState,
 ): CompiledNode {
   validateDeclaration(declaration);
+  if (state.declarations.has(declaration)) {
+    throw new DuplicateNameError(
+      `Contexture node ${JSON.stringify(declaration.name)} reuses one declaration object at more than one address.`,
+    );
+  }
+  state.declarations.add(declaration);
   const path = [...parentPath, declaration.name];
   const ref = path.join(SEPARATOR);
   if (state.byRef.has(ref)) {

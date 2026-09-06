@@ -80,6 +80,13 @@ test('compilation creates a fresh canonical forest with both root audiences', ()
     ['restart'],
   );
   assert.notEqual(first.find('operations'), second.find('operations'));
+  const firstTool = first.find('operations/status');
+  const secondTool = second.find('operations/status');
+  assert.equal(firstTool.kind, 'tool');
+  assert.equal(secondTool.kind, 'tool');
+  if (firstTool.kind !== 'tool' || secondTool.kind !== 'tool') throw new Error('Expected Tools.');
+  assert.notEqual(firstTool.binding, secondTool.binding);
+  assert.equal(Object.isFrozen(first), true);
   assert.equal(first.parentOf(first.find('operations/status'))?.name, 'operations');
   assert.deepEqual(first.dependentsOf('operations/status'), ['operations/diagnose']);
   assert.deepEqual(
@@ -87,6 +94,40 @@ test('compilation creates a fresh canonical forest with both root audiences', ()
     ['status', 'restart'],
   );
   assert.equal(first.executionBound, true);
+});
+
+test('compilation rejects a declaration object reused at different addresses', () => {
+  const shared = {
+    kind: 'skill' as const,
+    name: 'shared',
+    description: 'A reused object.',
+    instructions: 'Do not reuse declaration identity.',
+  };
+  assert.throws(
+    () =>
+      compileApplication(
+        defineApplication({
+          name: 'identity',
+          roots: [
+            () => ({
+              kind: 'role',
+              name: 'left',
+              description: 'Left.',
+              instructions: 'Left.',
+              skills: [() => shared],
+            }),
+            () => ({
+              kind: 'role',
+              name: 'right',
+              description: 'Right.',
+              instructions: 'Right.',
+              skills: [() => shared],
+            }),
+          ],
+        }),
+      ),
+    DuplicateNameError,
+  );
 });
 
 test('declaration and compiled collections cannot be mutated into a served surface', () => {
