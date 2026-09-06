@@ -52,10 +52,13 @@ test('the official SDK returns selected goto completions with the real total and
     id: 2,
     result: {
       completion: {
-        values: Array.from(
-          { length: 100 },
-          (_, number) => `capability-${String(number).padStart(3, '0')}`,
-        ),
+        values: [
+          ...Array.from(
+            { length: 99 },
+            (_, number) => `capability-${String(number).padStart(3, '0')}`,
+          ),
+          '... 1 more match; keep typing to narrow.',
+        ],
         total: 101,
         hasMore: true,
       },

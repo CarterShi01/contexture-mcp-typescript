@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { Gateway } from '../core/model/system-api.js';
 import { RootSelection } from '../core/model/root-selection.js';
 import { principalOf } from './identity.js';
-import { COMPLETION_LIMIT, GOTO_ARGUMENT, GOTO_PROMPT } from './messages.js';
+import { COMPLETION_LIMIT, GOTO_ARGUMENT, GOTO_PROMPT, truncatedCompletion } from './messages.js';
 import type { GatewayName } from '../core/mcp-interface/tool.js';
 import { Publications } from './surface/publications.js';
 
@@ -212,9 +212,13 @@ function installCompletion(
       return { completion: { values: [], total: 0, hasMore: false } };
     }
     const completed = publications.complete(argument.value, selection, COMPLETION_LIMIT);
+    const values = [...completed.values];
+    if (completed.total > values.length && values.length > 0) {
+      values[values.length - 1] = truncatedCompletion(values.length, completed.total);
+    }
     return {
       completion: {
-        values: [...completed.values],
+        values,
         total: completed.total,
         hasMore: completed.total > completed.values.length,
       },
