@@ -6,6 +6,7 @@ import {
   ApplicationRuntime,
   compileApplication,
   compileDisclosureApplication,
+  compileRuntimeApplication,
   defineApplication,
   Disclosure,
   ModelValidationError,
@@ -160,4 +161,25 @@ test('disclosure-only publications retain Prompt navigation but reject Resources
   const surface = new Publications(new Disclosure(index), undefined, declaration);
   assert.equal(surface.promptCards().length, 2);
   assert.match(surface.instructions(), /architecture/);
+});
+
+test('a Prompt can reserve a model-visible node while retaining person-controlled navigation', async () => {
+  const application = compileRuntimeApplication(
+    defineApplication({
+      name: 'reserved',
+      roots: [
+        () => ({
+          kind: 'skill',
+          name: 'approval',
+          description: 'Requires a person.',
+          instructions: 'Wait for approval.',
+        }),
+      ],
+      prompts: [
+        { opens: 'approval', description: 'Open the approval procedure.', modelMayOpen: false },
+      ],
+    }),
+  );
+  assert.throws(() => application.disclosure.open('approval'), /opened by a person/);
+  assert.match(await application.publications.command('approval'), /You are at approval/);
 });

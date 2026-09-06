@@ -4,7 +4,7 @@
   "revision": "e107a81a933c5eb5b4530e762311619be3a7a80f",
   "specificationVersion": "0.12",
   "status": "partial",
-  "implementedRules": [1, 2, 3, 4, 5, 12, 13, 14, 16],
+  "implementedRules": [1, 2, 3, 4, 5, 7, 9, 10, 11, 12, 13, 14, 15, 16],
   "rules": {
     "1": { "status": "implemented", "evidence": ["test/declarations.test.ts"] },
     "2": { "status": "implemented", "evidence": ["test/compiler.test.ts"] },
@@ -15,18 +15,24 @@
     "4": { "status": "implemented", "evidence": ["test/binding.test.ts"] },
     "5": { "status": "implemented", "evidence": ["test/server.test.ts"] },
     "6": { "status": "in-progress", "evidence": ["test/disclosure.test.ts"] },
-    "7": { "status": "in-progress", "evidence": ["test/disclosure.test.ts"] },
+    "7": {
+      "status": "implemented",
+      "evidence": ["test/disclosure.test.ts", "test/publications.test.ts"]
+    },
     "8": { "status": "not-started", "evidence": [] },
-    "9": { "status": "in-progress", "evidence": ["test/disclosure.test.ts"] },
-    "10": { "status": "in-progress", "evidence": ["test/disclosure.test.ts"] },
-    "11": { "status": "not-started", "evidence": [] },
+    "9": {
+      "status": "implemented",
+      "evidence": ["test/disclosure.test.ts", "test/runtime.test.ts", "test/publications.test.ts"]
+    },
+    "10": { "status": "implemented", "evidence": ["test/disclosure.test.ts"] },
+    "11": { "status": "implemented", "evidence": ["test/runtime.test.ts"] },
     "12": { "status": "implemented", "evidence": ["test/lifecycle.test.ts"] },
     "13": {
       "status": "implemented",
       "evidence": ["test/lifecycle.test.ts", "test/publications.test.ts"]
     },
     "14": { "status": "implemented", "evidence": ["test/rest.test.ts"] },
-    "15": { "status": "in-progress", "evidence": ["test/runtime.test.ts"] },
+    "15": { "status": "implemented", "evidence": ["test/runtime.test.ts"] },
     "16": { "status": "implemented", "evidence": ["test/layering.test.ts"] }
   },
   "fixtures": [

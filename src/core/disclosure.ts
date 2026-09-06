@@ -17,15 +17,21 @@ export class RefusedError extends Error {
 export class Disclosure {
   readonly selection: RootSelection;
   readonly #promptRoots: ReadonlySet<string>;
+  readonly #reserved: ReadonlySet<string>;
 
   constructor(
     readonly index: CompiledApplication,
-    options: { readonly selection?: RootSelection; readonly promptRoots?: Iterable<string> } = {},
+    options: {
+      readonly selection?: RootSelection;
+      readonly promptRoots?: Iterable<string>;
+      readonly reserved?: Iterable<string>;
+    } = {},
   ) {
     this.selection = (options.selection ?? RootSelection.all()).resolve(index);
     this.#promptRoots = new Set(
       options.promptRoots ?? index.promptRoots.map((node) => index.refOf(node)),
     );
+    this.#reserved = new Set(options.reserved ?? []);
     for (const ref of this.#promptRoots) {
       const node = index.find(ref);
       if (index.parentOf(node) !== undefined) {
@@ -39,11 +45,12 @@ export class Disclosure {
     return new Disclosure(this.index, {
       selection: this.selection.intersect(selection),
       promptRoots: this.#promptRoots,
+      reserved: this.#reserved,
     });
   }
 
   unrestricted(): Disclosure {
-    return new Disclosure(this.index, { selection: this.selection });
+    return new Disclosure(this.index, { selection: this.selection, reserved: this.#reserved });
   }
 
   effectiveSelection(requested: RootSelection = RootSelection.all()): RootSelection {
@@ -69,6 +76,12 @@ export class Disclosure {
   open(ref: string, requested: RootSelection = RootSelection.all()): RoutingCard {
     if (!this.modelCanSee(ref, requested)) {
       this.effectiveSelection(requested).requireRef(ref);
+      throw new RefusedError(
+        `${ref} is opened by a person, not by an agent. It is reachable only as a command in this host's menu. ` +
+          'Do not reproduce its steps another way; tell the user which command runs it and let them decide when.',
+      );
+    }
+    if (this.#reserved.has(ref)) {
       throw new RefusedError(
         `${ref} is opened by a person, not by an agent. It is reachable only as a command in this host's menu. ` +
           'Do not reproduce its steps another way; tell the user which command runs it and let them decide when.',

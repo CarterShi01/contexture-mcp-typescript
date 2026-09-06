@@ -26,6 +26,8 @@ export type {
   CompiledSkill,
   CompiledTool,
 } from './compiler.js';
+export { compileRuntimeApplication, compileStructuralApplication } from './application.js';
+export type { DisclosureApplication, RuntimeApplication } from './application.js';
 export { Disclosure, RefusedError } from './disclosure.js';
 export type { Discovery, RoutingCard } from './disclosure.js';
 export {
