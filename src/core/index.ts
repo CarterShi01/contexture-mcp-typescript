@@ -6,6 +6,8 @@ export { defineApplication, defineTool } from './declarations.js';
 export type {
   ApplicationDeclaration,
   BaseNodeDeclaration,
+  Channels,
+  CleanupRegistrar,
   Factory,
   NodeDeclaration,
   NodeKind,
@@ -14,7 +16,7 @@ export type {
   ToolCallContext,
   ToolDeclaration,
 } from './declarations.js';
-export { compileApplication } from './compiler.js';
+export { compileApplication, compileDisclosureApplication } from './compiler.js';
 export type {
   CompiledApplication,
   CompiledNode,
@@ -41,6 +43,7 @@ export {
 } from './root-selection.js';
 export { bindTool } from './binding.js';
 export type { JsonObject, JsonValue, ToolBinding } from './binding.js';
+export { withChannels } from './channels.js';
 export {
   ContainmentCycleError,
   DuplicateNameError,

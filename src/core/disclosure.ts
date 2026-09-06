@@ -144,7 +144,7 @@ function toolCard(node: CompiledTool, ref: string, includeSchema: boolean): Rout
     description: node.description,
     ref,
     read_only: node.readOnly,
-    ...(includeSchema ? { input_schema: node.binding.schema } : {}),
+    ...(includeSchema && node.binding !== undefined ? { input_schema: node.binding.schema } : {}),
   });
 }
 

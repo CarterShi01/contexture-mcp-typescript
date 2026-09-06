@@ -36,8 +36,10 @@ test('one Tool Binding discloses the schema it validates before calling its hand
   const tool = index.find('inspect');
   assert.equal(tool.kind, 'tool');
   if (tool.kind !== 'tool') throw new Error('Expected a Tool.');
+  const binding = tool.binding;
+  if (binding === undefined) throw new Error('Expected a bound Tool.');
 
-  assert.deepEqual(tool.binding.schema, {
+  assert.deepEqual(binding.schema, {
     type: 'object',
     properties: {
       service: { type: 'string' },
@@ -50,12 +52,9 @@ test('one Tool Binding discloses the schema it validates before calling its hand
     },
     required: ['service'],
   });
-  await assert.rejects(
-    tool.binding.call({ service: 'api', extra: true }, {}),
-    InputValidationError,
-  );
+  await assert.rejects(binding.call({ service: 'api', extra: true }, {}), InputValidationError);
   assert.equal(calls, 0);
-  assert.deepEqual(await tool.binding.call({ service: 'api', retries: 2 }, {}), {
+  assert.deepEqual(await binding.call({ service: 'api', retries: 2 }, {}), {
     service: 'api',
     retries: 2,
   });
@@ -85,12 +84,14 @@ test('Tool input schemas cover nullable values, arrays, enums, nested objects, a
   );
   const tool = index.find('corpus');
   if (tool.kind !== 'tool') throw new Error('Expected a Tool.');
+  const binding = tool.binding;
+  if (binding === undefined) throw new Error('Expected a bound Tool.');
   assert.deepEqual(
-    await tool.binding.call({ nullable: null, items: [{ id: 1 }], status: 'ready', choice: 2 }, {}),
+    await binding.call({ nullable: null, items: [{ id: 1 }], status: 'ready', choice: 2 }, {}),
     { nullable: null, items: [{ id: 1 }], status: 'ready', choice: 2 },
   );
   await assert.rejects(
-    tool.binding.call({ nullable: null, items: [{ id: 'wrong' }], status: 'other', choice: 2 }, {}),
+    binding.call({ nullable: null, items: [{ id: 'wrong' }], status: 'other', choice: 2 }, {}),
     InputValidationError,
   );
 });

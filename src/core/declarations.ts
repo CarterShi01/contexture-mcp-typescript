@@ -44,7 +44,7 @@ export interface ToolDeclaration<Input = never, Output = unknown> extends BaseNo
   readonly kind: 'tool';
   readonly readOnly: boolean;
   /** The one schema used for both the disclosed contract and invocation validation. */
-  readonly input: ZodType;
+  readonly input?: ZodType;
   readonly invoke: (input: Input, context: ToolCallContext) => Output | Promise<Output>;
 }
 
@@ -55,6 +55,17 @@ export function defineTool<Schema extends ZodType, Output>(
   return Object.freeze({ ...declaration }) as ToolDeclaration<output<Schema>, Output>;
 }
 
+/** Application-wide dependencies with an explicitly managed lifetime. */
+export interface Channels {
+  open(registrar: CleanupRegistrar): void | Promise<void>;
+  close(): void | Promise<void>;
+}
+
+/** Register cleanup immediately after acquiring a dependency. */
+export interface CleanupRegistrar {
+  defer(cleanup: () => void | Promise<void>): void;
+}
+
 /** The closed union accepted at an application root or inside a compiled Index. */
 export type NodeDeclaration = RoleDeclaration | SkillDeclaration | ToolDeclaration<never, unknown>;
 
@@ -63,7 +74,7 @@ export interface ApplicationDeclaration {
   readonly name: string;
   readonly roots: readonly Factory<NodeDeclaration>[];
   readonly promptRoots?: readonly Factory<NodeDeclaration>[];
-  readonly channels?: unknown;
+  readonly channels?: Channels;
 }
 
 /**

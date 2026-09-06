@@ -5,6 +5,7 @@ import { InputValidationError, ModelValidationError } from './errors.js';
 import { RefusedError } from './disclosure.js';
 import { RootSelection, SelectedGraph } from './root-selection.js';
 import type { ToolCallContext } from './declarations.js';
+import { withChannels } from './channels.js';
 
 /** Best-effort observability; it is never permitted to change an outcome. */
 export interface Telemetry {
@@ -108,6 +109,11 @@ export class ApplicationRuntime {
     return this.invokeAtDoor(ref, arguments_, false, context, requested);
   }
 
+  /** Open application Channels around a Host serving lifetime. */
+  async serve<Result>(operation: () => Promise<Result>): Promise<Result> {
+    return withChannels(this.index.channels, operation);
+  }
+
   private async invokeAtDoor(
     ref: string,
     arguments_: unknown,
@@ -142,7 +148,11 @@ export class ApplicationRuntime {
       selection: scope.selection,
     });
     try {
-      const value = await SCOPE.run(scope, () => node.binding.call(arguments_, callContext));
+      const binding = node.binding;
+      if (binding === undefined) {
+        throw new ModelValidationError('A disclosure-only Tool cannot be invoked.');
+      }
+      const value = await SCOPE.run(scope, () => binding.call(arguments_, callContext));
       await report(this.telemetry, ref, false);
       return value;
     } catch (error) {

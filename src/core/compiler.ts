@@ -41,7 +41,7 @@ export interface CompiledTool extends CompiledNodeBase {
   readonly kind: 'tool';
   readonly readOnly: boolean;
   readonly declaration: ToolDeclaration;
-  readonly binding: ToolBinding;
+  readonly binding: ToolBinding | undefined;
 }
 
 export type CompiledNode = CompiledRole | CompiledSkill | CompiledTool;
@@ -51,8 +51,8 @@ export interface CompiledApplication {
   readonly roots: readonly CompiledNode[];
   readonly modelRoots: readonly CompiledNode[];
   readonly promptRoots: readonly CompiledNode[];
-  readonly channels: unknown;
-  readonly executionBound: true;
+  readonly channels: import('./declarations.js').Channels | undefined;
+  readonly executionBound: boolean;
   readonly size: number;
   find(ref: string): CompiledNode;
   refOf(node: CompiledNode): string;
@@ -71,10 +71,27 @@ interface CompilationState {
   readonly byKind: Map<NodeKind, CompiledNode[]>;
   readonly activeFactories: Set<Factory<NodeDeclaration>>;
   readonly declarations: WeakSet<object>;
+  readonly bindTools: boolean;
 }
 
 /** Compile one lazy application into an immutable, canonical forest snapshot. */
 export function compileApplication(application: ApplicationDeclaration): CompiledApplication {
+  return compile(application, true);
+}
+
+/** Compile an independent structural projection with neither bindings nor Channels. */
+export function compileDisclosureApplication(
+  application: ApplicationDeclaration,
+): CompiledApplication {
+  if (application.channels !== undefined) {
+    throw new ModelValidationError(
+      'A disclosure-only Contexture application cannot declare Channels.',
+    );
+  }
+  return compile(application, false);
+}
+
+function compile(application: ApplicationDeclaration, bindTools: boolean): CompiledApplication {
   const state: CompilationState = {
     byRef: new Map(),
     parentByNode: new Map(),
@@ -82,6 +99,7 @@ export function compileApplication(application: ApplicationDeclaration): Compile
     byKind: new Map<NodeKind, CompiledNode[]>(),
     activeFactories: new Set(),
     declarations: new WeakSet(),
+    bindTools,
   };
 
   const modelRoots = application.roots.map((factory) =>
@@ -130,7 +148,7 @@ function compileDeclaration(
   parent: CompiledRole | undefined,
   state: CompilationState,
 ): CompiledNode {
-  validateDeclaration(declaration);
+  validateDeclaration(declaration, state.bindTools);
   if (state.declarations.has(declaration)) {
     throw new DuplicateNameError(
       `Contexture node ${JSON.stringify(declaration.name)} reuses one declaration object at more than one address.`,
@@ -201,7 +219,7 @@ function compileDeclaration(
       ...declaration,
       uses: Object.freeze([...(declaration.uses ?? [])]),
     }),
-    binding: bindTool(declaration as ToolDeclaration),
+    binding: state.bindTools ? bindTool(declaration as ToolDeclaration) : undefined,
   });
   registerNode(node, ref, parent, state);
   return node;
@@ -229,7 +247,7 @@ function registerNode(
   state.byKind.set(node.kind, nodes);
 }
 
-function validateDeclaration(declaration: NodeDeclaration): void {
+function validateDeclaration(declaration: NodeDeclaration, bindTools: boolean): void {
   if (typeof declaration !== 'object' || declaration === null) {
     throw new ModelValidationError('A Contexture factory must return a node declaration object.');
   }
@@ -295,7 +313,7 @@ function validateDeclaration(declaration: NodeDeclaration): void {
         `Tool ${JSON.stringify(declaration.name)} must declare invoke.`,
       );
     }
-    if (typeof declaration.input !== 'object' || declaration.input === null) {
+    if (bindTools && (typeof declaration.input !== 'object' || declaration.input === null)) {
       throw new ModelValidationError(
         `Tool ${JSON.stringify(declaration.name)} must declare a Zod input schema.`,
       );
@@ -347,7 +365,7 @@ function deriveDependents(
 }
 
 class ImmutableIndex implements CompiledApplication {
-  readonly executionBound = true as const;
+  readonly executionBound: boolean;
   readonly size: number;
   readonly roots: readonly CompiledNode[];
   readonly modelRoots: readonly CompiledNode[];
@@ -362,10 +380,11 @@ class ImmutableIndex implements CompiledApplication {
     readonly name: string,
     modelRoots: readonly CompiledNode[],
     promptRoots: readonly CompiledNode[],
-    readonly channels: unknown,
+    readonly channels: import('./declarations.js').Channels | undefined,
     state: CompilationState,
     dependents: ReadonlyMap<string, readonly string[]>,
   ) {
+    this.executionBound = state.bindTools;
     this.modelRoots = Object.freeze([...modelRoots]);
     this.promptRoots = Object.freeze([...promptRoots]);
     this.roots = Object.freeze([...this.modelRoots, ...this.promptRoots]);
