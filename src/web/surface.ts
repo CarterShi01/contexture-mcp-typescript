@@ -11,7 +11,9 @@ import {
   ApplicationRuntime,
   InputValidationError,
   ModelValidationError,
+  PermissionError,
   Principal,
+  RejectedError,
   RootSelection,
 } from '../core/index.js';
 import type { RestMethod, RestRoute } from './route.js';
@@ -271,8 +273,10 @@ function normalizeRoute(route: RestRoute): RestRoute {
   }
   if (ref.length === 0) throw new ModelValidationError('A REST Route must name one Tool ref.');
   const status = route.status ?? 200;
-  if (!Number.isSafeInteger(status) || status < 100 || status > 599) {
-    throw new ModelValidationError('A REST Route status must be an HTTP status.');
+  if (!isFetchSafeJsonStatus(status)) {
+    throw new ModelValidationError(
+      'A REST Route status must be a Fetch-safe JSON HTTP status (200–599 except 204, 205, and 304).',
+    );
   }
   return Object.freeze({ method: method as RestMethod, path, ref, status });
 }
@@ -400,11 +404,11 @@ function responseForFailure(error: unknown): Response {
   if (error instanceof InputValidationError) {
     return problem(422, 'invalid-arguments', error.message);
   }
-  if (error instanceof Error && error.name === 'PermissionError') {
+  if (error instanceof PermissionError) {
     return problem(403, 'forbidden', error.message || 'Forbidden.');
   }
   if (error instanceof ModelValidationError) return problem(500, 'invalid-surface', error.message);
-  if (error instanceof Error && error.name === 'ValueError') {
+  if (error instanceof RejectedError) {
     return problem(422, 'rejected', error.message);
   }
   return problem(500, 'controller-failed', error instanceof Error ? error.name : 'UnknownError');
@@ -452,6 +456,17 @@ function problem(status: number, kind: string, detail: string): Response {
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isFetchSafeJsonStatus(status: number): boolean {
+  return (
+    Number.isSafeInteger(status) &&
+    status >= 200 &&
+    status <= 599 &&
+    status !== 204 &&
+    status !== 205 &&
+    status !== 304
+  );
 }
 
 function nodeRequest(request: IncomingMessage, host: string, port: number): Request {

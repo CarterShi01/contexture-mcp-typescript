@@ -60,5 +60,7 @@ export {
   ModelValidationError,
   InputValidationError,
   NodeNotFoundError,
+  PermissionError,
+  RejectedError,
   UnresolvedReferenceError,
 } from './foundation/errors.js';

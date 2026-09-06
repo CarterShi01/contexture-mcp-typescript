@@ -44,3 +44,13 @@ export class InputValidationError extends ModelValidationError {
     super(`Arguments for Contexture Tool ${JSON.stringify(tool)} do not satisfy its input schema.`);
   }
 }
+
+/** A business Tool denied the authenticated caller; HTTP REST renders this as 403. */
+export class PermissionError extends ContextureError {
+  override readonly name = 'PermissionError';
+}
+
+/** A business Tool rejected otherwise valid input; HTTP REST renders this as 422. */
+export class RejectedError extends ContextureError {
+  override readonly name = 'RejectedError';
+}

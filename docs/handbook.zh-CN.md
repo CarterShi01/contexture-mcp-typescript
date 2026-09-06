@@ -170,7 +170,7 @@ read-only Tool；POST、PUT、PATCH 与 DELETE 只能调用 writing Tool。REST 
 复用同一个 runtime Binding 来校验输入，因此不存在第二份业务实现。
 
 ```js
-import { Principal } from '@contexture/mcp';
+import { PermissionError, Principal, RejectedError } from '@contexture/mcp';
 import { compileRuntimeApplication } from '@contexture/mcp/server';
 import { RestSurface } from '@contexture/mcp/web';
 
@@ -200,6 +200,17 @@ fallback 到已声明的 GET route，保留 header 但永不发送 response body
 content type、body size、Binding argument 和授权失败都会返回 no-store 的结构化
 `application/problem+json` response。没有 authenticator 时不要信任自称 principal 的
 header，也不要因为 Tool 在 application graph 中有效就发布它。
+
+如需表达明确的业务结果，抛出 `new PermissionError(detail)` 会得到 403 `forbidden`
+response，抛出 `new RejectedError(detail)` 会得到 422 `rejected` response。Binding
+argument 无效同样会得到 422 `invalid-arguments`；普通的意外 `Error` 会得到 500
+`controller-failed` response。这些是明确的 Contexture error type，不是依赖字符串名称的
+约定。
+
+Python 的 `Route` 允许 100 到 599 的所有 HTTP status。TypeScript 的 `RestSurface`
+以 Fetch 为基础且始终序列化 JSON，因此会在 route construction 时拒绝 1xx、204、205 和
+304：标准 Fetch `Response` 无法表示这些带 body 的最终 response。请使用 200 到 599
+之间、且不为 204、205 或 304 的 Fetch-safe JSON status。
 
 ## 9. 通过 MCP Host 提供服务
 

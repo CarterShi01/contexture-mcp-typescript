@@ -190,7 +190,7 @@ invoke only writing Tools. The same runtime Binding validates REST input and
 the MCP gateway input, so there is no second business implementation.
 
 ```js
-import { Principal } from '@contexture/mcp';
+import { PermissionError, Principal, RejectedError } from '@contexture/mcp';
 import { compileRuntimeApplication } from '@contexture/mcp/server';
 import { RestSurface } from '@contexture/mcp/web';
 
@@ -224,6 +224,18 @@ size, binding arguments, and authorization failures receive structured
 `application/problem+json` responses with no-store caching. Do not trust a
 claimed principal header without an authenticator, and do not publish a Tool
 merely because it is valid in the application graph.
+
+For a deliberate business outcome, throw `new PermissionError(detail)` for a
+403 `forbidden` response or `new RejectedError(detail)` for a 422 `rejected`
+response. Invalid binding arguments are also 422 `invalid-arguments`; an
+ordinary unexpected `Error` is a 500 `controller-failed` response. These are
+explicit Contexture error types, not string-name conventions.
+
+Python's `Route` permits every HTTP status from 100 through 599. The
+TypeScript `RestSurface` is Fetch-based and always serializes JSON, so it
+rejects 1xx, 204, 205, and 304 during route construction: standard Fetch
+`Response` cannot represent those body-bearing final responses. Choose a
+Fetch-safe JSON status from 200 through 599 other than 204, 205, or 304.
 
 ## 9. Serve through an MCP Host
 

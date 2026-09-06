@@ -7,6 +7,11 @@ export interface RestRoute {
   readonly path: string;
   /** The canonical Contexture Tool reference this route may invoke. */
   readonly ref: string;
-  /** Successful response status; defaults to 200. */
+  /**
+   * Successful Fetch-safe response status; defaults to 200.
+   *
+   * RestSurface serializes a JSON body, so it rejects 1xx, 204, 205, and 304
+   * at construction rather than deferring a Fetch Response failure to a live request.
+   */
   readonly status?: number;
 }

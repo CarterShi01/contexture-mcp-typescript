@@ -1,10 +1,25 @@
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
+import { request as requestFromNode } from 'node:http';
 import test from 'node:test';
 import { z } from 'zod';
 
-import { defineApplication, defineTool, ModelValidationError, Principal } from '../src/index.js';
+import {
+  defineApplication,
+  defineTool,
+  ModelValidationError,
+  PermissionError,
+  Principal,
+  RejectedError,
+} from '../src/index.js';
 import { ApplicationRuntime, compileApplication, currentPrincipal } from '../src/core/index.js';
-import { RestRouter, RestSurface, type Authenticator, type WebRequest } from '../src/web/index.js';
+import {
+  RestRouter,
+  RestSurface,
+  type Authenticator,
+  type RestRoute,
+  type WebRequest,
+} from '../src/web/index.js';
 
 function runtime(): ApplicationRuntime {
   return new ApplicationRuntime(
@@ -31,7 +46,69 @@ function runtime(): ApplicationRuntime {
                   invoke: (input) => ({
                     status: input.service,
                     principal: currentPrincipal()?.subject ?? null,
+                    ...(input.tag === undefined ? {} : { tag: input.tag }),
                   }),
+                }),
+              () =>
+                defineTool({
+                  kind: 'tool',
+                  name: 'reset',
+                  description: 'Reset with no arguments.',
+                  readOnly: false,
+                  input: z.strictObject({}),
+                  invoke: () => ({ reset: true }),
+                }),
+              () =>
+                defineTool({
+                  kind: 'tool',
+                  name: 'forbidden',
+                  description: 'Reject an unauthorized caller.',
+                  readOnly: true,
+                  input: z.strictObject({}),
+                  invoke: () => {
+                    throw new PermissionError('A verified identity lacks the required scope.');
+                  },
+                }),
+              () =>
+                defineTool({
+                  kind: 'tool',
+                  name: 'rejected',
+                  description: 'Reject valid business input.',
+                  readOnly: true,
+                  input: z.strictObject({}),
+                  invoke: () => {
+                    throw new RejectedError('The requested change is not currently allowed.');
+                  },
+                }),
+              () =>
+                defineTool({
+                  kind: 'tool',
+                  name: 'explode',
+                  description: 'Fail unexpectedly.',
+                  readOnly: true,
+                  input: z.strictObject({}),
+                  invoke: () => {
+                    throw new Error('Unexpected implementation failure.');
+                  },
+                }),
+              () =>
+                defineTool({
+                  kind: 'tool',
+                  name: 'probe',
+                  description: 'Observe request-local context.',
+                  readOnly: true,
+                  input: z.strictObject({ request: z.string() }),
+                  invoke: async ({ request }, context) => {
+                    await delay(request === 'alpha' ? 20 : 1);
+                    const host = context.host as WebRequest;
+                    return {
+                      contextPrincipal: context.principal?.subject ?? null,
+                      currentPrincipal: currentPrincipal()?.subject ?? null,
+                      header: host.headers['x-request'] ?? null,
+                      query: host.query.request ?? [],
+                      request,
+                    };
+                  },
                 }),
               () =>
                 defineTool({
@@ -101,7 +178,10 @@ test('REST surface turns explicit paths into real JSON HTTP behavior and authent
   );
   assert.equal(read.status, 200);
   assert.equal(read.headers.get('content-type'), 'application/json; charset=utf-8');
-  assert.deepEqual(await read.json(), { status: 'api', principal: 'alice' });
+  assert.deepEqual(await read.json(), { status: 'api', principal: 'alice', tag: ['', 'blue'] });
+  assert.equal(authenticated?.method, 'GET');
+  assert.equal(authenticated?.path, '/v1/status');
+  assert.equal(authenticated?.headers.authorization, 'Bearer alice');
   assert.deepEqual(authenticated?.query, { service: ['api'], tag: ['', 'blue'] });
 
   const write = await rest.fetch(
@@ -216,6 +296,118 @@ test('REST surface has a fixed allowlist, HEAD fallback, and structured request 
   );
 });
 
+test('REST gives explicitly named business failures stable problem responses', async () => {
+  const rest = new RestSurface(runtime(), [
+    { method: 'GET', path: '/v1/forbidden', ref: 'operations/forbidden' },
+    { method: 'GET', path: '/v1/rejected', ref: 'operations/rejected' },
+    { method: 'GET', path: '/v1/explode', ref: 'operations/explode' },
+  ]);
+  await assertProblem(
+    await rest.fetch(new Request('http://contexture.test/v1/forbidden')),
+    403,
+    'forbidden',
+    'A verified identity lacks the required scope.',
+  );
+  await assertProblem(
+    await rest.fetch(new Request('http://contexture.test/v1/rejected')),
+    422,
+    'rejected',
+    'The requested change is not currently allowed.',
+  );
+  await assertProblem(
+    await rest.fetch(new Request('http://contexture.test/v1/explode')),
+    500,
+    'controller-failed',
+    'Error',
+  );
+
+  await assertProblem(
+    await surface((() => Object.freeze({})) as unknown as Authenticator).fetch(
+      new Request('http://contexture.test/v1/status?service=api'),
+    ),
+    500,
+    'invalid-authenticator',
+    'Authenticator returned an invalid identity.',
+  );
+  await assertProblem(
+    await surface(() => {
+      throw new Error('Verifier is unavailable.');
+    }).fetch(new Request('http://contexture.test/v1/status?service=api')),
+    500,
+    'invalid-authenticator',
+    'Authenticator failed to establish an identity.',
+  );
+});
+
+test('REST preserves explicit HEAD routes, empty command bodies, and streamed body limits', async () => {
+  const explicitHead = new RestSurface(runtime(), [
+    { method: 'GET', path: '/v1/status', ref: 'operations/status' },
+    { method: 'HEAD', path: '/v1/status', ref: 'operations/status', status: 202 },
+    { method: 'POST', path: '/v1/reset', ref: 'operations/reset' },
+  ]);
+  const head = await explicitHead.fetch(
+    new Request('http://contexture.test/v1/status?service=api', { method: 'HEAD' }),
+  );
+  assert.equal(head.status, 202);
+  assert.equal(await head.text(), '');
+  const reset = await explicitHead.fetch(
+    new Request('http://contexture.test/v1/reset', { method: 'POST' }),
+  );
+  assert.deepEqual(await reset.json(), { reset: true });
+
+  const encoder = new TextEncoder();
+  const chunks = [encoder.encode('{'), encoder.encode('}')];
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller): void {
+      const chunk = chunks.shift();
+      if (chunk === undefined) controller.close();
+      else controller.enqueue(chunk);
+    },
+  });
+  const limited = new RestSurface(
+    runtime(),
+    [{ method: 'POST', path: '/v1/restart', ref: 'operations/restart' }],
+    undefined,
+    { maxBodyBytes: 1 },
+  );
+  await assertProblem(
+    await limited.fetch(
+      new Request('http://contexture.test/v1/restart', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: stream,
+        duplex: 'half',
+      } as RequestInit),
+    ),
+    413,
+    'body-too-large',
+    'Request body exceeds the configured limit.',
+  );
+});
+
+test('REST rejects invalid route grammar, missing targets, and Fetch-unsafe statuses at publication time', () => {
+  const service = runtime();
+  const reject = (route: RestRoute): void => {
+    assert.throws(() => new RestSurface(service, [route]), ModelValidationError);
+  };
+  reject({ method: 'TRACE' as never, path: '/trace', ref: 'operations/status' });
+  reject({ method: 'GET', path: '/hash#fragment', ref: 'operations/status' });
+  reject({ method: 'GET', path: '/parameter/{id}', ref: 'operations/status' });
+  reject({ method: 'GET', path: '/missing-ref', ref: ' ' });
+  reject({ method: 'GET', path: '/missing-target', ref: 'operations/nope' });
+  for (const status of [199, 204, 205, 304, 600]) {
+    reject({ method: 'GET', path: `/status-${status}`, ref: 'operations/status', status });
+  }
+  assert.throws(
+    () =>
+      new RestSurface(service, [
+        { method: 'GET', path: '/duplicate', ref: 'operations/status' },
+        { method: 'GET', path: '/duplicate', ref: 'operations/status' },
+      ]),
+    ModelValidationError,
+  );
+});
+
 test('REST surface validates HTTP route grammar and holds Channels open for its real Node listener', async () => {
   const service = runtime();
   assert.throws(
@@ -227,14 +419,6 @@ test('REST surface validates HTTP route grammar and holds Channels open for its 
       new RestSurface(service, [{ method: 'GET', path: '/status?x=1', ref: 'operations/status' }]),
     ModelValidationError,
   );
-  assert.throws(
-    () =>
-      new RestSurface(service, [
-        { method: 'GET', path: '/status', ref: 'operations/status', status: 99 },
-      ]),
-    ModelValidationError,
-  );
-
   const marks: string[] = [];
   const live = new ApplicationRuntime(
     compileApplication(
@@ -275,6 +459,9 @@ test('REST surface validates HTTP route grammar and holds Channels open for its 
     assert.equal(second.status, 200);
     assert.deepEqual(await first.json(), { hello: 'Ada' });
     assert.deepEqual(await second.json(), { hello: 'Lin' });
+    const raw = await getWithIgnoredBody(`${handle.url}/v1/value?name=Query`, '{"name":"Body"}');
+    assert.equal(raw.status, 200);
+    assert.deepEqual(JSON.parse(raw.body), { hello: 'Query' });
     assert.deepEqual(marks, ['open']);
   } finally {
     await handle.close();
@@ -297,3 +484,96 @@ test('REST rejects method/read-only mismatches and non-Tool refs at publication 
     ModelValidationError,
   );
 });
+
+test('REST Node listener isolates concurrent authenticated Principals and WebRequest facts', async () => {
+  const rest = new RestSurface(
+    runtime(),
+    [{ method: 'GET', path: '/v1/probe', ref: 'operations/probe' }],
+    async (request) => {
+      await delay(request.query.request?.[0] === 'alpha' ? 1 : 20);
+      const bearer = request.headers.authorization;
+      return bearer === undefined
+        ? undefined
+        : new Principal({ subject: bearer.replace('Bearer ', '') });
+    },
+  );
+  const handle = await rest.listen();
+  try {
+    const [alpha, beta] = await Promise.all([
+      fetch(`${handle.url}/v1/probe?request=alpha`, {
+        headers: { authorization: 'Bearer alice', 'x-request': 'alpha' },
+      }),
+      fetch(`${handle.url}/v1/probe?request=beta`, {
+        headers: { authorization: 'Bearer bob', 'x-request': 'beta' },
+      }),
+    ]);
+    assert.deepEqual(await alpha.json(), {
+      contextPrincipal: 'alice',
+      currentPrincipal: 'alice',
+      header: 'alpha',
+      query: ['alpha'],
+      request: 'alpha',
+    });
+    assert.deepEqual(await beta.json(), {
+      contextPrincipal: 'bob',
+      currentPrincipal: 'bob',
+      header: 'beta',
+      query: ['beta'],
+      request: 'beta',
+    });
+  } finally {
+    await handle.close();
+  }
+});
+
+async function assertProblem(
+  response: Response,
+  status: number,
+  kind: string,
+  detail: string,
+): Promise<void> {
+  assert.equal(response.status, status);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.equal(response.headers.get('content-type'), 'application/problem+json; charset=utf-8');
+  const text = await response.text();
+  assert.equal(
+    response.headers.get('content-length'),
+    String(new TextEncoder().encode(text).byteLength),
+  );
+  assert.deepEqual(JSON.parse(text), {
+    type: `urn:contexture:problem:${kind}`,
+    status,
+    title: kind.replaceAll('-', ' '),
+    detail,
+  });
+}
+
+function getWithIgnoredBody(
+  url: string,
+  body: string,
+): Promise<{ readonly status: number; readonly body: string }> {
+  return new Promise((resolve, reject) => {
+    const request = requestFromNode(url, {
+      method: 'GET',
+      headers: {
+        connection: 'close',
+        'content-length': String(Buffer.byteLength(body)),
+        'content-type': 'application/json',
+      },
+    });
+    request.once('error', reject);
+    request.once('response', (response) => {
+      const chunks: Buffer[] = [];
+      response.on('data', (chunk: Buffer) => chunks.push(chunk));
+      response.once('error', reject);
+      response.once('end', () => {
+        resolve({ status: response.statusCode ?? 0, body: Buffer.concat(chunks).toString('utf8') });
+      });
+    });
+    request.end(body);
+  });
+}
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
