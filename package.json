@@ -1,0 +1,76 @@
+{
+  "name": "@contexture/mcp",
+  "version": "0.0.0",
+  "private": true,
+  "description": "TypeScript implementation of Contexture's progressive-disclosure framework for MCP",
+  "keywords": [
+    "ai",
+    "context",
+    "mcp",
+    "model-context-protocol",
+    "progressive-disclosure",
+    "typescript"
+  ],
+  "license": "Apache-2.0",
+  "author": "Contexture contributors",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CarterShi01/contexture-mcp-typescript.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CarterShi01/contexture-mcp-typescript/issues"
+  },
+  "homepage": "https://github.com/CarterShi01/contexture-mcp-typescript#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "npm@11.19.1",
+  "files": [
+    "dist",
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md",
+    "README.zh-CN.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run pack:check",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "pack:check": "npm pack --dry-run",
+    "prepack": "npm run build",
+    "test": "node --import tsx --test test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.13.3",
+    "eslint": "10.10.0",
+    "prettier": "3.9.6",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.69.0"
+  }
+}
