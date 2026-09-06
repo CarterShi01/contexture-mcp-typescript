@@ -17,6 +17,11 @@ export interface ToolBinding {
 
 /** Create the only schema/validation/invocation binding for a declared Tool. */
 export function bindTool<Input, Output>(declaration: ToolDeclaration<Input, Output>): ToolBinding {
+  if (declaration.input === undefined) {
+    throw new ModelValidationError(
+      `Tool ${JSON.stringify(declaration.name)} must declare a Zod input schema for runtime execution.`,
+    );
+  }
   const schema = requireObjectSchema(declaration.input) as ZodType<Input>;
   const jsonSchema = normalizeSchema(z.toJSONSchema(schema, { io: 'input' }));
   return Object.freeze({
