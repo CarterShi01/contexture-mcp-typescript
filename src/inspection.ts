@@ -40,15 +40,16 @@ export class Cost {
   }
 
   static of(text: string): Cost {
+    const characters = [...text];
     let wide = 0;
-    for (const character of text) {
+    for (const character of characters) {
       const codePoint = character.codePointAt(0) ?? 0;
       if (WIDE_RANGES.some(([low, high]) => low <= codePoint && codePoint <= high)) wide += 1;
     }
     return new Cost(
-      text.length,
+      characters.length,
       Buffer.byteLength(text, 'utf8'),
-      Math.round(wide + (text.length - wide) / 4),
+      Math.round(wide + (characters.length - wide) / 4),
     );
   }
 
@@ -108,13 +109,13 @@ export class Step {
   toJSON(): Readonly<Record<string, unknown>> {
     return Object.freeze({
       call: this.call,
-      ref: this.ref,
+      ref: this.ref ?? null,
       refused: this.refused,
       body: this.body,
-      payload: this.payload,
+      payload: this.payload ?? null,
       checks: this.checks,
       cost: this.cost.toJSON(),
-      aside: this.aside,
+      aside: this.aside ?? null,
     });
   }
 }
@@ -147,13 +148,10 @@ export function connectStep(
   instructions = buildInstructions(disclosure),
 ): Step {
   const cost = Cost.of(instructions);
-  const roots = disclosure.index.modelRoots.filter((node) =>
-    disclosure.modelCanSee(disclosure.index.refOf(node)),
+  const roles = [...disclosure.index.walk()].filter(
+    ([ref, node]) => node.kind === 'role' && disclosure.modelCanSee(ref),
   ).length;
-  const { listed, cut } = rosterLines(
-    instructions,
-    new Set(disclosure.index.modelRoots.map((node) => disclosure.index.refOf(node))),
-  );
+  const { listed, cut } = rosterLines(instructions);
   const checks: readonly Check[] = Object.freeze([
     Object.freeze({
       ok: cost.bytes <= INSTRUCTIONS_LIMIT,
@@ -164,8 +162,8 @@ export function connectStep(
       note: `contexture_open named in the first ${SELF_CONTAINED_PREFIX} characters — that is how far Codex reads while deciding whether to use this server`,
     }),
     Object.freeze({
-      ok: !cut && listed === roots,
-      note: `roster lists ${listed} of ${roots} role(s)${cut ? ' — the rest were cut for budget' : ''}`,
+      ok: !cut && listed === roles,
+      note: `roster lists ${listed} of ${roles} role(s)${cut ? ' — the rest were cut for budget' : ''}`,
     }),
   ]);
   return new Step(CONNECT, instructions, {
@@ -190,7 +188,7 @@ export function openStep(disclosure: Disclosure, ref: string): Step {
       payload,
       checks: routingChecks(payload),
       aside: contentTool(disclosure, ref)
-        ? 'the document itself is not here — pass read: true to include it and its cost'
+        ? 'the document itself is not here — an agent runs it with contexture_invoke_read_only; pass --read to include it and its cost'
         : undefined,
     });
   } catch (error) {
@@ -284,9 +282,7 @@ export function render(trace_: Trace, options: { readonly payloads?: boolean } =
     if (payloads) lines.push('', ...step.body.split('\n').map((line) => `  | ${line}`));
     lines.push('');
   });
-  lines.push(
-    `total  ${trace_.total.characters} characters, ${trace_.total.bytes} bytes, ~${trace_.total.tokens} tokens over ${trace_.steps.length} step(s)`,
-  );
+  lines.push(...renderSummary(trace_));
   return lines.join('\n');
 }
 
@@ -304,10 +300,17 @@ function routingChecks(payload: Readonly<Record<string, unknown>>): readonly Che
   const long = cards
     .filter((card) => String(card.description ?? '').length > DESCRIPTION_BUDGET)
     .map((card) => String(card.name));
-  const named = [...held].filter(
-    (name) =>
-      name !== String(payload.name ?? '') && String(payload.description ?? '').includes(name),
-  );
+  const named = new Set<string>();
+  for (const card of cards) {
+    for (const name of held) {
+      if (name !== String(card.name ?? '') && String(card.description ?? '').includes(name)) {
+        named.add(String(card.name ?? ''));
+      }
+    }
+  }
+  const opened = String(payload.description ?? '');
+  if ([...held].some((name) => opened.includes(name))) named.add(String(payload.name ?? ''));
+  const listing = [...named].sort();
   return Object.freeze([
     Object.freeze({
       ok: long.length === 0,
@@ -317,11 +320,11 @@ function routingChecks(payload: Readonly<Record<string, unknown>>): readonly Che
           : `over ${DESCRIPTION_BUDGET} characters: ${long.join(', ')}`,
     }),
     Object.freeze({
-      ok: named.length === 0,
+      ok: listing.length === 0,
       note:
-        named.length === 0
+        listing.length === 0
           ? 'no routing sentence names what its node holds'
-          : `${named.join(', ')} name(s) their own members`,
+          : `${listing.join(', ')} name(s) their own members — the inside is what opening delivers, and describing it twice is how the two copies start disagreeing`,
     }),
   ]);
 }
@@ -340,22 +343,44 @@ function objectPropertyCount(schema: unknown): number {
   return Object.keys(schema.properties).length;
 }
 
-function rosterLines(
-  text: string,
-  roots: ReadonlySet<string>,
-): { readonly listed: number; readonly cut: boolean } {
+function rosterLines(text: string): { readonly listed: number; readonly cut: boolean } {
   let listed = 0;
   let cut = false;
   for (const line of text.split('\n')) {
     if (!line.startsWith('- ')) continue;
     if (line.startsWith('- ...and ')) cut = true;
-    else if (roots.has(line.slice(2, line.indexOf(':')))) listed += 1;
+    else listed += 1;
   }
   return { listed, cut };
 }
 
 function amount(cost: Cost): string {
   return `${cost.characters} characters, ${cost.bytes} bytes, ~${cost.tokens} tokens`;
+}
+
+function renderSummary(trace_: Trace): readonly string[] {
+  const width = Math.min(Math.max(3, ...trace_.steps.map((step) => (step.ref ?? '').length)), 52);
+  const rule = '-'.repeat(36 + width);
+  const lines = [rule, `${'#'.padStart(2)}  ${'call'.padEnd(26)}  ${'ref'.padEnd(width)}  ~tok`];
+  let running = new Cost(0, 0, 0);
+  trace_.steps.forEach((step, index) => {
+    running = running.plus(step.cost);
+    let ref = step.ref ?? '-';
+    if (ref.length > width) ref = `…${ref.slice(-(width - 1))}`;
+    lines.push(
+      `${String(index).padStart(2)}  ${step.call.padEnd(26)}  ${ref.padEnd(width)}  ${String(step.cost.tokens).padStart(5)}  (running ${running.tokens})`,
+    );
+  });
+  const total = trace_.total;
+  lines.push(
+    rule,
+    `total  ${total.characters} characters, ${total.bytes} bytes, ~${total.tokens} tokens over ${trace_.steps.length} step(s)`,
+  );
+  const refused = trace_.steps.filter((step) => step.refused).length;
+  if (refused > 0) lines.push(`       ${refused} step(s) refused`);
+  const failed = trace_.steps.flatMap((step) => step.checks).filter((check) => !check.ok);
+  if (failed.length > 0) lines.push(`       ${failed.length} host limit(s) not met`);
+  return lines;
 }
 
 function wire(value: unknown): string {

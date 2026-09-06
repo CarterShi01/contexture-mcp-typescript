@@ -4,7 +4,18 @@ import { z } from 'zod';
 
 import { defineApplication, defineTool } from '../src/index.js';
 import { compileApplication, Disclosure } from '../src/core/index.js';
-import { asJson, connectStep, Cost, everyRef, openStep, render, trace } from '../src/inspection.js';
+import {
+  asJson,
+  connectStep,
+  Cost,
+  everyRef,
+  openStep,
+  render,
+  Step,
+  trace,
+  Trace,
+} from '../src/inspection.js';
+import { buildInstructions } from '../src/server/instructions.js';
 
 function fixture(): Disclosure {
   return new Disclosure(
@@ -69,8 +80,67 @@ test('inspection measures the exact discover/open payloads and keeps refusals re
 
 test('inspection uses UTF-8 bytes and wide characters in its approximate cost', () => {
   assert.deepEqual(Cost.of('a中').toJSON(), { characters: 2, bytes: 4, estimated_tokens: 1 });
+  assert.deepEqual(Cost.of('😀').toJSON(), { characters: 1, bytes: 4, estimated_tokens: 0 });
   assert.deepEqual(
     [...everyRef(fixture())],
     ['operations', 'operations/diagnose', 'operations/runbook'],
   );
+});
+
+test('inspection accounts for all visible roles, checks routing cards, and keeps JSON nullable', () => {
+  const disclosure = new Disclosure(
+    compileApplication(
+      defineApplication({
+        name: 'inspection-detail',
+        roots: [
+          () => ({
+            kind: 'role',
+            name: 'root',
+            description: 'Route work.',
+            instructions: 'Start here.',
+            children: [
+              () => ({
+                kind: 'role',
+                name: 'child',
+                description: 'Continue work.',
+                instructions: 'Continue here.',
+              }),
+            ],
+            skills: [
+              () => ({
+                kind: 'skill',
+                name: 'diagnose',
+                description: 'Diagnose the service.',
+                instructions: 'Inspect the service.',
+              }),
+            ],
+            tools: [
+              () =>
+                defineTool({
+                  kind: 'tool',
+                  name: 'get_logs',
+                  description: 'Read the diagnose output.',
+                  readOnly: true,
+                  input: z.strictObject({}),
+                  invoke: () => 'logs',
+                }),
+            ],
+          }),
+        ],
+      }),
+    ),
+  );
+
+  const connected = connectStep(disclosure, buildInstructions(disclosure));
+  assert.equal(connected.checks[2]?.ok, true);
+
+  const opened = openStep(disclosure, 'root');
+  assert.equal(opened.checks[1]?.ok, false);
+  assert.match(opened.checks[1]?.note ?? '', /get_logs/);
+
+  const replay = new Trace([new Step('synthetic', 'body')]);
+  const json = JSON.parse(asJson(replay)) as { steps: Array<{ ref: unknown; aside: unknown }> };
+  assert.equal(json.steps[0]?.ref, null);
+  assert.equal(json.steps[0]?.aside, null);
+  assert.match(render(replay, { payloads: false }), /running/);
 });
