@@ -20,6 +20,17 @@ export {
   ROSTER_BUDGET,
   SELF_CONTAINED_PREFIX,
 } from './instructions.js';
+export {
+  ContextureOptions,
+  DEFAULT_HOST,
+  DEFAULT_PATH,
+  DEFAULT_PORT,
+  LOOPBACK,
+  ServeError,
+} from './options.js';
+export type { Transport } from './options.js';
+export { buildServer, ContextureServer, PACKAGE_VERSION } from './server.js';
+export type { HttpServerHandle } from './server.js';
 
 /** Metadata required to identify a Contexture MCP server. */
 export interface ServerIdentity {

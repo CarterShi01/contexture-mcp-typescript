@@ -7,6 +7,7 @@ import { asJson, everyRef, render, trace } from '../inspection.js';
 import { app as demoApplication } from '../demo/server.js';
 import { compileRuntimeApplication } from '../server/application.js';
 import { buildInstructions } from '../server/instructions.js';
+import { buildServer, ContextureOptions, ServeError } from '../server/index.js';
 
 import { findProject, loadApplication } from './project.js';
 import { newProject } from './scaffold.js';
@@ -52,6 +53,10 @@ export async function main(
         return await commandCall(arguments_, output, environment);
       case 'inspect':
         return await commandInspect(arguments_, output, environment);
+      case 'serve':
+        return await commandServe(arguments_, output, environment);
+      case 'demo':
+        return await commandDemo(arguments_, output);
       default:
         throw new UsageError(usage());
     }
@@ -281,6 +286,28 @@ async function commandInspect(
   return traced.failures.length === 0 ? 0 : 1;
 }
 
+async function commandServe(
+  argv: readonly string[],
+  output: CliOutput,
+  environment: CliEnvironment,
+): Promise<number> {
+  const { target, options } = transportArguments(argv, true);
+  const loaded = await loadApplication({
+    ...(environment.cwd === undefined ? {} : { start: environment.cwd }),
+    ...(target === undefined ? {} : { target }),
+  });
+  const handle = await buildServer(loaded.application).start(options);
+  if (handle !== undefined) output.error(`Serving MCP on ${handle.url}`);
+  return 0;
+}
+
+async function commandDemo(argv: readonly string[], output: CliOutput): Promise<number> {
+  const { options } = transportArguments(argv, false);
+  const handle = await buildServer(demoApplication).start(options);
+  if (handle !== undefined) output.error(`Serving bundled demo on ${handle.url}`);
+  return 0;
+}
+
 async function compiled(target: string | undefined, environment: CliEnvironment) {
   const loaded = await loadApplication({
     ...(environment.cwd === undefined ? {} : { start: environment.cwd }),
@@ -322,7 +349,89 @@ async function inputObject(
 }
 
 function usage(): string {
-  return 'Expected contexture new, list, check, call, inspect, serve, or demo. This build has not installed serve or demo yet.';
+  return 'Expected contexture new, list, check, call, inspect, serve, or demo.';
+}
+
+function transportArguments(
+  argv: readonly string[],
+  acceptsTarget: boolean,
+): { readonly target: string | undefined; readonly options: ContextureOptions } {
+  let target: string | undefined;
+  let transport: 'stdio' | 'streamable-http' | undefined;
+  let host: string | undefined;
+  let port: number | undefined;
+  let endpointPath: string | undefined;
+  const allowedHosts: string[] = [];
+  const allowedOrigins: string[] = [];
+  let allowAnonymous = false;
+  for (let index = 0; index < argv.length; index += 1) {
+    const item = argv[index];
+    if (item === undefined) throw new UsageError('Unexpected empty command argument.');
+    if (!item.startsWith('--')) {
+      if (!acceptsTarget || target !== undefined)
+        throw new UsageError(
+          acceptsTarget
+            ? 'Use contexture serve [TARGET] [transport options].'
+            : 'Use contexture demo [transport options].',
+        );
+      target = item;
+      continue;
+    }
+    if (item === '--allow-anonymous') {
+      if (allowAnonymous) throw new UsageError('Use --allow-anonymous at most once.');
+      allowAnonymous = true;
+      continue;
+    }
+    const value = argv[index + 1];
+    if (value === undefined) throw new UsageError(`Option ${item} needs a value.`);
+    switch (item) {
+      case '--transport':
+        if (transport !== undefined) throw new UsageError('Use --transport at most once.');
+        if (value !== 'stdio' && value !== 'streamable-http')
+          throw new UsageError('--transport must be stdio or streamable-http.');
+        transport = value;
+        break;
+      case '--host':
+        if (host !== undefined) throw new UsageError('Use --host at most once.');
+        host = value;
+        break;
+      case '--port':
+        if (port !== undefined) throw new UsageError('Use --port at most once.');
+        port = Number(value);
+        if (!Number.isInteger(port)) throw new UsageError('--port must be an integer.');
+        break;
+      case '--path':
+        if (endpointPath !== undefined) throw new UsageError('Use --path at most once.');
+        endpointPath = value;
+        break;
+      case '--allow-host':
+        allowedHosts.push(value);
+        break;
+      case '--allow-origin':
+        allowedOrigins.push(value);
+        break;
+      default:
+        throw new UsageError(`Unknown transport option ${item}.`);
+    }
+    index += 1;
+  }
+  try {
+    return Object.freeze({
+      target,
+      options: new ContextureOptions({
+        ...(transport === undefined ? {} : { transport }),
+        ...(host === undefined ? {} : { host }),
+        ...(port === undefined ? {} : { port }),
+        ...(endpointPath === undefined ? {} : { path: endpointPath }),
+        ...(allowedHosts.length === 0 ? {} : { allowedHosts }),
+        ...(allowedOrigins.length === 0 ? {} : { allowedOrigins }),
+        ...(allowAnonymous ? { allowAnonymous: true } : {}),
+      }),
+    });
+  } catch (error) {
+    if (error instanceof ServeError) throw new UsageError(error.message);
+    throw error;
+  }
 }
 
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {

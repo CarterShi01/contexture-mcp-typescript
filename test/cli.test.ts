@@ -36,6 +36,10 @@ test('CLI sends usage errors to stderr with status two', async () => {
   const invalid = output();
   assert.equal(await main(['new'], invalid.writer), 2);
   assert.match(invalid.error[0] ?? '', /^contexture: /);
+
+  const invalidTransport = output();
+  assert.equal(await main(['demo', '--host', '0.0.0.0'], invalidTransport.writer), 2);
+  assert.match(invalidTransport.error[0] ?? '', /transport='stdio'/);
 });
 
 test('inspect uses the bundled demo when no project configuration exists', async () => {
