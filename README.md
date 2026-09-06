@@ -177,7 +177,9 @@ run the TypeScript implementation before comparing its observations with them.
 
 ## Repository map
 
-The architecture document is also available in [Simplified Chinese](docs/architecture.zh-CN.md).
+Read the [TypeScript handbook](docs/handbook.md), its
+[Simplified Chinese translation](docs/handbook.zh-CN.md), and the
+[architecture document](docs/architecture.md).
 
 ```text
 src/application.ts        Contexture application declaration and composition root
