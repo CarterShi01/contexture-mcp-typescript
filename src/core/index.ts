@@ -34,6 +34,7 @@ export {
   currentTelemetry,
   InMemoryTelemetry,
   reportTelemetry,
+  WrongDoorError,
 } from './model/runtime.js';
 export type { NodeUsage, Telemetry, TelemetryEvent } from './model/runtime.js';
 export {
@@ -45,7 +46,15 @@ export {
 export { bindTool } from './model/binding.js';
 export type { JsonObject, JsonValue, ToolBinding } from './model/binding.js';
 export { withChannels } from './model/channels.js';
-export { Gateway, GATEWAY } from './model/system-api.js';
+export {
+  DISCLOSURE_GATEWAY,
+  EXECUTION_GATEWAY,
+  Gateway,
+  GATEWAY,
+  takenByPersonMessage,
+  unresolvedMessage,
+  wrongDoorMessage,
+} from './model/system-api.js';
 export type { GatewayTool } from './model/system-api.js';
 export { GATEWAY_TOOL_NAMES } from './mcp-interface/tool.js';
 export type { GatewayName } from './mcp-interface/tool.js';

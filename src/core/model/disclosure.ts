@@ -1,4 +1,5 @@
 import type { CompiledApplication, CompiledNode, CompiledRole, CompiledTool } from './compiler.js';
+import { LookupFailure, NodeNotFoundError } from '../foundation/errors.js';
 import { RootOutsideSelectionError, RootSelection } from './root-selection.js';
 import { InMemoryTelemetry, reportTelemetry, type Telemetry } from './telemetry.js';
 
@@ -12,6 +13,11 @@ export type Discovery = Readonly<{
 /** A model-plane navigation request is deliberately refused with a recovery sentence. */
 export class RefusedError extends Error {
   override readonly name = 'RefusedError';
+
+  constructor(message: string, options: { readonly cause?: unknown } = {}) {
+    super(message);
+    if (options.cause !== undefined) Object.defineProperty(this, 'cause', { value: options.cause });
+  }
 }
 
 /** A pure, stateless progressive-disclosure projection over a compiled Index. */
@@ -184,45 +190,57 @@ function resolveRef(
   selection: RootSelection,
   candidates: readonly CompiledNode[],
 ): CompiledNode {
-  if (ref.length === 0) {
-    throw new RefusedError(
-      'A reference must name at least a root role. Call contexture_discover for the roles this server serves.',
-    );
-  }
-  const segments = ref.split('/');
   const roots = candidates.filter((root) => selection.containsRef(index.refOf(root)));
-  let node = roots.find((root) => root.name === segments[0]);
-  if (node === undefined) {
-    throw new RefusedError(
-      `No root role named '${segments[0]}'. This server serves: ${roots.map((root) => root.name).join(', ')}. ` +
-        'Call contexture_discover for their cards, then open one to reach what is beneath it.',
-    );
-  }
-  for (let position = 1; position < segments.length; position += 1) {
-    const segment = segments[position];
-    if (node.kind !== 'role') {
-      throw new RefusedError(
-        `Reference '${ref}' continues past '${node.name}', which is a ${node.kind} and holds nothing. ` +
-          `Open '${node.name}' itself with contexture_open, or go back to the card the ref came from.`,
-      );
+  let node: CompiledNode;
+  try {
+    // The Index alone owns structured lookup facts. Gateway is the sole
+    // model-facing renderer; other Hosts can still classify the raw failure.
+    node = index.find(ref);
+  } catch (error) {
+    if (error instanceof NodeNotFoundError && error.reason === LookupFailure.NO_SUCH_ROOT) {
+      throw selectedRootFailure(error, roots);
     }
-    const members = index.childrenOf(node);
-    const next = members.find((child) => child.name === segment);
-    if (next === undefined) {
-      const known = members.map((child) => child.name).sort();
-      const holds = known.length === 0 ? 'It holds nothing.' : `It holds: ${known.join(', ')}.`;
-      throw new RefusedError(
-        `Role '${node.name}' holds no member named '${segment}'. ${holds} ` +
-          `Call contexture_open on '${node.name}' to see each member with the ref that opens it.`,
-      );
-    }
-    node = next;
+    throw error;
   }
-  return node;
+  const root = rootOf(ref);
+  if (roots.some((candidate) => candidate.name === root)) return node;
+  throw selectedRootFailure(
+    new NodeNotFoundError({
+      reason: LookupFailure.NO_SUCH_ROOT,
+      ref,
+      segment: root,
+      scope: root,
+    }),
+    roots,
+  );
 }
 
 function rootOf(ref: string): string {
-  return ref.split('/', 1)[0] ?? '';
+  return ref.split('/').find((segment) => segment.length > 0) ?? '';
+}
+
+function selectedRootFailure(
+  failure: NodeNotFoundError,
+  roots: readonly CompiledNode[],
+): NodeNotFoundError {
+  return new NodeNotFoundError({
+    reason: LookupFailure.NO_SUCH_ROOT,
+    ...(failure.ref === undefined ? {} : { ref: failure.ref }),
+    ...(failure.segment === undefined ? {} : { segment: failure.segment }),
+    ...(failure.scope === undefined ? {} : { scope: failure.scope }),
+    known: roots.map((root) => root.name).sort(compareCodePoints),
+  });
+}
+
+function compareCodePoints(left: string, right: string): number {
+  const leftPoints = [...left];
+  const rightPoints = [...right];
+  for (let index = 0; index < Math.min(leftPoints.length, rightPoints.length); index += 1) {
+    const difference =
+      (leftPoints[index]?.codePointAt(0) ?? 0) - (rightPoints[index]?.codePointAt(0) ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return leftPoints.length - rightPoints.length;
 }
 
 function isRole(node: CompiledNode): node is CompiledRole {

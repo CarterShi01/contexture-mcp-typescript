@@ -19,7 +19,15 @@ export type {
   RestServerHandle,
   WebRequest,
 } from './rest.js';
-export { Gateway, GATEWAY } from '../core/model/system-api.js';
+export {
+  DISCLOSURE_GATEWAY,
+  EXECUTION_GATEWAY,
+  Gateway,
+  GATEWAY,
+  takenByPersonMessage,
+  unresolvedMessage,
+  wrongDoorMessage,
+} from '../core/model/system-api.js';
 export type { GatewayTool } from '../core/model/system-api.js';
 export { Publications } from './surface/publications.js';
 export type { PromptCard, ResourceCard } from './surface/publications.js';
@@ -123,7 +131,11 @@ export function createContextureMcpServer(
             inputSchema: z.strictObject({ ref: z.string() }),
             annotations: { readOnlyHint: true },
           },
-          async ({ ref }) => toolResult(() => gateway.open(ref, selection)),
+          async ({ ref }) =>
+            toolResult(async () => {
+              publications?.checkModelOpen(ref, selection);
+              return gateway.open(ref, selection);
+            }),
         );
         break;
       case 'contexture_invoke_read_only':

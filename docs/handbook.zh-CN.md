@@ -77,6 +77,11 @@ dependents 会被过滤。request header 使用同一 projection，不能泄露 
 `currentRootSelection()` 在 Tool 内返回 request-local projection，在 invocation 外返回兼容的
 all-roots 值。
 
+每个可执行 server 都暴露同一个有序四工具 `Gateway`：discover、open、read-only invoke 和
+invoke。disclosure-only host 只暴露前两个 navigation entry。lookup 和 wrong-door failure 会在
+这里被渲染为可执行下一步的 `RefusedError` recovery；`RootOutsideSelectionError` 保持 typed，
+以便 authorization ceiling 不会泄露其他 root。Prompt reservation 只会在该 ceiling 之后检查。
+
 可选的 framework telemetry 可声明为 `telemetry: new InMemoryTelemetry()`。它会把成功的 Role 和
 Skill open，以及成功或失败的 Tool invocation 聚合成 `NodeUsage`（`callCount`、`errorCount` 和
 `lastUsedAt`）；不会观察 discover 或打开 Tool card。可使用自定义 `Telemetry` 做 export，exporter 的

@@ -5,7 +5,12 @@ import { InMemoryTransport, LATEST_PROTOCOL_VERSION } from '@modelcontextprotoco
 import { z } from 'zod';
 
 import { defineApplication, InMemoryTelemetry } from '../src/index.js';
-import { ApplicationRuntime, compileApplication, Disclosure } from '../src/core/index.js';
+import {
+  ApplicationRuntime,
+  compileApplication,
+  Disclosure,
+  RootSelection,
+} from '../src/core/index.js';
 import {
   compileRuntimeApplication,
   Gateway,
@@ -203,6 +208,115 @@ test('the official MCP gateway shares compiled telemetry across opens and invoca
     assert.equal(telemetry.usage('operations').callCount, 1);
     assert.equal(telemetry.usage('operations/diagnose').callCount, 1);
     assert.equal(telemetry.usage('operations/status').callCount, 1);
+  } finally {
+    await client.close();
+    await adapter.server.close();
+  }
+});
+
+test('the official MCP path keeps Gateway recovery when Publications guard a reserved Prompt', async () => {
+  const application = compileRuntimeApplication(
+    defineApplication({
+      name: 'gateway-publications',
+      roots: [
+        () => ({
+          kind: 'role' as const,
+          name: 'operations',
+          description: 'Operate.',
+          instructions: 'Inspect.',
+          skills: [
+            () => ({
+              kind: 'skill' as const,
+              name: 'change',
+              description: 'Change.',
+              instructions: 'Ask.',
+            }),
+          ],
+        }),
+        () => ({
+          kind: 'role' as const,
+          name: 'hidden',
+          description: 'Hidden.',
+          instructions: 'Do not disclose.',
+          skills: [
+            () => ({
+              kind: 'skill' as const,
+              name: 'change',
+              description: 'Change.',
+              instructions: 'Ask.',
+            }),
+          ],
+        }),
+      ],
+      prompts: [
+        {
+          name: 'operations-change',
+          opens: 'operations/change',
+          description: 'Change.',
+          modelMayOpen: false,
+        },
+        {
+          name: 'hidden-change',
+          opens: 'hidden/change',
+          description: 'Hidden change.',
+          modelMayOpen: false,
+        },
+      ],
+    }),
+  );
+  const adapter = createContextureMcpServer(
+    { name: 'gateway-publications', version: '0.0.0' },
+    new Gateway(application.disclosure, application.runtime),
+    application.publications,
+    { selection: RootSelection.only('operations') },
+  );
+  const [client, host] = InMemoryTransport.createLinkedPair();
+  const replies = new Map<number, unknown>();
+  client.onmessage = (message) => {
+    if ('id' in message && typeof message.id === 'number') replies.set(message.id, message);
+  };
+  await client.start();
+  await adapter.server.connect(host);
+  try {
+    await sendAndWait(client, replies, 1, 'initialize', {
+      protocolVersion: LATEST_PROTOCOL_VERSION,
+      capabilities: {},
+      clientInfo: { name: 'gateway-publications-client', version: '0.0.0' },
+    });
+    await client.send({ jsonrpc: '2.0', method: 'notifications/initialized' });
+    const missing = response(
+      await sendAndWait(client, replies, 2, 'tools/call', {
+        name: 'contexture_open',
+        arguments: { ref: 'missing' },
+      }),
+    );
+    assert.equal(missing.isError, true);
+    assert.match(
+      String((missing.content as Array<{ readonly text: string }>)[0]?.text),
+      /contexture_discover/,
+    );
+
+    const reserved = response(
+      await sendAndWait(client, replies, 3, 'tools/call', {
+        name: 'contexture_open',
+        arguments: { ref: 'operations/change' },
+      }),
+    );
+    assert.equal(reserved.isError, true);
+    assert.match(
+      String((reserved.content as Array<{ readonly text: string }>)[0]?.text),
+      /opened by a person/,
+    );
+
+    const excluded = response(
+      await sendAndWait(client, replies, 4, 'tools/call', {
+        name: 'contexture_open',
+        arguments: { ref: 'hidden/change' },
+      }),
+    );
+    assert.equal(excluded.isError, true);
+    const excludedText = String((excluded.content as Array<{ readonly text: string }>)[0]?.text);
+    assert.doesNotMatch(excludedText, /opened by a person|operations/);
   } finally {
     await client.close();
     await adapter.server.close();

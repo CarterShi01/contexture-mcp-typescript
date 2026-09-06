@@ -1,5 +1,7 @@
 import type { ApplicationDeclaration } from '../../application.js';
 import { ModelValidationError } from '../../core/foundation/errors.js';
+import { RefusedError } from '../../core/model/disclosure.js';
+import { takenByPersonMessage } from '../../core/model/system-api.js';
 import type { PromptDeclaration } from '../../core/mcp-interface/prompt.js';
 import type { ResourceDeclaration } from '../../core/mcp-interface/resource.js';
 import { Disclosure } from '../../core/model/disclosure.js';
@@ -96,6 +98,20 @@ export class Publications {
 
   async goto(ref: string, selection: RootSelection = RootSelection.all()): Promise<string> {
     return this.openForPerson(ref, selection);
+  }
+
+  /**
+   * Apply publication-only model authorization before Gateway performs ordinary
+   * navigation, so a typed lookup still reaches Gateway's one recovery layer.
+   */
+  checkModelOpen(ref: string, selection: RootSelection = RootSelection.all()): void {
+    const effective = this.disclosure.effectiveSelection(selection);
+    // Authorization precedes reservation: an excluded root must never reveal
+    // that it also happens to be reachable through a person Prompt.
+    effective.requireRef(ref);
+    if (this.prompts.some((entry) => entry.opens === ref && entry.modelMayOpen === false)) {
+      throw new RefusedError(takenByPersonMessage(ref));
+    }
   }
 
   complete(

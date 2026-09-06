@@ -8,7 +8,8 @@
 import type { CompiledNode } from './core/model/compiler.js';
 import { Disclosure } from './core/model/disclosure.js';
 import { ApplicationRuntime } from './core/model/runtime.js';
-import { GATEWAY } from './core/model/system-api.js';
+import { GATEWAY, unresolvedMessage } from './core/model/system-api.js';
+import { NodeNotFoundError } from './core/foundation/errors.js';
 import {
   buildInstructions,
   INSTRUCTIONS_LIMIT,
@@ -192,11 +193,15 @@ export function openStep(disclosure: Disclosure, ref: string): Step {
         : undefined,
     });
   } catch (error) {
-    return new Step('contexture_open', message(error), {
-      ref,
-      refused: true,
-      aside: 'this recovery sentence is all the agent receives',
-    });
+    return new Step(
+      'contexture_open',
+      error instanceof NodeNotFoundError ? unresolvedMessage(error) : message(error),
+      {
+        ref,
+        refused: true,
+        aside: 'this recovery sentence is all the agent receives',
+      },
+    );
   }
 }
 

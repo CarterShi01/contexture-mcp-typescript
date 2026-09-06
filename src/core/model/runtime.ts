@@ -1,13 +1,8 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 import type { CompiledApplication, CompiledTool } from './compiler.js';
-import {
-  InputValidationError,
-  ModelValidationError,
-  NodeNotFoundError,
-} from '../foundation/errors.js';
+import { InputValidationError, ModelValidationError } from '../foundation/errors.js';
 import type { Principal } from '../foundation/principal.js';
-import { RefusedError } from './disclosure.js';
 import { RootSelection, SelectedGraph } from './root-selection.js';
 import type { ToolCallContext } from './declarations.js';
 import { withChannels } from './channels.js';
@@ -26,6 +21,18 @@ interface RuntimeScope {
 }
 
 const SCOPE = new AsyncLocalStorage<RuntimeScope>();
+
+/** A Tool reached the invocation door whose fixed host hint does not match it. */
+export class WrongDoorError extends Error {
+  override readonly name = 'WrongDoorError';
+
+  constructor(
+    readonly ref: string,
+    readonly readOnly: boolean,
+  ) {
+    super(`${ref} was called through the wrong Contexture invocation door.`);
+  }
+}
 
 function requireScope(): RuntimeScope {
   const scope = SCOPE.getStore();
@@ -115,9 +122,7 @@ export class ApplicationRuntime {
     selection.requireRef(ref);
     const node = this.nodeAt(ref);
     if (node.readOnly !== readOnly) {
-      const stated = node.readOnly ? 'read-only' : 'not read-only';
-      const door = node.readOnly ? 'contexture_invoke_read_only' : 'contexture_invoke';
-      throw new RefusedError(`${ref} is ${stated}, so it must be run through ${door}.`);
+      throw new WrongDoorError(ref, node.readOnly);
     }
     const scope: RuntimeScope = Object.freeze({
       principal: context.principal,
@@ -149,21 +154,7 @@ export class ApplicationRuntime {
   }
 
   private nodeAt(ref: string): CompiledTool {
-    let node;
-    try {
-      node = this.index.find(ref);
-    } catch (error) {
-      if (error instanceof ModelValidationError || error instanceof NodeNotFoundError) {
-        throw new RefusedError(error.message);
-      }
-      throw error;
-    }
-    if (node.kind !== 'tool') {
-      throw new RefusedError(
-        `${ref} names a ${node.kind}, not a tool. Open it with contexture_open.`,
-      );
-    }
-    return node;
+    return this.index.tool(ref);
   }
 }
 

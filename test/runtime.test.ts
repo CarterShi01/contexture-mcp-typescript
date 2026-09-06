@@ -11,9 +11,9 @@ import {
   currentRootSelection,
   currentTelemetry,
   InMemoryTelemetry,
-  RefusedError,
   RootOutsideSelectionError,
   RootSelection,
+  WrongDoorError,
   type Telemetry,
 } from '../src/core/index.js';
 
@@ -81,16 +81,12 @@ test('runtime validates via the disclosed Binding and enforces the fixed read/wr
   await assert.rejects(
     service.invoke('operations/status', { value: 'api' }),
     (error: unknown) =>
-      error instanceof RefusedError &&
-      error.message ===
-        'operations/status is read-only, so it must be run through contexture_invoke_read_only.',
+      error instanceof WrongDoorError && error.ref === 'operations/status' && error.readOnly,
   );
   await assert.rejects(
     service.invokeReadOnly('operations/restart', { value: 'api' }),
     (error: unknown) =>
-      error instanceof RefusedError &&
-      error.message ===
-        'operations/restart is not read-only, so it must be run through contexture_invoke.',
+      error instanceof WrongDoorError && error.ref === 'operations/restart' && !error.readOnly,
   );
   assert.equal(telemetry.events.length, 1);
   assert.deepEqual(

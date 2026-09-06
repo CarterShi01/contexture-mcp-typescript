@@ -84,6 +84,13 @@ cannot disclose roots outside an identity ceiling. `currentRootSelection()`
 returns the request-local projection inside a Tool and the compatibility
 all-roots value outside an invocation.
 
+Every executable server exposes the same ordered four-tool `Gateway`: discover,
+open, read-only invoke, and invoke. A disclosure-only host exposes its first
+two navigation entries. Lookup and wrong-door failures are rendered there as
+actionable `RefusedError` recoveries, while `RootOutsideSelectionError` remains
+typed so an authorization ceiling cannot disclose another root. Prompt
+reservations are checked only after that ceiling.
+
 Optional framework telemetry is declared with `telemetry: new InMemoryTelemetry()`.
 It aggregates successful Role and Skill opens plus successful or failed Tool
 invocations as `NodeUsage` (`callCount`, `errorCount`, and `lastUsedAt`). It

@@ -6,6 +6,8 @@ import { defineApplication } from '../src/index.js';
 import {
   compileApplication,
   Disclosure,
+  LookupFailure,
+  NodeNotFoundError,
   RefusedError,
   RootOutsideSelectionError,
   RootSelection,
@@ -214,15 +216,11 @@ test('open recovery strings retain the protocol recovery action', () => {
   assert.throws(
     () => disclosure.open(''),
     (error: unknown) =>
-      error instanceof RefusedError &&
-      error.message ===
-        'A reference must name at least a root role. Call contexture_discover for the roles this server serves.',
+      error instanceof NodeNotFoundError && error.reason === LookupFailure.EMPTY_REF,
   );
   assert.throws(
     () => disclosure.open('operations/status/deeper'),
     (error: unknown) =>
-      error instanceof RefusedError &&
-      error.message ===
-        "Reference 'operations/status/deeper' continues past 'status', which is a tool and holds nothing. Open 'status' itself with contexture_open, or go back to the card the ref came from.",
+      error instanceof NodeNotFoundError && error.reason === LookupFailure.NOT_A_CONTAINER,
   );
 });
