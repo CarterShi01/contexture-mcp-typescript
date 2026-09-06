@@ -54,11 +54,13 @@ try {
   const consumer = [
     "import { Principal, currentPrincipal, defineApplication } from '@contexture/mcp';",
     "import { trace } from '@contexture/mcp/inspection';",
+    "import { newProject } from '@contexture/mcp/cli';",
     "import { compileRuntimeApplication } from '@contexture/mcp/server';",
     "import { RestRouter } from '@contexture/mcp/web';",
     "if (typeof defineApplication !== 'function') throw new Error('missing declaration facade');",
     "if (typeof Principal !== 'function' || typeof currentPrincipal !== 'function') throw new Error('missing root request facts');",
     "if (typeof trace !== 'function') throw new Error('missing inspection API');",
+    "if (typeof newProject !== 'function') throw new Error('missing CLI scaffold API');",
     "if (typeof compileRuntimeApplication !== 'function') throw new Error('missing server facade');",
     "if (typeof RestRouter !== 'function') throw new Error('missing web facade');",
   ].join('\n');

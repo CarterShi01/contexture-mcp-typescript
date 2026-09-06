@@ -50,6 +50,10 @@
       "types": "./dist/inspection.d.ts",
       "import": "./dist/inspection.js"
     },
+    "./cli": {
+      "types": "./dist/cli/index.d.ts",
+      "import": "./dist/cli/index.js"
+    },
     "./package.json": "./package.json"
   },
   "types": "./dist/index.d.ts",
