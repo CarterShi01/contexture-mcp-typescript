@@ -64,16 +64,19 @@ export class Publications {
     ]);
   }
 
-  resourceCards(): readonly ResourceCard[] {
+  resourceCards(selection: RootSelection = RootSelection.all()): readonly ResourceCard[] {
+    const effective = this.disclosure.effectiveSelection(selection);
     return Object.freeze(
-      this.resources.map((entry) =>
-        Object.freeze({
-          name: publicationName(entry),
-          uri: entry.uri,
-          description: entry.description,
-          mimeType: entry.mimeType,
-        }),
-      ),
+      this.resources
+        .filter((entry) => effective.containsRef(entry.opens))
+        .map((entry) =>
+          Object.freeze({
+            name: publicationName(entry),
+            uri: entry.uri,
+            description: entry.description,
+            mimeType: entry.mimeType,
+          }),
+        ),
     );
   }
 

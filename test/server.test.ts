@@ -5,7 +5,12 @@ import { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
 import { defineApplication } from '../src/index.js';
-import { ApplicationRuntime, compileApplication, Disclosure } from '../src/core/index.js';
+import {
+  ApplicationRuntime,
+  compileApplication,
+  Disclosure,
+  RootSelection,
+} from '../src/core/index.js';
 import {
   createContextureMcpServer,
   createMcpServer,
@@ -82,4 +87,42 @@ test('the SDK publishes Contexture Prompts and Resources as their native primiti
   >;
   assert.deepEqual(Object.keys(resources), ['contexture://readme']);
   assert.equal(resources['contexture://readme']?.name, 'readme');
+});
+
+test('a fixed server root selection registers only publications inside its surface', () => {
+  const declaration = defineApplication({
+    name: 'selected-publications',
+    roots: [
+      () => ({
+        kind: 'tool',
+        name: 'included',
+        description: 'Included.',
+        readOnly: true,
+        input: z.strictObject({}),
+        invoke: () => 'included',
+      }),
+      () => ({
+        kind: 'tool',
+        name: 'excluded',
+        description: 'Excluded.',
+        readOnly: true,
+        input: z.strictObject({}),
+        invoke: () => 'excluded',
+      }),
+    ],
+    resources: [
+      { opens: 'included', uri: 'contexture://included', description: 'Included.' },
+      { opens: 'excluded', uri: 'contexture://excluded', description: 'Excluded.' },
+    ],
+  });
+  const index = compileApplication(declaration);
+  const adapter = createContextureMcpServer(
+    { name: 'contexture-test', version: '0.0.0' },
+    new Gateway(new Disclosure(index), new ApplicationRuntime(index)),
+    new Publications(new Disclosure(index), new ApplicationRuntime(index), declaration),
+    { selection: RootSelection.only('included') },
+  );
+  assert.deepEqual(Object.keys(Reflect.get(adapter.server, '_registeredResources')), [
+    'contexture://included',
+  ]);
 });

@@ -11,6 +11,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
 import type { ApplicationDeclaration } from '../application.js';
 import { Gateway } from '../core/model/system-api.js';
+import { RootSelection } from '../core/model/root-selection.js';
 
 import { compileRuntimeApplication, type RuntimeApplication } from './application.js';
 import { createContextureMcpServer, type ContextureMcpServer } from './index.js';
@@ -29,11 +30,16 @@ export class ContextureServer {
   readonly application: RuntimeApplication;
   readonly name: string;
   readonly version: string;
+  readonly selection: RootSelection;
 
-  constructor(declaration: ApplicationDeclaration, options: { readonly version?: string } = {}) {
+  constructor(
+    declaration: ApplicationDeclaration,
+    options: { readonly version?: string; readonly selection?: RootSelection } = {},
+  ) {
     this.application = compileRuntimeApplication(declaration);
     this.name = declaration.name;
     this.version = options.version ?? PACKAGE_VERSION;
+    this.selection = (options.selection ?? RootSelection.all()).resolve(this.application.index);
     Object.freeze(this);
   }
 
@@ -43,6 +49,7 @@ export class ContextureServer {
       { name: this.name, version: this.version },
       new Gateway(this.application.disclosure, this.application.runtime),
       this.application.publications,
+      { selection: this.selection },
     );
   }
 
@@ -131,8 +138,11 @@ export class ContextureServer {
 }
 
 /** Compile one declaration into its server-owned application container. */
-export function buildServer(declaration: ApplicationDeclaration): ContextureServer {
-  return new ContextureServer(declaration);
+export function buildServer(
+  declaration: ApplicationDeclaration,
+  options: { readonly version?: string; readonly selection?: RootSelection } = {},
+): ContextureServer {
+  return new ContextureServer(declaration, options);
 }
 
 function transportCompletion(transport: StdioServerTransport): Promise<void> {

@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
 import { Gateway } from '../core/model/system-api.js';
+import { RootSelection } from '../core/model/root-selection.js';
 import type { GatewayName } from '../core/mcp-interface/tool.js';
 import { Publications } from './surface/publications.js';
 
@@ -62,7 +63,9 @@ export function createContextureMcpServer(
   identity: ServerIdentity,
   gateway: Gateway,
   publications?: Publications,
+  options: { readonly selection?: RootSelection } = {},
 ): ContextureMcpServer {
+  const selection = options.selection ?? RootSelection.all();
   const server = createMcpServer(identity);
   for (const tool of gateway.tools) {
     switch (tool.name) {
@@ -74,7 +77,7 @@ export function createContextureMcpServer(
             inputSchema: z.strictObject({}),
             annotations: { readOnlyHint: true },
           },
-          async () => toolResult(() => gateway.discover()),
+          async () => toolResult(() => gateway.discover(selection)),
         );
         break;
       case 'contexture_open':
@@ -85,7 +88,7 @@ export function createContextureMcpServer(
             inputSchema: z.strictObject({ ref: z.string() }),
             annotations: { readOnlyHint: true },
           },
-          async ({ ref }) => toolResult(() => gateway.open(ref)),
+          async ({ ref }) => toolResult(() => gateway.open(ref, selection)),
         );
         break;
       case 'contexture_invoke_read_only':
@@ -97,7 +100,7 @@ export function createContextureMcpServer(
             annotations: { readOnlyHint: true },
           },
           async ({ ref, arguments: arguments_ }) =>
-            toolResult(() => gateway.invokeReadOnly(ref, arguments_)),
+            toolResult(() => gateway.invokeReadOnly(ref, arguments_, {}, selection)),
         );
         break;
       case 'contexture_invoke':
@@ -109,12 +112,12 @@ export function createContextureMcpServer(
             annotations: { readOnlyHint: false },
           },
           async ({ ref, arguments: arguments_ }) =>
-            toolResult(() => gateway.invoke(ref, arguments_)),
+            toolResult(() => gateway.invoke(ref, arguments_, {}, selection)),
         );
         break;
     }
   }
-  if (publications !== undefined) installPublications(server, publications);
+  if (publications !== undefined) installPublications(server, publications, selection);
   return Object.freeze({
     server,
     gateway,
@@ -122,27 +125,31 @@ export function createContextureMcpServer(
   });
 }
 
-function installPublications(server: McpServer, publications: Publications): void {
-  for (const prompt of publications.promptCards()) {
+function installPublications(
+  server: McpServer,
+  publications: Publications,
+  selection: RootSelection,
+): void {
+  for (const prompt of publications.promptCards(selection)) {
     if (prompt.name === 'goto') {
       server.registerPrompt(
         prompt.name,
         { description: prompt.description, argsSchema: z.strictObject({ ref: z.string() }) },
-        async ({ ref }) => promptResult(await publications.goto(ref)),
+        async ({ ref }) => promptResult(await publications.goto(ref, selection)),
       );
     } else {
       server.registerPrompt(prompt.name, { description: prompt.description }, async () =>
-        promptResult(await publications.command(prompt.name)),
+        promptResult(await publications.command(prompt.name, selection)),
       );
     }
   }
-  for (const resource of publications.resourceCards()) {
+  for (const resource of publications.resourceCards(selection)) {
     server.registerResource(
       resource.name,
       resource.uri,
       { description: resource.description, mimeType: resource.mimeType },
       async (uri) => ({
-        contents: [{ uri: uri.href, text: String(await publications.read(uri.href)) }],
+        contents: [{ uri: uri.href, text: String(await publications.read(uri.href, selection)) }],
       }),
     );
   }
