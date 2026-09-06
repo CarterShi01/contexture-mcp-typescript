@@ -43,7 +43,7 @@ test('one Tool Binding discloses the schema it validates before calling its hand
     type: 'object',
     properties: {
       service: { type: 'string' },
-      retries: { type: 'integer', minimum: -9007199254740991, maximum: 9007199254740991 },
+      retries: { type: 'integer' },
       labels: {
         type: 'object',
         propertyNames: { type: 'string' },

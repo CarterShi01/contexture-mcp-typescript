@@ -56,7 +56,13 @@ function normalizeObject(value: Record<string, unknown>): JsonObject {
   for (const [key, item] of Object.entries(value)) {
     // Zod-generated names and strictness implementation are incidental to
     // Contexture's schema contract; validation remains strict in the Binding.
-    if (key === '$schema' || key === 'title' || (key === 'additionalProperties' && item === false))
+    if (
+      key === '$schema' ||
+      key === 'title' ||
+      (key === 'additionalProperties' && item === false) ||
+      (key === 'minimum' && item === -Number.MAX_SAFE_INTEGER) ||
+      (key === 'maximum' && item === Number.MAX_SAFE_INTEGER)
+    )
       continue;
     result[key] = normalizeValue(item);
   }
