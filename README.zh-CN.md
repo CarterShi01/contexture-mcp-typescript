@@ -104,6 +104,8 @@ TypeScript 实现生成真实观察结果，再与这些资产比较。
 
 ## 仓库结构
 
+架构文档也提供[英文原文](docs/architecture.md)。
+
 ```text
 src/application.ts        Contexture 应用声明与组合根
 src/core/foundation/      共享常量与错误
