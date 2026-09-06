@@ -10,6 +10,7 @@ import {
   defineApplication,
   Disclosure,
   Gateway,
+  Publications,
 } from '../src/index.js';
 import { createContextureMcpServer, createMcpServer } from '../src/server/index.js';
 
@@ -47,4 +48,34 @@ test('the SDK receives exactly the four Contexture gateway tools, never a busine
   const names = Object.keys(registered);
   assert.deepEqual(names, adapter.gatewayNames);
   assert.equal(Object.hasOwn(registered, 'business_status'), false);
+});
+
+test('the SDK publishes Contexture Prompts and Resources as their native primitives', () => {
+  const declaration = defineApplication({
+    name: 'publications-server',
+    roots: [
+      () => ({
+        kind: 'tool',
+        name: 'readme',
+        description: 'Read the document.',
+        readOnly: true,
+        input: z.strictObject({}),
+        invoke: () => 'document',
+      }),
+    ],
+    prompts: [{ opens: 'readme', description: 'Open the document.' }],
+    resources: [{ opens: 'readme', uri: 'contexture://readme', description: 'Read the document.' }],
+  });
+  const index = compileApplication(declaration);
+  const runtime = new ApplicationRuntime(index);
+  const adapter = createContextureMcpServer(
+    { name: 'contexture-test', version: '0.0.0' },
+    new Gateway(new Disclosure(index), runtime),
+    new Publications(new Disclosure(index), runtime, declaration),
+  );
+  assert.deepEqual(Object.keys(Reflect.get(adapter.server, '_registeredPrompts')), [
+    'readme',
+    'goto',
+  ]);
+  assert.deepEqual(Object.keys(Reflect.get(adapter.server, '_registeredResources')), ['readme']);
 });

@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
-import { Gateway, type GatewayName } from '../core/index.js';
+import { Gateway, Publications, type GatewayName } from '../core/index.js';
 
 export { RestRouter } from './rest.js';
 export type { RestMethod, RestRoute } from './rest.js';
@@ -33,6 +33,7 @@ export interface ContextureMcpServer {
 export function createContextureMcpServer(
   identity: ServerIdentity,
   gateway: Gateway,
+  publications?: Publications,
 ): ContextureMcpServer {
   const server = createMcpServer(identity);
   for (const tool of gateway.tools) {
@@ -85,11 +86,42 @@ export function createContextureMcpServer(
         break;
     }
   }
+  if (publications !== undefined) installPublications(server, publications);
   return Object.freeze({
     server,
     gateway,
     gatewayNames: Object.freeze(gateway.tools.map((tool) => tool.name)),
   });
+}
+
+function installPublications(server: McpServer, publications: Publications): void {
+  for (const prompt of publications.promptCards()) {
+    if (prompt.name === 'goto') {
+      server.registerPrompt(
+        prompt.name,
+        { description: prompt.description, argsSchema: z.strictObject({ ref: z.string() }) },
+        async ({ ref }) => promptResult(await publications.goto(ref)),
+      );
+    } else {
+      server.registerPrompt(prompt.name, { description: prompt.description }, async () =>
+        promptResult(await publications.command(prompt.name)),
+      );
+    }
+  }
+  for (const resource of publications.resourceCards()) {
+    server.registerResource(
+      resource.name,
+      resource.uri,
+      { description: resource.description, mimeType: resource.mimeType },
+      async (uri) => ({
+        contents: [{ uri: uri.href, text: String(await publications.read(uri.href)) }],
+      }),
+    );
+  }
+}
+
+function promptResult(text: string) {
+  return { messages: [{ role: 'user' as const, content: { type: 'text' as const, text } }] };
 }
 
 const invocationSchema = z.strictObject({
