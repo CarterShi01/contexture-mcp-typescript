@@ -11,9 +11,10 @@ Contexture 的 TypeScript 实现。Contexture 是一个面向 MCP 应用的渐�
 [Go](https://github.com/CarterShi01/contexture-mcp-go) ·
 [跨语言规范](https://github.com/CarterShi01/contexture-mcp/tree/master/spec)
 
-> **当前状态：0.12 内核一致性原型，完整 Python 产品等价工作进行中。** 16 条一致性
-> 规则均已有定向执行证据，但 CLI、脚手架、inspection、demo 与完整产品测试对齐尚未
-> 完成；在全部发布门禁通过前，npm 包仍保持 private。
+> **当前状态：正在推进的 0.12 产品移植，尚不是 Python 的可发布替代品。** 内核已有
+> 定向证据；本仓库已具备原生 CLI、脚手架、inspection、维护中的 demo、MCP transport、
+> 固定 root surface 与 HTTP bearer identity。请求级 HTTP root 选择、完整文档/场景映射
+> 以及干净检出环境的发布审计仍待完成；在全部发布门禁通过前，npm 包保持 private。
 
 ## 节点模型
 

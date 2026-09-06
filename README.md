@@ -11,10 +11,13 @@ Implementations:
 [Go](https://github.com/CarterShi01/contexture-mcp-go) ·
 [Specification](https://github.com/CarterShi01/contexture-mcp/tree/master/spec)
 
-> **Status: 0.12 kernel-conformant prototype; full Python-product parity is in
-> progress.** All 16 conformance rules have focused execution evidence, but
-> CLI, scaffolding, inspection, demo, and full product-test parity remain
-> incomplete. The npm package stays private until those release gates pass.
+> **Status: active 0.12 product port; not yet a release-ready Python
+> replacement.** The kernel has focused evidence and this repository ships a
+> native CLI, scaffold, inspection, maintained demo, MCP transports, fixed
+> root surfaces, and HTTP bearer identity. Remaining parity work includes
+> request-selected HTTP roots, complete documentation/scenario mapping, and a
+> clean-checkout release audit. The npm package remains private until those
+> release gates pass.
 
 ## Node model
 

@@ -30,8 +30,12 @@ fixed navigation and invocation gateway.
 3. Typed Tool binding, execution context, and fixed MCP gateway.
 4. Prompt, Resource, completion, and selected-root behavior.
 5. Channels lifecycle, identity, telemetry, HTTP, and explicit REST routes.
+6. Native project discovery, scaffolding, check/list/inspect/call/serve/demo
+   commands, and an installed-package consumer check.
+7. Streamable HTTP and stdio launch, fixed root surfaces, HTTP bearer identity,
+   and the maintained Kubernetes reference application.
 
-The first five areas have focused conformance evidence and a packed npm
-external-consumer import check. They do not yet establish full product parity:
-CLI, scaffolding, transport-free inspection, maintained demo, complete
-documentation, and mapped Python product tests remain planned work.
+The kernel areas have focused conformance evidence; the product workflows have
+native integration and packed npm-consumer evidence. This is still not full
+product parity: request-selected HTTP roots, complete documentation and
+scenario mapping, and the clean-checkout release audit remain open.
