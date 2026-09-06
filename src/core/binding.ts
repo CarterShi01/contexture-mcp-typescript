@@ -53,7 +53,7 @@ function normalizeSchema(value: unknown): JsonObject {
 
 function normalizeObject(value: Record<string, unknown>): JsonObject {
   const result: Record<string, JsonValue> = {};
-  for (const [key, item] of Object.entries(value)) {
+  for (const [key, item] of orderedEntries(value)) {
     // Zod-generated names and strictness implementation are incidental to
     // Contexture's schema contract; validation remains strict in the Binding.
     if (
@@ -67,6 +67,22 @@ function normalizeObject(value: Record<string, unknown>): JsonObject {
     result[key] = normalizeValue(item);
   }
   return result;
+}
+
+function orderedEntries(value: Record<string, unknown>): readonly (readonly [string, unknown])[] {
+  const entries = Object.entries(value);
+  const objectSchema = value.type === 'object';
+  const rank = (key: string): number => {
+    if (objectSchema) {
+      if (key === 'properties') return 0;
+      if (key === 'required') return 1;
+      if (key === 'type') return 2;
+    }
+    if (key === 'default') return 0;
+    if (key === 'type') return 1;
+    return 2;
+  };
+  return entries.sort(([left], [right]) => rank(left) - rank(right));
 }
 
 function normalizeValue(value: unknown): JsonValue {

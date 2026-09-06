@@ -3,8 +3,8 @@
   "repository": "https://github.com/CarterShi01/contexture-mcp",
   "revision": "e107a81a933c5eb5b4530e762311619be3a7a80f",
   "specificationVersion": "0.12",
-  "status": "partial",
-  "implementedRules": [1, 2, 3, 4, 5, 7, 9, 10, 11, 12, 13, 14, 15, 16],
+  "status": "conformant",
+  "implementedRules": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
   "rules": {
     "1": { "status": "implemented", "evidence": ["test/declarations.test.ts"] },
     "2": { "status": "implemented", "evidence": ["test/compiler.test.ts"] },
@@ -14,12 +14,15 @@
     },
     "4": { "status": "implemented", "evidence": ["test/binding.test.ts"] },
     "5": { "status": "implemented", "evidence": ["test/server.test.ts"] },
-    "6": { "status": "in-progress", "evidence": ["test/disclosure.test.ts"] },
+    "6": {
+      "status": "implemented",
+      "evidence": ["test/disclosure.test.ts", "test/golden-disclosure.test.ts"]
+    },
     "7": {
       "status": "implemented",
       "evidence": ["test/disclosure.test.ts", "test/publications.test.ts"]
     },
-    "8": { "status": "not-started", "evidence": [] },
+    "8": { "status": "implemented", "evidence": ["test/golden-disclosure.test.ts"] },
     "9": {
       "status": "implemented",
       "evidence": ["test/disclosure.test.ts", "test/runtime.test.ts", "test/publications.test.ts"]
@@ -54,5 +57,5 @@
     "resources.json",
     "tools.json"
   ],
-  "notes": "Only lazy application declaration is implemented. No package release may claim full conformance yet."
+  "notes": "All Contexture 0.12 conformance rules have repository execution evidence. The package remains private until a separately authorized release."
 }
