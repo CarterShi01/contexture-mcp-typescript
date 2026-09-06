@@ -33,6 +33,7 @@ export {
 export type { Transport } from './options.js';
 export { buildServer, ContextureServer, PACKAGE_VERSION } from './server.js';
 export type { HttpServerHandle } from './server.js';
+export { Launch, claudeCodeConfig, cliCommands, codexConfig, cursorConfig } from './launch.js';
 export { FixedRootSelector, HeaderRootSelector, ROOTS_HEADER } from './root-selector.js';
 export type { RootCeiling, RootSelector } from './root-selector.js';
 export { Auth, principalOf, PRINCIPAL_EXTRA } from './identity.js';
