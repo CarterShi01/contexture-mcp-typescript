@@ -4,9 +4,13 @@ import test from 'node:test';
 import { InMemoryTransport, LATEST_PROTOCOL_VERSION } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
-import { defineApplication } from '../src/index.js';
+import { defineApplication, InMemoryTelemetry } from '../src/index.js';
 import { ApplicationRuntime, compileApplication, Disclosure } from '../src/core/index.js';
-import { Gateway, createContextureMcpServer } from '../src/server/index.js';
+import {
+  compileRuntimeApplication,
+  Gateway,
+  createContextureMcpServer,
+} from '../src/server/index.js';
 
 test('the official SDK exposes only the fixed gateway and preserves its two invocation doors', async () => {
   const declaration = defineApplication({
@@ -130,6 +134,79 @@ test('the official SDK exposes only the fixed gateway and preserves its two invo
   );
   await client.close();
   await adapter.server.close();
+});
+
+test('the official MCP gateway shares compiled telemetry across opens and invocation', async () => {
+  const telemetry = new InMemoryTelemetry();
+  const application = compileRuntimeApplication(
+    defineApplication({
+      name: 'telemetry-wire',
+      telemetry,
+      roots: [
+        () => ({
+          kind: 'role' as const,
+          name: 'operations',
+          description: 'Operate.',
+          instructions: 'Inspect.',
+          skills: [
+            () => ({
+              kind: 'skill' as const,
+              name: 'diagnose',
+              description: 'Diagnose.',
+              instructions: 'Read.',
+            }),
+          ],
+          tools: [
+            () => ({
+              kind: 'tool' as const,
+              name: 'status',
+              description: 'Status.',
+              readOnly: true,
+              input: z.strictObject({}),
+              invoke: () => 'ok',
+            }),
+          ],
+        }),
+      ],
+    }),
+  );
+  const adapter = createContextureMcpServer(
+    { name: 'telemetry-gateway', version: '0.0.0' },
+    new Gateway(application.disclosure, application.runtime),
+  );
+  const [client, host] = InMemoryTransport.createLinkedPair();
+  const replies = new Map<number, unknown>();
+  client.onmessage = (message) => {
+    if ('id' in message && typeof message.id === 'number') replies.set(message.id, message);
+  };
+  await client.start();
+  await adapter.server.connect(host);
+  try {
+    await sendAndWait(client, replies, 1, 'initialize', {
+      protocolVersion: LATEST_PROTOCOL_VERSION,
+      capabilities: {},
+      clientInfo: { name: 'telemetry-client', version: '0.0.0' },
+    });
+    await client.send({ jsonrpc: '2.0', method: 'notifications/initialized' });
+    await sendAndWait(client, replies, 2, 'tools/call', {
+      name: 'contexture_open',
+      arguments: { ref: 'operations' },
+    });
+    await sendAndWait(client, replies, 3, 'tools/call', {
+      name: 'contexture_open',
+      arguments: { ref: 'operations/diagnose' },
+    });
+    await sendAndWait(client, replies, 4, 'tools/call', {
+      name: 'contexture_invoke_read_only',
+      arguments: { ref: 'operations/status', arguments: {} },
+    });
+    assert.equal(telemetry.usage('operations').callCount, 1);
+    assert.equal(telemetry.usage('operations/diagnose').callCount, 1);
+    assert.equal(telemetry.usage('operations/status').callCount, 1);
+  } finally {
+    await client.close();
+    await adapter.server.close();
+  }
 });
 
 function response(reply: unknown): Record<string, unknown> {

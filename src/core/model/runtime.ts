@@ -11,30 +11,10 @@ import { RefusedError } from './disclosure.js';
 import { RootSelection, SelectedGraph } from './root-selection.js';
 import type { ToolCallContext } from './declarations.js';
 import { withChannels } from './channels.js';
+import { InMemoryTelemetry, reportTelemetry, type Telemetry } from './telemetry.js';
 
-/** Best-effort observability; it is never permitted to change an outcome. */
-export interface Telemetry {
-  record(event: TelemetryEvent): void | Promise<void>;
-}
-
-export interface TelemetryEvent {
-  readonly ref: string;
-  readonly failed: boolean;
-  readonly at: Date;
-}
-
-/** Minimal deterministic telemetry suitable for local inspection and tests. */
-export class InMemoryTelemetry implements Telemetry {
-  readonly #events: TelemetryEvent[] = [];
-
-  record(event: TelemetryEvent): void {
-    this.#events.push(Object.freeze({ ...event }));
-  }
-
-  get events(): readonly TelemetryEvent[] {
-    return Object.freeze([...this.#events]);
-  }
-}
+export { InMemoryTelemetry, reportTelemetry } from './telemetry.js';
+export type { NodeUsage, Telemetry, TelemetryEvent } from './telemetry.js';
 
 interface RuntimeScope {
   readonly principal: Principal | undefined;
@@ -158,10 +138,10 @@ export class ApplicationRuntime {
         throw new ModelValidationError('A disclosure-only Tool cannot be invoked.');
       }
       const value = await SCOPE.run(scope, () => binding.call(arguments_, callContext));
-      await report(this.telemetry, ref, false);
+      await reportTelemetry(this.telemetry, ref);
       return value;
     } catch (error) {
-      await report(this.telemetry, ref, true);
+      await reportTelemetry(this.telemetry, ref, true);
       throw error;
     }
   }
@@ -182,14 +162,6 @@ export class ApplicationRuntime {
       );
     }
     return node;
-  }
-}
-
-async function report(telemetry: Telemetry, ref: string, failed: boolean): Promise<void> {
-  try {
-    await telemetry.record(Object.freeze({ ref, failed, at: new Date() }));
-  } catch {
-    // Telemetry is an observer; a failed exporter cannot alter a business call.
   }
 }
 

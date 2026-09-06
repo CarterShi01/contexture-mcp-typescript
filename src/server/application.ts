@@ -5,6 +5,8 @@ import {
 } from '../core/model/compiler.js';
 import { Disclosure } from '../core/model/disclosure.js';
 import { ApplicationRuntime } from '../core/model/runtime.js';
+import { InMemoryTelemetry } from '../core/model/telemetry.js';
+import type { Telemetry } from '../core/model/telemetry.js';
 import { defineApplication, type ApplicationDeclaration } from '../application.js';
 import { Publications } from './surface/publications.js';
 
@@ -14,6 +16,7 @@ export interface RuntimeApplication {
   readonly disclosure: Disclosure;
   readonly runtime: ApplicationRuntime;
   readonly publications: Publications;
+  readonly telemetry: Telemetry;
 }
 
 /** The independently compiled projection that deliberately cannot execute. */
@@ -27,12 +30,17 @@ export interface DisclosureApplication {
 export function compileRuntimeApplication(declaration: ApplicationDeclaration): RuntimeApplication {
   const normalized = defineApplication(declaration);
   const index = compileApplication(normalized);
-  const disclosure = new Disclosure(index, { reserved: reservedPromptRefs(normalized) });
-  const runtime = new ApplicationRuntime(index);
+  const telemetry = normalized.telemetry ?? new InMemoryTelemetry();
+  const disclosure = new Disclosure(index, {
+    reserved: reservedPromptRefs(normalized),
+    telemetry,
+  });
+  const runtime = new ApplicationRuntime(index, { telemetry });
   return Object.freeze({
     index,
     disclosure,
     runtime,
+    telemetry,
     publications: new Publications(disclosure, runtime, normalized),
   });
 }

@@ -52,7 +52,7 @@ try {
   run('npm', ['install', '--ignore-scripts', '--no-package-lock', tarball], temporaryRoot);
 
   const consumer = [
-    "import { Contexture, LookupFailure, NodeNotFoundError, Principal, currentPrincipal, defineApplication } from '@contexture/mcp';",
+    "import { Contexture, InMemoryTelemetry, LookupFailure, NodeNotFoundError, Principal, currentPrincipal, defineApplication, reportTelemetry } from '@contexture/mcp';",
     "import { trace } from '@contexture/mcp/inspection';",
     "import { newProject } from '@contexture/mcp/cli';",
     "import { Auth, claudeCodeConfig, compileRuntimeApplication, HeaderRootSelector, Launch } from '@contexture/mcp/server';",
@@ -69,6 +69,7 @@ try {
     "if (typeof Auth !== 'function') throw new Error('missing identity facade');",
     "if (typeof Launch !== 'function' || typeof claudeCodeConfig !== 'function') throw new Error('missing host launch facade');",
     "if (typeof RestRouter !== 'function') throw new Error('missing web facade');",
+    "const telemetry = new InMemoryTelemetry(); reportTelemetry(telemetry, 'consumer/check'); if (telemetry.usage('consumer/check').callCount !== 1) throw new Error('missing telemetry aggregate');",
     "const rawApplication = { name: ' packed declaration ', roots: [() => ({ kind: 'skill', name: 'approval', description: 'Require approval.', instructions: 'Wait for a person.' })], prompts: [{ opens: 'approval', description: 'Open approval.', modelMayOpen: false }] };",
     'const rawRuntime = compileRuntimeApplication(rawApplication);',
     "if (rawRuntime.index.name !== 'packed declaration') throw new Error('server compilation did not normalize a raw declaration');",

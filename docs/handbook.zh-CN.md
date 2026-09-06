@@ -70,6 +70,12 @@ export const app = defineApplication({
 factory 并规范化 application 名称。每个 Role、Skill、Tool 都应通过 factory 声明；编译会
 从这些 factory 创建新的不可变 graph snapshot。
 
+可选的 framework telemetry 可声明为 `telemetry: new InMemoryTelemetry()`。它会把成功的 Role 和
+Skill open，以及成功或失败的 Tool invocation 聚合成 `NodeUsage`（`callCount`、`errorCount` 和
+`lastUsedAt`）；不会观察 discover 或打开 Tool card。可使用自定义 `Telemetry` 做 export，exporter 的
+rejection 或同步 throw 不会影响 navigation 或 business outcome。`compileRuntimeApplication` 会让
+Disclosure、Runtime 和 gateway surface 共享同一个 collector。
+
 声明门面保持 SDK-neutral。它公开 `Contexture`、`defineApplication`、
 `ApplicationDeclaration`、原生 `Prompt` 与 `Resource` 数据 interface、node declaration，
 以及 `Principal` 等 request facts。`Prompt` 和 `Resource` 是 TypeScript object shape，

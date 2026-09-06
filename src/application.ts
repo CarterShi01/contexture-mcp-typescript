@@ -1,6 +1,7 @@
 import type { Channels, Factory, NodeDeclaration } from './core/model/declarations.js';
 import type { PromptDeclaration } from './core/mcp-interface/prompt.js';
 import type { ResourceDeclaration } from './core/mcp-interface/resource.js';
+import type { Telemetry } from './core/model/telemetry.js';
 
 /** The lazy application composition root. */
 export interface ApplicationDeclaration {
@@ -10,6 +11,7 @@ export interface ApplicationDeclaration {
   readonly channels?: Channels;
   readonly prompts?: readonly PromptDeclaration[];
   readonly resources?: readonly ResourceDeclaration[];
+  readonly telemetry?: Telemetry;
 }
 
 /**
@@ -35,6 +37,15 @@ export function defineApplication(declaration: ApplicationDeclaration): Applicat
   }
   const prompts = snapshotPrompts(declaration.prompts);
   const resources = snapshotResources(declaration.resources);
+  if (
+    declaration.telemetry !== undefined &&
+    (typeof declaration.telemetry !== 'object' ||
+      declaration.telemetry === null ||
+      typeof declaration.telemetry.record !== 'function' ||
+      typeof declaration.telemetry.usage !== 'function')
+  ) {
+    throw new TypeError('Application telemetry must implement record and usage.');
+  }
 
   return Object.freeze({
     name: declaration.name.trim(),
@@ -45,6 +56,7 @@ export function defineApplication(declaration: ApplicationDeclaration): Applicat
     ...(declaration.channels === undefined ? {} : { channels: declaration.channels }),
     ...(prompts === undefined ? {} : { prompts }),
     ...(resources === undefined ? {} : { resources }),
+    ...(declaration.telemetry === undefined ? {} : { telemetry: declaration.telemetry }),
   });
 }
 

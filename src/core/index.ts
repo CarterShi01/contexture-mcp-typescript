@@ -33,8 +33,9 @@ export {
   currentRootSelection,
   currentTelemetry,
   InMemoryTelemetry,
+  reportTelemetry,
 } from './model/runtime.js';
-export type { Telemetry, TelemetryEvent } from './model/runtime.js';
+export type { NodeUsage, Telemetry, TelemetryEvent } from './model/runtime.js';
 export {
   RootOutsideSelectionError,
   RootSelection,

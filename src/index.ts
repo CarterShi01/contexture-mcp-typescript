@@ -27,7 +27,14 @@ export type { Prompt, PromptDeclaration } from './core/mcp-interface/prompt.js';
 export type { Resource, ResourceDeclaration } from './core/mcp-interface/resource.js';
 export { Principal } from './core/foundation/principal.js';
 export type { PrincipalOptions } from './core/foundation/principal.js';
-export { currentGraph, currentPrincipal, currentTelemetry } from './core/model/runtime.js';
+export {
+  currentGraph,
+  currentPrincipal,
+  currentTelemetry,
+  InMemoryTelemetry,
+  reportTelemetry,
+} from './core/model/runtime.js';
+export type { NodeUsage, Telemetry, TelemetryEvent } from './core/model/runtime.js';
 export {
   ContextureError,
   ContainmentCycleError,

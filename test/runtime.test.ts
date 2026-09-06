@@ -185,6 +185,7 @@ test('requested selection can only attenuate an identity ceiling and governs the
 test('a telemetry exporter failure never replaces the observed business result or error', async () => {
   const brokenTelemetry: Telemetry = {
     record: () => Promise.reject(new Error('exporter offline')),
+    usage: (ref) => ({ ref, callCount: 0, errorCount: 0, lastUsedAt: undefined }),
   };
   const service = runtime(brokenTelemetry);
   assert.deepEqual(await service.invokeReadOnly('operations/status', { value: 'api' }), {

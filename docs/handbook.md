@@ -75,6 +75,14 @@ Both preserve lazy factories and normalize the application name. Use a factory
 for every Role, Skill, and Tool: compilation creates a fresh immutable graph
 snapshot from those factories.
 
+Optional framework telemetry is declared with `telemetry: new InMemoryTelemetry()`.
+It aggregates successful Role and Skill opens plus successful or failed Tool
+invocations as `NodeUsage` (`callCount`, `errorCount`, and `lastUsedAt`). It
+does not observe discovery or opening a Tool card. A custom `Telemetry` can be
+used for export; exporter rejection or a synchronous throw is isolated from
+navigation and business outcomes. `compileRuntimeApplication` shares one
+collector with its Disclosure, Runtime, and gateway surfaces.
+
 The declaration facade is SDK-neutral: its public inventory is `Contexture`,
 `defineApplication`, `ApplicationDeclaration`, the native `Prompt` and
 `Resource` data interfaces, node declarations, and request facts such as

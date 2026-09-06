@@ -1,5 +1,6 @@
 import type { CompiledApplication, CompiledNode, CompiledRole, CompiledTool } from './compiler.js';
 import { RootOutsideSelectionError, RootSelection } from './root-selection.js';
+import { InMemoryTelemetry, reportTelemetry, type Telemetry } from './telemetry.js';
 
 export type RoutingCard = Readonly<Record<string, unknown>>;
 export type Discovery = Readonly<{
@@ -16,6 +17,7 @@ export class RefusedError extends Error {
 /** A pure, stateless progressive-disclosure projection over a compiled Index. */
 export class Disclosure {
   readonly selection: RootSelection;
+  readonly telemetry: Telemetry;
   readonly #promptRoots: ReadonlySet<string>;
   readonly #reserved: ReadonlySet<string>;
 
@@ -25,6 +27,7 @@ export class Disclosure {
       readonly selection?: RootSelection;
       readonly promptRoots?: Iterable<string>;
       readonly reserved?: Iterable<string>;
+      readonly telemetry?: Telemetry;
     } = {},
   ) {
     this.selection = (options.selection ?? RootSelection.all()).resolve(index);
@@ -32,6 +35,7 @@ export class Disclosure {
       options.promptRoots ?? index.promptRoots.map((node) => index.refOf(node)),
     );
     this.#reserved = new Set(options.reserved ?? []);
+    this.telemetry = options.telemetry ?? new InMemoryTelemetry();
     for (const ref of this.#promptRoots) {
       const node = index.find(ref);
       if (index.parentOf(node) !== undefined) {
@@ -46,11 +50,16 @@ export class Disclosure {
       selection: this.selection.intersect(selection),
       promptRoots: this.#promptRoots,
       reserved: this.#reserved,
+      telemetry: this.telemetry,
     });
   }
 
   unrestricted(): Disclosure {
-    return new Disclosure(this.index, { selection: this.selection, reserved: this.#reserved });
+    return new Disclosure(this.index, {
+      selection: this.selection,
+      reserved: this.#reserved,
+      telemetry: this.telemetry,
+    });
   }
 
   effectiveSelection(requested: RootSelection = RootSelection.all()): RootSelection {
@@ -88,18 +97,26 @@ export class Disclosure {
       );
     }
     const selection = this.effectiveSelection(requested);
-    return this.active(
+    const result = this.active(
       resolveRef(this.index, ref, selection, this.index.modelRoots),
       selection,
       true,
     );
+    this.reportOpen(ref, result);
+    return result;
   }
 
   openForPerson(ref: string, requested: RootSelection = RootSelection.all()): RoutingCard {
     const selection = this.effectiveSelection(requested);
     selection.requireRef(ref);
     const node = resolveRef(this.index, ref, selection, this.index.roots);
-    return this.active(node, selection, true);
+    const result = this.active(node, selection, true);
+    this.reportOpen(ref, result);
+    return result;
+  }
+
+  private reportOpen(ref: string, card: RoutingCard): void {
+    if (card.kind === 'role' || card.kind === 'skill') void reportTelemetry(this.telemetry, ref);
   }
 
   card(node: CompiledNode): RoutingCard {
