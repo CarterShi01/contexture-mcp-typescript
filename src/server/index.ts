@@ -31,6 +31,8 @@ export {
 export type { Transport } from './options.js';
 export { buildServer, ContextureServer, PACKAGE_VERSION } from './server.js';
 export type { HttpServerHandle } from './server.js';
+export { FixedRootSelector, HeaderRootSelector, ROOTS_HEADER } from './root-selector.js';
+export type { RootCeiling, RootSelector } from './root-selector.js';
 
 /** Metadata required to identify a Contexture MCP server. */
 export interface ServerIdentity {
