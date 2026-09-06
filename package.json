@@ -63,7 +63,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "2.0.0"
+    "@modelcontextprotocol/server": "2.0.0",
+    "zod": "4.1.12"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

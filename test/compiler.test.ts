@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { z } from 'zod';
 
 import {
   compileApplication,
@@ -42,6 +43,7 @@ function application() {
             name: 'status',
             description: 'Read service status.',
             readOnly: true,
+            input: z.strictObject({}),
             invoke: () => ({ ok: true }),
           }),
         ],
@@ -53,6 +55,7 @@ function application() {
         name: 'restart',
         description: 'Restart a service.',
         readOnly: false,
+        input: z.strictObject({}),
         invoke: () => ({ restarted: true }),
       }),
     ],
@@ -130,6 +133,7 @@ test('compilation rejects invalid global forest structure', () => {
                   name: 'same',
                   description: 'Two.',
                   readOnly: true,
+                  input: z.strictObject({}),
                   invoke: () => undefined,
                 }),
               ],

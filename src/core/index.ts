@@ -22,9 +22,12 @@ export type {
   CompiledSkill,
   CompiledTool,
 } from './compiler.js';
+export { bindTool } from './binding.js';
+export type { JsonObject, JsonValue, ToolBinding } from './binding.js';
 export {
   ContainmentCycleError,
   DuplicateNameError,
   ModelValidationError,
+  InputValidationError,
   UnresolvedReferenceError,
 } from './errors.js';

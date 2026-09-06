@@ -13,6 +13,7 @@ import {
   ModelValidationError,
   UnresolvedReferenceError,
 } from './errors.js';
+import { bindTool, type ToolBinding } from './binding.js';
 
 const SEPARATOR = '/';
 
@@ -40,6 +41,7 @@ export interface CompiledTool extends CompiledNodeBase {
   readonly kind: 'tool';
   readonly readOnly: boolean;
   readonly declaration: ToolDeclaration;
+  readonly binding: ToolBinding;
 }
 
 export type CompiledNode = CompiledRole | CompiledSkill | CompiledTool;
@@ -191,6 +193,7 @@ function compileDeclaration(
       ...declaration,
       uses: Object.freeze([...(declaration.uses ?? [])]),
     }),
+    binding: bindTool(declaration as ToolDeclaration),
   });
   registerNode(node, ref, parent, state);
   return node;
@@ -282,6 +285,11 @@ function validateDeclaration(declaration: NodeDeclaration): void {
     if (typeof declaration.invoke !== 'function') {
       throw new ModelValidationError(
         `Tool ${JSON.stringify(declaration.name)} must declare invoke.`,
+      );
+    }
+    if (typeof declaration.input !== 'object' || declaration.input === null) {
+      throw new ModelValidationError(
+        `Tool ${JSON.stringify(declaration.name)} must declare a Zod input schema.`,
       );
     }
   }

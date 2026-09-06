@@ -17,3 +17,15 @@ export class ContainmentCycleError extends ModelValidationError {
 export class UnresolvedReferenceError extends ModelValidationError {
   override readonly name = 'UnresolvedReferenceError';
 }
+
+/** A caller supplied arguments that do not satisfy a Tool's disclosed schema. */
+export class InputValidationError extends ModelValidationError {
+  override readonly name = 'InputValidationError';
+
+  constructor(
+    readonly tool: string,
+    readonly issues: readonly { readonly path: readonly PropertyKey[]; readonly message: string }[],
+  ) {
+    super(`Arguments for Contexture Tool ${JSON.stringify(tool)} do not satisfy its input schema.`);
+  }
+}

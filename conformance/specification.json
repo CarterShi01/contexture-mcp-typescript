@@ -9,7 +9,7 @@
     "1": { "status": "implemented", "evidence": ["test/declarations.test.ts"] },
     "2": { "status": "in-progress", "evidence": ["test/compiler.test.ts"] },
     "3": { "status": "in-progress", "evidence": ["test/compiler.test.ts"] },
-    "4": { "status": "not-started", "evidence": [] },
+    "4": { "status": "in-progress", "evidence": ["test/binding.test.ts"] },
     "5": { "status": "not-started", "evidence": [] },
     "6": { "status": "not-started", "evidence": [] },
     "7": { "status": "not-started", "evidence": [] },

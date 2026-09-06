@@ -1,3 +1,5 @@
+import type { ZodType } from 'zod';
+
 /** A lazy factory. Calling it belongs to compilation, never declaration. */
 export type Factory<T> = () => T;
 
@@ -37,6 +39,8 @@ export interface ToolCallContext {
 export interface ToolDeclaration<Input = unknown, Output = unknown> extends BaseNodeDeclaration {
   readonly kind: 'tool';
   readonly readOnly: boolean;
+  /** The one schema used for both the disclosed contract and invocation validation. */
+  readonly input: ZodType<Input>;
   readonly invoke: (input: Input, context: ToolCallContext) => Output | Promise<Output>;
 }
 
