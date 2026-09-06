@@ -87,6 +87,27 @@ const adapter = createContextureMcpServer({ name: 'operations', version: '0.1.0'
 SDK；`@contexture/mcp/server` 是官方 SDK 适配边界。`RestRouter` 提供显式
 allowlist REST 适配器。
 
+## Host 配置
+
+Host 配置应当指向启动服务器的命令，而不是复制应用已经声明的 context。`Launch`
+可以生成 Claude Code、Cursor 和 Codex 所需的准确格式：
+
+```ts
+import { Launch, claudeCodeConfig, codexConfig } from '@contexture/mcp/server';
+
+const launch = new Launch({
+  name: 'operations',
+  command: 'node',
+  args: ['dist/cli/main.js', 'serve'],
+});
+
+console.log(claudeCodeConfig(launch)); // .mcp.json 或 .cursor/mcp.json
+console.log(codexConfig(launch)); // ~/.codex/config.toml 的 stanza
+```
+
+`cliCommands(launch)` 会返回经过安全 shell 引用的 `claude mcp add` 和
+`codex mcp add` 命令。使用自定义 stdio 入口的应用也可复用同一 API。
+
 ## 开发与一致性验证
 
 需要 Node.js 20.19 或更新版本，以及 npm 11。

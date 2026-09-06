@@ -92,6 +92,29 @@ Business Tools remain behind Contexture's four fixed gateway Tools. The core is
 SDK-neutral; `@contexture/mcp/server` is the official MCP SDK adapter boundary.
 An explicit REST allowlist is also available through `RestRouter`.
 
+## Host configuration
+
+Keep host configuration as a pointer to the server command, rather than a copy
+of an application's declared context. `Launch` produces the exact formats for
+Claude Code, Cursor, and Codex:
+
+```ts
+import { Launch, claudeCodeConfig, codexConfig } from '@contexture/mcp/server';
+
+const launch = new Launch({
+  name: 'operations',
+  command: 'node',
+  args: ['dist/cli/main.js', 'serve'],
+});
+
+console.log(claudeCodeConfig(launch)); // .mcp.json or .cursor/mcp.json
+console.log(codexConfig(launch)); // stanza for ~/.codex/config.toml
+```
+
+`cliCommands(launch)` returns safely quoted `claude mcp add` and `codex mcp
+add` commands. The same API is available to applications that distribute a
+custom stdio entry point.
+
 ## Development and conformance
 
 Requires Node.js 20.19 or newer and npm 11.
