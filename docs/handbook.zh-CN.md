@@ -76,6 +76,11 @@ lazy declaration 在 compilation 时会校验 node 的 `name`、`description`、
 `uses`。打开 Role 同样会返回自己的 instructions 及其 contained member 的单层 routing card。这些有界
 card 使声明的 reference cycle 保持安全，也避免一次 open 展开无关 procedure。
 
+active Tool 或 Role 声明 `uses` 时也采用同一条单层规则。被引用的 node 是 routing card，因此该 response
+绝不会展开它们自身的 instructions 或 dependencies。disclosure-only Tool 仍是 structural：其 card 同时省略
+`read_only` 与 `input_schema`，但显式 open 的 Tool 仍可列出直接的 structural `uses` card。root selection 会在
+渲染前过滤这些 card，因此 cross-root dependency 永远不会扩大一个 request 的范围。
+
 `RootSelection` 表示 all-roots 或精确 root allowlist：它会 trim 请求的 root name、拒绝
 descendant，并且只能收窄另一个 selection。`SelectedGraph` 只公开选中范围内的 `roots`、`walk`、
 `find`、`refOf`、`parentOf`、`childrenOf`、`usesOf` 与 `dependentsOf`；cross-root uses 和

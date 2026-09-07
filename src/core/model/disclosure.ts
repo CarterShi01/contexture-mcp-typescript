@@ -106,7 +106,6 @@ export class Disclosure {
     const result = this.active(
       resolveRef(this.index, ref, selection, this.index.modelRoots),
       selection,
-      true,
     );
     this.reportOpen(ref, result);
     return result;
@@ -116,7 +115,7 @@ export class Disclosure {
     const selection = this.effectiveSelection(requested);
     selection.requireRef(ref);
     const node = resolveRef(this.index, ref, selection, this.index.roots);
-    const result = this.active(node, selection, true);
+    const result = this.active(node, selection);
     this.reportOpen(ref, result);
     return result;
   }
@@ -127,62 +126,67 @@ export class Disclosure {
 
   card(node: CompiledNode): RoutingCard {
     const ref = this.index.refOf(node);
-    if (node.kind === 'tool') return toolCard(node, ref, true);
+    if (node.kind === 'tool') return toolCard(node, ref);
     return Object.freeze({ kind: node.kind, name: node.name, description: node.description, ref });
   }
 
-  private active(
-    node: CompiledNode,
-    selection: RootSelection,
-    includeSchema: boolean,
-  ): RoutingCard {
-    const ref = this.index.refOf(node);
-    if (node.kind === 'tool') return toolCard(node, ref, includeSchema);
+  private active(node: CompiledNode, selection: RootSelection): RoutingCard {
+    if (node.kind === 'tool') {
+      return Object.freeze({ ...this.card(node), ...this.activeUses(node, selection) });
+    }
     if (node.kind === 'skill') {
       return Object.freeze({
         ...this.card(node),
         instructions: node.instructions,
-        ...(node.uses.length === 0
-          ? {}
-          : {
-              uses: Object.freeze(
-                node.uses
-                  .filter(
-                    (target) =>
-                      selection.containsRef(target) && this.modelCanSee(target, selection),
-                  )
-                  .map((target) => this.card(this.index.find(target))),
-              ),
-            }),
+        ...this.activeUses(node, selection),
       });
     }
-    return roleActive(this, node, selection);
+    return this.roleActive(node, selection);
+  }
+
+  /** Render one direct, request-safe dependency layer without recursive expansion. */
+  private activeUses(
+    node: CompiledNode,
+    selection: RootSelection,
+  ): Readonly<Record<string, unknown>> {
+    if (node.uses.length === 0) return EMPTY_DETAILS;
+    return Object.freeze({
+      uses: Object.freeze(
+        node.uses
+          .filter((target) => selection.containsRef(target) && this.modelCanSee(target, selection))
+          .map((target) => this.card(this.index.find(target))),
+      ),
+    });
+  }
+
+  private roleActive(role: CompiledRole, selection: RootSelection): RoutingCard {
+    const visible = (node: CompiledNode): boolean =>
+      selection.containsRef(this.index.refOf(node)) &&
+      this.modelCanSee(this.index.refOf(node), selection);
+    return Object.freeze({
+      ...this.card(role),
+      instructions: role.instructions,
+      roles: Object.freeze(role.children.filter(visible).map((node) => this.card(node))),
+      skills: Object.freeze(role.skills.filter(visible).map((node) => this.card(node))),
+      tools: Object.freeze(role.tools.filter(visible).map((node) => this.card(node))),
+      ...this.activeUses(role, selection),
+    });
   }
 }
 
-function roleActive(view: Disclosure, role: CompiledRole, selection: RootSelection): RoutingCard {
-  const visible = (node: CompiledNode): boolean =>
-    selection.containsRef(view.index.refOf(node)) &&
-    view.modelCanSee(view.index.refOf(node), selection);
-  return Object.freeze({
-    ...view.card(role),
-    instructions: role.instructions,
-    roles: Object.freeze(role.children.filter(visible).map((node) => view.card(node))),
-    skills: Object.freeze(role.skills.filter(visible).map((node) => view.card(node))),
-    tools: Object.freeze(role.tools.filter(visible).map((node) => view.card(node))),
-  });
-}
-
-function toolCard(node: CompiledTool, ref: string, includeSchema: boolean): RoutingCard {
+function toolCard(node: CompiledTool, ref: string): RoutingCard {
   return Object.freeze({
     kind: 'tool',
     name: node.name,
     description: node.description,
     ref,
-    read_only: node.readOnly,
-    ...(includeSchema && node.binding !== undefined ? { input_schema: node.binding.schema } : {}),
+    ...(node.binding === undefined
+      ? {}
+      : { read_only: node.readOnly, input_schema: node.binding.schema }),
   });
 }
+
+const EMPTY_DETAILS: Readonly<Record<string, never>> = Object.freeze({});
 
 function resolveRef(
   index: CompiledApplication,

@@ -84,6 +84,13 @@ instructions plus one-level routing cards for contained members. These bounded
 cards keep declared reference cycles safe and prevent a single open from
 expanding an unrelated procedure.
 
+The same one-layer rule applies when an active Tool or Role declares `uses`.
+Referenced nodes are routing cards, so their own instructions and dependencies
+are never expanded in that response. A disclosure-only Tool remains structural:
+its cards omit both `read_only` and `input_schema`, but an explicitly opened
+Tool can still name its direct structural `uses` cards. Root selection filters
+those cards before rendering, so a cross-root dependency never widens a request.
+
 `RootSelection` is an all-roots value or an exact root allowlist: it trims
 requested root names, rejects descendants, and can only attenuate another
 selection. `SelectedGraph` exposes only selected `roots`, `walk`, `find`,
