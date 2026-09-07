@@ -1,5 +1,6 @@
 import { defineManagedApplication, type ManagedApplicationDeclaration } from '../../application.js';
 import { ModelValidationError } from '../foundation/errors.js';
+import { REFERENCE_SEPARATOR } from '../foundation/vocabulary.js';
 import { compileApplication, type CompiledApplication } from './compiler.js';
 import type { ChannelHandle } from './channels.js';
 import type { Factory, NodeDeclaration, NodeKind } from './node.js';
@@ -252,7 +253,13 @@ function captureGroup(
         `Role ${JSON.stringify(parent)} member ${JSON.stringify(nameOf(member))} is a ${String((member as NodeDeclaration).kind)} in the ${expected} group.`,
       );
     }
-    return captureNode(member, `${parent}/${nameOf(member)}`, seen, pending, active);
+    return captureNode(
+      member,
+      `${parent}${REFERENCE_SEPARATOR}${nameOf(member)}`,
+      seen,
+      pending,
+      active,
+    );
   });
 }
 
@@ -265,9 +272,9 @@ function validateNode(declaration: NodeDeclaration): void {
     declaration.description,
     `Context node ${JSON.stringify(declaration.name)} must have a routing description.`,
   );
-  if (declaration.name.includes('/')) {
+  if (declaration.name.includes(REFERENCE_SEPARATOR)) {
     throw new ModelValidationError(
-      `Context node name ${JSON.stringify(declaration.name)} must not contain "/".`,
+      `Context node name ${JSON.stringify(declaration.name)} must not contain ${JSON.stringify(REFERENCE_SEPARATOR)}.`,
     );
   }
   const uses = declaration.uses ?? [];

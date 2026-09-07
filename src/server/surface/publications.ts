@@ -1,5 +1,6 @@
 import type { ApplicationCompilation } from '../../core/model/compiler.js';
 import { ModelValidationError } from '../../core/foundation/errors.js';
+import { REFERENCE_SEPARATOR } from '../../core/foundation/vocabulary.js';
 import { RefusedError } from '../../core/model/disclosure.js';
 import { takenByPersonMessage } from '../../core/model/system-api.js';
 import type { PromptDeclaration } from '../../core/mcp-interface/prompt.js';
@@ -217,10 +218,10 @@ function validateResources(
 }
 
 function personSignpost(disclosure: Disclosure, ref: string, selection: RootSelection): string {
-  const names = ref.split('/');
+  const names = ref.split(REFERENCE_SEPARATOR);
   const levels: [string, number][] = [];
   for (let depth = 1; depth < names.length; depth += 1) {
-    const ancestor = names.slice(0, depth).join('/');
+    const ancestor = names.slice(0, depth).join(REFERENCE_SEPARATOR);
     const node = disclosure.openForPerson(ancestor, selection);
     const roles = Array.isArray(node.roles) ? node.roles.length : 0;
     levels.push([ancestor, roles]);
@@ -229,7 +230,7 @@ function personSignpost(disclosure: Disclosure, ref: string, selection: RootSele
 }
 
 function publicationName(entry: PromptDeclaration | ResourceDeclaration): string {
-  return entry.name ?? entry.opens.slice(entry.opens.lastIndexOf('/') + 1);
+  return entry.name ?? entry.opens.slice(entry.opens.lastIndexOf(REFERENCE_SEPARATOR) + 1);
 }
 
 function hasProperties(schema: Readonly<Record<string, unknown>>): boolean {

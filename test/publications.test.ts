@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { z } from 'zod';
 
-import { defineApplication, ModelValidationError } from '../src/index.js';
+import { defineApplication, ModelValidationError, REFERENCE_SEPARATOR } from '../src/index.js';
 import {
   ApplicationRuntime,
   compileApplication,
@@ -118,6 +118,45 @@ test('publication declarations are snapshotted before serving', () => {
   });
   prompt.description = 'Changed.';
   assert.equal(surface.promptCards()[0]?.description, 'Original. (command)');
+});
+
+test('publication parser derives nested Contexture names and person signposts with the shared separator', async () => {
+  const ref = ['operations', 'runbook'].join(REFERENCE_SEPARATOR);
+  const declaration = defineApplication({
+    name: 'publication-refs',
+    roots: [
+      () => ({
+        kind: 'role',
+        name: 'operations',
+        description: 'Operate.',
+        instructions: 'Route.',
+        tools: [
+          () => ({
+            kind: 'tool',
+            name: 'runbook',
+            description: 'Read.',
+            readOnly: true,
+            input: z.strictObject({}),
+            invoke: () => 'runbook',
+          }),
+        ],
+      }),
+    ],
+    prompts: [{ opens: ref, description: 'Open the runbook.' }],
+    resources: [{ opens: ref, uri: 'contexture://runbooks/operations', description: 'Read it.' }],
+  });
+  const index = compileApplication(declaration);
+  const surface = new Publications(
+    new Disclosure(index),
+    new ApplicationRuntime(index),
+    declaration,
+  );
+  assert.equal(surface.promptCards()[0]?.name, 'runbook');
+  assert.equal(surface.resourceCards()[0]?.name, 'runbook');
+  const command = await surface.command('runbook');
+  assert.match(command, new RegExp(`You are at ${ref}`));
+  assert.match(command, /- operations: no sub-roles/);
+  assert.equal(await surface.read('contexture://runbooks/operations'), 'runbook');
 });
 
 test('Resources reject non-Tool, argument-taking, and writing targets', () => {

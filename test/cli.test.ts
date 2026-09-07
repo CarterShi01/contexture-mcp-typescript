@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { CLI_VERSION, main } from '../src/cli/index.js';
+import { PACKAGE_VERSION, REFERENCE_SEPARATOR } from '../src/index.js';
 
 function output() {
   const out: string[] = [];
@@ -20,6 +21,7 @@ test('CLI reports its version and creates a project through the real scaffold', 
   const version = output();
   assert.equal(await main(['--version'], version.writer), 0);
   assert.deepEqual(version.out, [CLI_VERSION]);
+  assert.equal(CLI_VERSION, PACKAGE_VERSION);
 
   const temporary = await mkdtemp(path.join(tmpdir(), 'contexture-cli-'));
   try {
@@ -107,7 +109,7 @@ export const app = {
     const called = output();
     assert.equal(
       await main(
-        ['call', 'assistant/read', '--input', '{"value":"ok"}'],
+        ['call', ['assistant', 'read'].join(REFERENCE_SEPARATOR), '--input', '{"value":"ok"}'],
         called.writer,
         environment,
       ),

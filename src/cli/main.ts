@@ -9,12 +9,14 @@ import { app as demoApplication } from '../demo/server.js';
 import { compileRuntimeApplication } from '../server/application.js';
 import { buildInstructions } from '../server/instructions.js';
 import { buildServer, ContextureOptions, ServeError } from '../server/index.js';
+import { PACKAGE_VERSION, REFERENCE_SEPARATOR } from '../core/foundation/vocabulary.js';
 
 import { findProject, loadApplication } from './project.js';
 import { newProject } from './scaffold.js';
 import { UsageError } from './usage.js';
 
-export const CLI_VERSION = '0.12.0rc1';
+/** Compatibility spelling for the canonical framework release version. */
+export const CLI_VERSION = PACKAGE_VERSION;
 
 export interface CliOutput {
   readonly out: (line: string) => void;
@@ -111,7 +113,7 @@ async function commandList(
 ): Promise<number> {
   const application = await compiled(oneTarget(argv, 'list'), environment);
   for (const [ref, node] of application.index.walk()) {
-    const indent = '  '.repeat(ref.split('/').length - 1);
+    const indent = '  '.repeat(ref.split(REFERENCE_SEPARATOR).length - 1);
     if (node.kind === 'role') output.out(`${indent}${node.name}  — ${node.description}`);
     if (node.kind === 'skill') output.out(`${indent}  skill     ${ref}`);
     if (node.kind === 'tool')

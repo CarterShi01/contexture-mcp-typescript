@@ -7,6 +7,7 @@ import {
   ModelValidationError,
   NodeNotFoundError,
   Channels,
+  REFERENCE_SEPARATOR,
   type RoleDeclaration,
 } from '../src/index.js';
 import {
@@ -102,7 +103,10 @@ test('ControllerManager validates registration groups, names, duplicate addresse
     () => manager.registerSkill((() => ({ ...role('not-a-skill') })) as never),
     /not a skill/,
   );
-  assert.throws(() => manager.registerRole(() => role('bad/name')), /must not contain/);
+  assert.throws(
+    () => manager.registerRole(() => role(`bad${REFERENCE_SEPARATOR}name`)),
+    /must not contain/,
+  );
 
   const shared = {
     kind: 'skill' as const,
@@ -119,7 +123,9 @@ test('ControllerManager validates registration groups, names, duplicate addresse
           () => ({ ...role('right'), skills: [() => shared] }),
         ],
       })),
-    /held twice.*root\/left\/status.*root\/right\/status/,
+    new RegExp(
+      `held twice.*root${REFERENCE_SEPARATOR}left${REFERENCE_SEPARATOR}status.*root${REFERENCE_SEPARATOR}right${REFERENCE_SEPARATOR}status`,
+    ),
   );
 
   const outer: RoleDeclaration = { ...role('outer'), children: [] };
@@ -127,8 +133,22 @@ test('ControllerManager validates registration groups, names, duplicate addresse
   (outer as { children: readonly (() => RoleDeclaration)[] }).children = [() => inner];
   assert.throws(
     () => new ControllerManager().registerRole(() => outer),
-    /contains itself.*outer.*outer\/inner\/outer/,
+    new RegExp(
+      `contains itself.*outer.*outer${REFERENCE_SEPARATOR}inner${REFERENCE_SEPARATOR}outer`,
+    ),
   );
+});
+
+test('ControllerManager builds nested canonical refs with the shared separator', () => {
+  const manager = new ControllerManager();
+  manager.registerRole(() => ({
+    ...role('operations'),
+    skills: [
+      () => ({ kind: 'skill', name: 'diagnose', description: 'Diagnose.', instructions: 'Read.' }),
+    ],
+  }));
+  const ref = ['operations', 'diagnose'].join(REFERENCE_SEPARATOR);
+  assert.equal(manager.compile('manager-ref').find(ref).name, 'diagnose');
 });
 
 test('ControllerManager generic registration dispatches by kind and rejects malformed node facts immediately', () => {
