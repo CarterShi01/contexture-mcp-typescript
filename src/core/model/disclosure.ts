@@ -153,7 +153,12 @@ export class Disclosure {
     return Object.freeze({
       uses: Object.freeze(
         node.uses
-          .filter((target) => selection.containsRef(target) && this.modelCanSee(target, selection))
+          .filter(
+            (target) =>
+              selection.containsRef(target) &&
+              !this.#reserved.has(target) &&
+              this.modelCanSee(target, selection),
+          )
           .map((target) => this.card(this.index.find(target))),
       ),
     });

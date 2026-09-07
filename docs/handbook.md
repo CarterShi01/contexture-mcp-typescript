@@ -90,6 +90,9 @@ are never expanded in that response. A disclosure-only Tool remains structural:
 its cards omit both `read_only` and `input_schema`, but an explicitly opened
 Tool can still name its direct structural `uses` cards. Root selection filters
 those cards before rendering, so a cross-root dependency never widens a request.
+A `modelMayOpen: false` Prompt reservation also removes its target from another
+active node's `uses` cards; person-controlled capabilities are never leaked as
+model routing choices.
 
 `RootSelection` is an all-roots value or an exact root allowlist: it trims
 requested root names, rejects descendants, and can only attenuate another

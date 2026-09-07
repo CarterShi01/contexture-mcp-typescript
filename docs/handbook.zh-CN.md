@@ -80,6 +80,8 @@ active Tool 或 Role 声明 `uses` 时也采用同一条单层规则。被引用
 绝不会展开它们自身的 instructions 或 dependencies。disclosure-only Tool 仍是 structural：其 card 同时省略
 `read_only` 与 `input_schema`，但显式 open 的 Tool 仍可列出直接的 structural `uses` card。root selection 会在
 渲染前过滤这些 card，因此 cross-root dependency 永远不会扩大一个 request 的范围。
+`modelMayOpen: false` 的 Prompt reservation 也会从其他 active node 的 `uses` card 中移除其 target；
+person-controlled capability 永远不会作为模型可选的 routing choice 泄露。
 
 `RootSelection` 表示 all-roots 或精确 root allowlist：它会 trim 请求的 root name、拒绝
 descendant，并且只能收窄另一个 selection。`SelectedGraph` 只公开选中范围内的 `roots`、`walk`、

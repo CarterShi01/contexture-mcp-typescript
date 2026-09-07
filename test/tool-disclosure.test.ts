@@ -9,6 +9,7 @@ import {
   Disclosure,
   RootSelection,
 } from '../src/core/index.js';
+import { compileRuntimeApplication } from '../src/server/index.js';
 
 function runtimeDisclosure(): Disclosure {
   return new Disclosure(
@@ -123,7 +124,7 @@ test('selected roots filter active Tool uses without leaking another root', () =
   assert.doesNotMatch(JSON.stringify(opened), /support|foreign/);
 });
 
-test('disclosure-only Tool cards omit callable facts while retaining active structural uses', () => {
+test('disclosure-only Tool-to-Tool uses omit callable facts on both cards', () => {
   const index = compileDisclosureApplication(
     defineApplication({
       name: 'structural-tool',
@@ -133,21 +134,20 @@ test('disclosure-only Tool cards omit callable facts while retaining active stru
           name: 'architecture',
           description: 'Architecture.',
           instructions: 'Route.',
-          skills: [
-            () => ({
-              kind: 'skill',
-              name: 'fact',
-              description: 'Fact.',
-              instructions: 'Read facts.',
-            }),
-          ],
           tools: [
             () => ({
               kind: 'tool',
               name: 'provider',
               description: 'Provider.',
               readOnly: true,
-              uses: ['architecture/fact'],
+              uses: ['architecture/reader'],
+              invoke: () => 'must not bind',
+            }),
+            () => ({
+              kind: 'tool',
+              name: 'reader',
+              description: 'Reader.',
+              readOnly: true,
               invoke: () => 'must not bind',
             }),
           ],
@@ -166,6 +166,55 @@ test('disclosure-only Tool cards omit callable facts while retaining active stru
   assert.equal('read_only' in tool, false);
   assert.equal('input_schema' in tool, false);
   assert.deepEqual(tool.uses, [
-    { kind: 'skill', name: 'fact', description: 'Fact.', ref: 'architecture/fact' },
+    { kind: 'tool', name: 'reader', description: 'Reader.', ref: 'architecture/reader' },
   ]);
+  const target = (tool.uses as readonly Record<string, unknown>[])[0];
+  assert.ok(target !== undefined);
+  assert.equal('read_only' in target, false);
+  assert.equal('input_schema' in target, false);
+});
+
+test('person-reserved prompt targets are omitted from active Tool uses', () => {
+  const application = compileRuntimeApplication(
+    defineApplication({
+      name: 'reserved-tool-use',
+      roots: [
+        () => ({
+          kind: 'role',
+          name: 'operations',
+          description: 'Operations.',
+          instructions: 'Route.',
+          skills: [
+            () => ({
+              kind: 'skill',
+              name: 'approval',
+              description: 'Approval.',
+              instructions: 'Wait for a person.',
+            }),
+          ],
+          tools: [
+            () => ({
+              kind: 'tool',
+              name: 'deploy',
+              description: 'Deploy.',
+              readOnly: false,
+              input: z.strictObject({}),
+              invoke: () => 'deployed',
+              uses: ['operations/approval'],
+            }),
+          ],
+        }),
+      ],
+      prompts: [
+        {
+          opens: 'operations/approval',
+          description: 'Approve a deployment.',
+          modelMayOpen: false,
+        },
+      ],
+    }),
+  );
+  const opened = application.disclosure.open('operations/deploy');
+  assert.deepEqual(opened.uses, []);
+  assert.doesNotMatch(JSON.stringify(opened), /approval|Wait for a person/);
 });
