@@ -80,8 +80,10 @@ active Tool 或 Role 声明 `uses` 时也采用同一条单层规则。被引用
 绝不会展开它们自身的 instructions 或 dependencies。disclosure-only Tool 仍是 structural：其 card 同时省略
 `read_only` 与 `input_schema`，但显式 open 的 Tool 仍可列出直接的 structural `uses` card。root selection 会在
 渲染前过滤这些 card，因此 cross-root dependency 永远不会扩大一个 request 的范围。
-`modelMayOpen: false` 的 Prompt reservation 也会从其他 active node 的 `uses` card 中移除其 target；
-person-controlled capability 永远不会作为模型可选的 routing choice 泄露。
+`modelMayOpen: false` 的 Prompt reservation 会从其他 active node 的 `uses` card 中移除其 target。
+与 prompt-only root 不同，该 target 的普通 containment card 仍会可见，因此模型可以把人引导到 Prompt；
+模型 open 会被拒绝，而具名 Prompt 或 `goto` 会为该人打开相同的 canonical active payload。
+`unrestricted()` 只移除 prompt-root 的模型所有权，保留已有的 root-selection ceiling。
 
 `RootSelection` 表示 all-roots 或精确 root allowlist：它会 trim 请求的 root name、拒绝
 descendant，并且只能收窄另一个 selection。`SelectedGraph` 只公开选中范围内的 `roots`、`walk`、
@@ -138,7 +140,8 @@ Disclosure、Runtime 和 gateway surface 共享同一个 collector。
 
 TypeScript 中的 `modelMayOpen` 有意使用 boolean：省略或 `true` 表示 Prompt 可由模型导航，
 `false` 则把这个已声明 capability 保留给人控制的 Prompt 或 `goto` 导航。它与 Python declaration
-有相同的可观察保留语义，但不复制 Python 的语法。
+有相同的可观察保留语义，但不复制 Python 的语法。自定义嵌套 `Disclosure` `promptRoots` ref 是无效的，
+并会抛出公开的 `ModelValidationError`；prompt-only ownership 只适用于完整 root，而非任意 descendant。
 
 直接使用 compiled index 的调用者可通过 `NodeNotFoundError` 分类 lookup 失败。其 `reason` 是
 `LookupFailure.EMPTY_REF`、`NO_SUCH_ROOT`、`NOT_A_CONTAINER`、`NO_SUCH_MEMBER` 或

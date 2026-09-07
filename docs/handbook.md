@@ -90,9 +90,12 @@ are never expanded in that response. A disclosure-only Tool remains structural:
 its cards omit both `read_only` and `input_schema`, but an explicitly opened
 Tool can still name its direct structural `uses` cards. Root selection filters
 those cards before rendering, so a cross-root dependency never widens a request.
-A `modelMayOpen: false` Prompt reservation also removes its target from another
-active node's `uses` cards; person-controlled capabilities are never leaked as
-model routing choices.
+A `modelMayOpen: false` Prompt reservation removes its target from another
+active node's `uses` cards. Unlike a prompt-only root, its ordinary containment
+card remains visible, so the model can direct the person to the Prompt; a model
+open is refused, while the named Prompt or `goto` opens the same canonical
+active payload for that person. `unrestricted()` removes prompt-root model
+ownership only: it preserves the existing root-selection ceiling.
 
 `RootSelection` is an all-roots value or an exact root allowlist: it trims
 requested root names, rejects descendants, and can only attenuate another
@@ -169,7 +172,9 @@ object cannot bypass declaration validation or Prompt reservation semantics.
 keeps a Prompt model-navigable, while `false` reserves that declared capability
 for person-controlled Prompt or `goto` navigation. This has the same
 observable reservation meaning as the Python declaration, without copying its
-syntax.
+syntax. A custom nested `Disclosure` `promptRoots` reference is invalid and
+raises the public `ModelValidationError`; prompt-only ownership applies to
+complete roots, not an arbitrary descendant.
 
 Direct compiled-index callers can classify a failed lookup with
 `NodeNotFoundError`. Its `reason` is one of `LookupFailure.EMPTY_REF`,

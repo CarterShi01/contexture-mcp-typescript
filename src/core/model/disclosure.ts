@@ -1,5 +1,5 @@
 import type { CompiledApplication, CompiledNode, CompiledRole, CompiledTool } from './compiler.js';
-import { LookupFailure, NodeNotFoundError } from '../foundation/errors.js';
+import { LookupFailure, ModelValidationError, NodeNotFoundError } from '../foundation/errors.js';
 import { RootOutsideSelectionError, RootSelection } from './root-selection.js';
 import { InMemoryTelemetry, reportTelemetry, type Telemetry } from './telemetry.js';
 
@@ -45,7 +45,9 @@ export class Disclosure {
     for (const ref of this.#promptRoots) {
       const node = index.find(ref);
       if (index.parentOf(node) !== undefined) {
-        throw new Error(`Prompt-only reference ${JSON.stringify(ref)} is not a root.`);
+        throw new ModelValidationError(
+          `Prompt-only reference ${JSON.stringify(ref)} is not a root.`,
+        );
       }
     }
     Object.freeze(this);
@@ -63,6 +65,7 @@ export class Disclosure {
   unrestricted(): Disclosure {
     return new Disclosure(this.index, {
       selection: this.selection,
+      promptRoots: [],
       reserved: this.#reserved,
       telemetry: this.telemetry,
     });
@@ -78,7 +81,7 @@ export class Disclosure {
   }
 
   discover(requested: RootSelection = RootSelection.all()): Discovery {
-    const roots = this.index.modelRoots.filter((node) =>
+    const roots = this.index.roots.filter((node) =>
       this.modelCanSee(this.index.refOf(node), requested),
     );
     return Object.freeze({
@@ -103,20 +106,20 @@ export class Disclosure {
       );
     }
     const selection = this.effectiveSelection(requested);
-    const result = this.active(
-      resolveRef(this.index, ref, selection, this.index.modelRoots),
-      selection,
-    );
+    const result = this.active(resolveRef(this.index, ref, selection, this.index.roots), selection);
     this.reportOpen(ref, result);
     return result;
   }
 
   openForPerson(ref: string, requested: RootSelection = RootSelection.all()): RoutingCard {
-    const selection = this.effectiveSelection(requested);
+    // Person navigation removes only prompt-root model ownership. It retains
+    // this view's root ceiling and still bypasses model-only reservations.
+    const personView = this.#promptRoots.size === 0 ? this : this.unrestricted();
+    const selection = personView.effectiveSelection(requested);
     selection.requireRef(ref);
-    const node = resolveRef(this.index, ref, selection, this.index.roots);
-    const result = this.active(node, selection);
-    this.reportOpen(ref, result);
+    const node = resolveRef(personView.index, ref, selection, personView.index.roots);
+    const result = personView.active(node, selection);
+    personView.reportOpen(ref, result);
     return result;
   }
 
