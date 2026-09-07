@@ -108,6 +108,13 @@ returns `undefined` for an unauthenticated call and outside an invocation;
 Contexture never invents an anonymous Principal. The application decides
 whether its capability requires identity.
 
+`currentGraph()` and `currentTelemetry()` are stricter: they are available only
+inside a running Tool and reject no-active-invocation access. `ToolCallContext`
+preserves Host-owned `host` and cancellation `signal`, while Contexture rebuilds
+its `principal`, `channels`, `telemetry`, `graph`, and `selection` facts for the
+exact call. A handler therefore cannot receive a caller-supplied framework
+snapshot that disagrees with its request-local context.
+
 For an imperative embedding phase, `ControllerManager` captures a root factory
 once through `registerRole`, `registerSkill`, `registerTool`, or `registerRoot`.
 It validates the complete captured tree and owns a deep snapshot; `roles`,

@@ -2,20 +2,30 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { z } from 'zod';
 
-import { defineApplication, defineTool, InputValidationError, Principal } from '../src/index.js';
+import {
+  Channels,
+  defineApplication,
+  defineTool,
+  InputValidationError,
+  Principal,
+} from '../src/index.js';
 import {
   ApplicationRuntime,
   compileApplication,
+  compileDisclosureApplication,
   currentGraph,
   currentPrincipal,
   currentRootSelection,
   currentTelemetry,
   InMemoryTelemetry,
+  ModelValidationError,
   RootOutsideSelectionError,
   RootSelection,
   WrongDoorError,
+  type ToolCallContext,
   type Telemetry,
 } from '../src/core/index.js';
+import { compileRuntimeApplication, Gateway } from '../src/server/index.js';
 
 function runtime(telemetry: Telemetry = new InMemoryTelemetry()): ApplicationRuntime {
   return new ApplicationRuntime(
@@ -100,6 +110,89 @@ test('runtime validates via the disclosed Binding and enforces the fixed read/wr
   );
 });
 
+test('ApplicationRuntime refuses a disclosure-only Index before it can execute', () => {
+  const structural = compileDisclosureApplication(
+    defineApplication({
+      name: 'structural-runtime',
+      roots: [
+        () => ({
+          kind: 'tool',
+          name: 'status',
+          description: 'Describe status.',
+          readOnly: true,
+          invoke: () => 'never bound',
+        }),
+      ],
+    }),
+  );
+  assert.throws(() => new ApplicationRuntime(structural), ModelValidationError);
+});
+
+test('currentGraph and currentTelemetry reject access without an active Tool invocation', () => {
+  assert.throws(() => currentGraph(), /No Contexture Tool invocation is active/);
+  assert.throws(() => currentTelemetry(), /No Contexture Tool invocation is active/);
+});
+
+test('runtime rebuilds framework ToolCallContext facts and preserves Host facts', async () => {
+  const channels = new (class extends Channels {
+    open() {}
+    close() {}
+  })();
+  const telemetry = new InMemoryTelemetry();
+  const trusted = new Principal({ subject: 'trusted' });
+  const spoofed = new Principal({ subject: 'spoofed' });
+  const host = Object.freeze({ requestId: 'host-request' });
+  const signal = new AbortController().signal;
+  let principalReads = 0;
+  const context = {
+    channels: Object.freeze({ spoofed: 'channels' }),
+    telemetry: Object.freeze({ spoofed: 'telemetry' }),
+    graph: Object.freeze({ spoofed: 'graph' }),
+    selection: Object.freeze({ spoofed: 'selection' }),
+    host,
+    signal,
+    get principal(): Principal {
+      // The request fact is captured once. A later spread of caller state
+      // must not replace the framework-owned context given to the Tool.
+      principalReads += 1;
+      return principalReads === 1 ? trusted : spoofed;
+    },
+  } as ToolCallContext;
+  const runtime = new ApplicationRuntime(
+    compileApplication(
+      defineApplication({
+        name: 'context-injection',
+        channels,
+        roots: [
+          () =>
+            defineTool({
+              kind: 'tool',
+              name: 'status',
+              description: 'Inspect injected request facts.',
+              readOnly: true,
+              input: z.strictObject({}),
+              invoke: (_input, received) => {
+                assert.equal(received.principal, trusted);
+                assert.equal(currentPrincipal(), trusted);
+                assert.equal(received.channels, channels);
+                assert.equal(received.telemetry, telemetry);
+                assert.equal(received.graph, currentGraph());
+                assert.equal(received.selection, currentRootSelection());
+                assert.equal(received.host, host);
+                assert.equal(received.signal, signal);
+                return 'injected';
+              },
+            }),
+        ],
+      }),
+    ),
+    { telemetry },
+  );
+
+  assert.equal(await runtime.invokeReadOnly('status', {}, context), 'injected');
+  assert.equal(principalReads, 2);
+});
+
 test('runtime scopes principal, graph, selection and telemetry to concurrent calls', async () => {
   assert.equal(currentPrincipal(), undefined);
   const service = runtime();
@@ -124,6 +217,52 @@ test('runtime scopes principal, graph, selection and telemetry to concurrent cal
     telemetry: currentTelemetryOutsideValue(second),
   });
   assert.equal(currentPrincipal(), undefined);
+});
+
+test('a compiled Gateway keeps overlapping request contexts isolated across awaits', async () => {
+  let arrived = 0;
+  let releaseBoth!: () => void;
+  const bothArrived = new Promise<void>((resolve) => {
+    releaseBoth = resolve;
+  });
+  const application = compileRuntimeApplication(
+    defineApplication({
+      name: 'gateway-runtime-context',
+      roots: [
+        () =>
+          defineTool({
+            kind: 'tool',
+            name: 'who',
+            description: 'Return the serving caller.',
+            readOnly: true,
+            input: z.strictObject({}),
+            invoke: async (_input, context) => {
+              const principal = currentPrincipal();
+              const graph = currentGraph();
+              const selection = currentRootSelection();
+              arrived += 1;
+              if (arrived === 2) releaseBoth();
+              await bothArrived;
+              await Promise.resolve();
+              assert.equal(currentPrincipal(), principal);
+              assert.equal(currentGraph(), graph);
+              assert.equal(currentRootSelection(), selection);
+              assert.equal(context.principal, principal);
+              assert.equal(context.graph, graph);
+              assert.equal(context.selection, selection);
+              return principal?.subject;
+            },
+          }),
+      ],
+    }),
+  );
+  const gateway = new Gateway(application.disclosure, application.runtime);
+  const [alice, bob] = await Promise.all([
+    gateway.invokeReadOnly('who', {}, { principal: new Principal({ subject: 'alice' }) }),
+    gateway.invokeReadOnly('who', {}, { principal: new Principal({ subject: 'bob' }) }),
+  ]);
+  assert.equal(alice, 'alice');
+  assert.equal(bob, 'bob');
 });
 
 test('runtime scopes the final attenuated selection independently for concurrent calls', async () => {

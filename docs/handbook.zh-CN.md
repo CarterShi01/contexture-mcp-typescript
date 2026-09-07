@@ -94,6 +94,11 @@ all-roots 值。
 它返回 `undefined`；Contexture 绝不会虚构 anonymous Principal。某项 capability 是否要求 identity
 由 application 自己决定。
 
+`currentGraph()` 与 `currentTelemetry()` 更严格：它们只可在正在运行的 Tool 内访问，在没有 active
+invocation 时会拒绝访问。`ToolCallContext` 保留 Host 所有的 `host` 与取消用的 `signal`，而 Contexture
+会为这一次确切 call 重建其中的 `principal`、`channels`、`telemetry`、`graph` 与 `selection` facts。因而
+handler 不会收到与其 request-local context 不一致的 caller-supplied framework snapshot。
+
 对于 imperative embedding phase，可使用 `ControllerManager` 通过 `registerRole`、
 `registerSkill`、`registerTool` 或 `registerRoot` 一次性捕获 root factory。它会校验完整的
 captured tree 并拥有 deep snapshot；`roles`、`skills`、`tools` 与 `roots` 返回 defensive snapshot
