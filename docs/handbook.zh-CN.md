@@ -195,6 +195,13 @@ Python 的 `Index.of`、`bound` 与 `unbound` 构造形式；serving 仍由既�
 声明 root 则有意保持 SDK-neutral。`SelectedGraph` 在同一 matcher 上只处理 selected ref，因此不会泄露
 另一个 request root。
 
+每个已编译 Role 也有本地结构查询。`branches()` 返回直接 child Role；`members()` 按 declaration group
+顺序返回直接 child Role、Skill、Tool；`member(name)` 在这三组直接成员中按 name 查找。name 不存在时会抛出
+带 Role scope 和按规范排序 known name 的 typed `NodeNotFoundError`。这些方法会返回新的 frozen array，
+其 node 仍属于同一个不可变 compilation snapshot，且绝不会执行 lazy declaration factory。每条 `uses` edge
+只会在完整 forest 存在后被检查：必须非空、唯一、可解析，且不得指向 node 自己的 canonical ref。不同 node
+之间的 reference cycle 仍然有效，因为 disclosure 只渲染一层 routing card。
+
 ## 3. 选择正确的节点
 
 | 使用  | 适用情形                                         |

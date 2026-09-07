@@ -37,6 +37,12 @@ export interface CompiledRole extends CompiledNodeBase {
   readonly children: readonly CompiledRole[];
   readonly skills: readonly CompiledSkill[];
   readonly tools: readonly CompiledTool[];
+  /** Direct child Roles in declaration order. */
+  branches(): readonly CompiledRole[];
+  /** Direct members in declaration-group order: Roles, Skills, then Tools. */
+  members(): readonly CompiledNode[];
+  /** Resolve one direct member by its cross-kind-unique name. */
+  member(name: string): CompiledNode;
 }
 
 export interface CompiledSkill extends CompiledNodeBase {
@@ -215,14 +221,28 @@ function compileDeclaration(
 
   if (declaration.kind === 'role') {
     const role = declaration as RoleDeclaration;
-    const node = {
+    const node: CompiledRole = {
       ...baseOf(role),
       kind: 'role' as const,
       instructions: role.instructions,
       children: [] as CompiledRole[],
       skills: [] as CompiledSkill[],
       tools: [] as CompiledTool[],
-    } as CompiledRole;
+      branches: () => Object.freeze([...node.children]),
+      members: () => Object.freeze([...node.children, ...node.skills, ...node.tools]),
+      member: (name: string) => {
+        const members = node.members();
+        const found = members.find((candidate) => candidate.name === name);
+        if (found !== undefined) return found;
+        throw new NodeNotFoundError({
+          reason: LookupFailure.NO_SUCH_MEMBER,
+          segment: name,
+          scope: node.name,
+          kind: node.kind,
+          known: sorted(members.map((candidate) => candidate.name)),
+        });
+      },
+    };
     registerNode(node, ref, parent, state);
     const children = (role.children ?? []).map((factory) =>
       compileFactory(factory, path, node, state),
@@ -391,6 +411,11 @@ function assertUniqueMemberNames(roleName: string, members: readonly CompiledNod
 function validateUses(byRef: ReadonlyMap<string, CompiledNode>): void {
   for (const [source, node] of byRef) {
     for (const target of node.uses) {
+      if (target === source) {
+        throw new ModelValidationError(
+          `${node.kind[0]?.toUpperCase() ?? ''}${node.kind.slice(1)} ${JSON.stringify(source)} names itself in uses.`,
+        );
+      }
       if (!byRef.has(target)) {
         throw new UnresolvedReferenceError(
           `${JSON.stringify(source)} uses unknown Contexture reference ${JSON.stringify(target)}.`,

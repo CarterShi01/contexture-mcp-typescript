@@ -232,6 +232,17 @@ limit deliberately yields no values rather than expanding a bounded response.
 `crossings()` lists declared `uses` edges that leave their root. Both are
 structural facts, not disclosure cards.
 
+Each compiled Role also has local structural queries. `branches()` returns its
+direct child Roles; `members()` returns direct child Roles, Skills, then Tools
+in declaration-group order; and `member(name)` resolves one direct member
+across those groups. A missing name throws a typed `NodeNotFoundError` with
+the Role scope and canonically sorted known names. These methods return fresh,
+frozen arrays over the same immutable compilation snapshot and never evaluate
+lazy declaration factories. Every `uses` edge is checked only after the whole
+forest exists: it must be non-blank, unique, resolvable, and cannot name the
+node's own canonical ref. Reference cycles between distinct nodes remain valid
+because disclosure renders only one routing-card layer.
+
 `bindingOf(ref)` and `schemaOf(tool)` are available only on a bound runtime
 Index. A disclosure-only Index still supports structural queries but rejects
 those execution facts. Schemas, node values, pairs, and result collections are
