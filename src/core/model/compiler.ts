@@ -238,7 +238,6 @@ function compileDeclaration(
           reason: LookupFailure.NO_SUCH_MEMBER,
           segment: name,
           scope: node.name,
-          kind: node.kind,
           known: sorted(members.map((candidate) => candidate.name)),
         });
       },

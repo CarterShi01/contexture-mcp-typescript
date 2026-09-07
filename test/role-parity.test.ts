@@ -107,7 +107,7 @@ test('a compiled Role exposes immutable, ordered local membership facts', () => 
           ref: undefined,
           segment: 'absent',
           scope: 'operations',
-          kind: 'role',
+          kind: undefined,
           known: ['changes', 'incidents', 'status', 'triage'],
         },
       );
