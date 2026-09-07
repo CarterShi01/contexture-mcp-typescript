@@ -48,17 +48,22 @@ test('NodeNotFoundError retains exhaustive immutable facts and separates develop
       `${reason} needs a gateway recovery name`,
     );
   }
-  known.push('mutated');
   const local = new NodeNotFoundError({
     reason: LookupFailure.NO_SUCH_MEMBER,
     segment: 'missing',
     scope: 'operations',
     known,
   });
+  known.push('caller-mutation-after-construction');
+  assert.deepEqual(local.known, ['diagnose', 'status']);
   const attached = local.within('operations/missing');
   assert.notStrictEqual(attached, local);
   assert.equal(attached.ref, 'operations/missing');
-  assert.deepEqual(attached.known, ['diagnose', 'status', 'mutated']);
+  assert.deepEqual(attached.known, ['diagnose', 'status']);
+  known.push('caller-mutation-after-within');
+  assert.deepEqual(local.known, ['diagnose', 'status']);
+  assert.deepEqual(attached.known, ['diagnose', 'status']);
+  assert.throws(() => (local.known as string[]).push('leak'), TypeError);
   assert.throws(() => (attached.known as string[]).push('leak'), TypeError);
   const complete = new NodeNotFoundError({ reason: LookupFailure.EMPTY_REF, ref: '' });
   assert.strictEqual(complete.within('replacement'), complete);
