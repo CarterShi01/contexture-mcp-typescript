@@ -1,7 +1,20 @@
-/** Application-wide dependencies with an explicitly managed lifetime. */
-export interface Channels {
-  open(registrar: CleanupRegistrar): void | Promise<void>;
-  close(): void | Promise<void>;
+/** Any deployment dependency captured by an imperative ControllerManager. */
+export type ChannelHandle = unknown;
+
+/**
+ * Application-wide dependencies with an explicitly managed lifetime.
+ *
+ * This is deliberately a nominal runtime class rather than a structural
+ * `{ open, close }` interface. An ordinary deployment handle may happen to
+ * contain methods with those names; Contexture must still pass it through
+ * unchanged. Only an instance of this class participates in a lifecycle.
+ */
+export abstract class Channels {
+  /** A protected nominal marker; structurally similar raw values stay raw. */
+  declare protected readonly __contextureChannelsLifecycle: void;
+
+  abstract open(registrar: CleanupRegistrar): void | Promise<void>;
+  abstract close(): void | Promise<void>;
 }
 
 /** Register cleanup immediately after acquiring a dependency. */
@@ -11,10 +24,10 @@ export interface CleanupRegistrar {
 
 /** Hold application dependencies open around one served operation. */
 export async function withChannels<Result>(
-  channels: Channels | undefined,
+  channels: ChannelHandle | undefined,
   serve: () => Promise<Result>,
 ): Promise<Result> {
-  if (channels === undefined) return serve();
+  if (!(channels instanceof Channels)) return serve();
   const cleanups: Array<() => void | Promise<void>> = [];
   const registrar: CleanupRegistrar = Object.freeze({
     defer(cleanup: () => void | Promise<void>): void {

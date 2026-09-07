@@ -1,4 +1,5 @@
-import type { Channels, Factory, NodeDeclaration } from './core/model/declarations.js';
+import { Channels } from './core/model/channels.js';
+import type { ChannelHandle, Factory, NodeDeclaration } from './core/model/declarations.js';
 import type { PromptDeclaration } from './core/mcp-interface/prompt.js';
 import type { ResourceDeclaration } from './core/mcp-interface/resource.js';
 import type { Telemetry } from './core/model/telemetry.js';
@@ -15,10 +16,52 @@ export interface ApplicationDeclaration {
 }
 
 /**
+ * A trusted snapshot made by ControllerManager.
+ *
+ * Its handle may be an ordinary application value, unlike the declarative
+ * ApplicationDeclaration API whose `channels` field is lifecycle-only.
+ */
+export interface ManagedApplicationDeclaration extends Omit<ApplicationDeclaration, 'channels'> {
+  readonly channels?: ChannelHandle;
+}
+
+const managedApplications = new WeakSet<object>();
+
+/**
  * Declare an application without constructing nodes, opening dependencies, or
  * compiling an Index.
  */
 export function defineApplication(declaration: ApplicationDeclaration): ApplicationDeclaration {
+  return snapshotApplication(declaration, false) as ApplicationDeclaration;
+}
+
+/** Make a ControllerManager-owned application snapshot with an arbitrary handle. */
+export function defineManagedApplication(
+  declaration: ManagedApplicationDeclaration,
+): ManagedApplicationDeclaration {
+  const snapshot = snapshotApplication(declaration, true) as ManagedApplicationDeclaration;
+  managedApplications.add(snapshot);
+  return snapshot;
+}
+
+/** Normalize public declarations and manager-owned snapshots at every compile door. */
+export function normalizeApplication(
+  declaration: ApplicationDeclaration | ManagedApplicationDeclaration,
+): ApplicationDeclaration | ManagedApplicationDeclaration {
+  if (
+    typeof declaration === 'object' &&
+    declaration !== null &&
+    managedApplications.has(declaration)
+  ) {
+    return declaration;
+  }
+  return defineApplication(declaration as ApplicationDeclaration);
+}
+
+function snapshotApplication(
+  declaration: ManagedApplicationDeclaration,
+  allowRawHandle: boolean,
+): ManagedApplicationDeclaration {
   if (typeof declaration.name !== 'string' || declaration.name.trim().length === 0) {
     throw new TypeError('Application name must not be empty.');
   }
@@ -34,6 +77,15 @@ export function defineApplication(declaration: ApplicationDeclaration): Applicat
       declaration.promptRoots.some((factory) => typeof factory !== 'function'))
   ) {
     throw new TypeError('Application promptRoots must be lazy factories.');
+  }
+  if (
+    declaration.channels !== undefined &&
+    !allowRawHandle &&
+    !(declaration.channels instanceof Channels)
+  ) {
+    throw new TypeError(
+      'Application channels must be a Channels lifecycle instance; pass ordinary deployment handles through ControllerManager.',
+    );
   }
   const prompts = snapshotPrompts(declaration.prompts);
   const resources = snapshotResources(declaration.resources);

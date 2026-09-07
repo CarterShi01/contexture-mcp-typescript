@@ -4,8 +4,6 @@ export {
 } from './foundation/specification.js';
 export type {
   BaseNodeDeclaration,
-  Channels,
-  CleanupRegistrar,
   Factory,
   NodeDeclaration,
   NodeKind,
@@ -45,7 +43,8 @@ export {
 } from './model/root-selection.js';
 export { bindTool } from './model/binding.js';
 export type { JsonObject, JsonValue, ToolBinding } from './model/binding.js';
-export { withChannels } from './model/channels.js';
+export { Channels, withChannels } from './model/channels.js';
+export type { ChannelHandle, CleanupRegistrar } from './model/channels.js';
 export { ControllerManager } from './model/manager.js';
 export type { RoleFactory, SkillFactory, ToolFactory } from './model/manager.js';
 export {

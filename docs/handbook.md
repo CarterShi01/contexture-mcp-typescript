@@ -93,6 +93,17 @@ trees, so later registration or `rebindChannels()` cannot change an older
 Application or compiled Index. Channels are intentionally identity snapshots:
 rebinding affects only Applications produced afterward.
 
+`Channels` is a nominal lifecycle base class: extend it when a deployment
+dependency must open before serving and close afterward. Do not use a plain
+object with similarly named `open` and `close` methods; it is not a lifecycle
+owner. `ControllerManager` also accepts an ordinary already-built deployment
+handle. It preserves that exact value without inspecting or invoking it, and a
+Tool receives the same framework-owned identity as `context.channels`. This
+is useful for clients, configuration, or test doubles that need no lifecycle.
+The declarative `defineApplication({ channels })` entry point intentionally
+accepts only a `Channels` instance; use `ControllerManager` for an ordinary
+handle. Contexture overwrites any caller-provided `context.channels` value.
+
 Every executable server exposes the same ordered four-tool `Gateway`: discover,
 open, read-only invoke, and invoke. A disclosure-only host exposes its first
 two navigation entries. Lookup and wrong-door failures are rendered there as

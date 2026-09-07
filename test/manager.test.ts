@@ -6,10 +6,14 @@ import {
   ControllerManager,
   ModelValidationError,
   NodeNotFoundError,
-  type Channels,
+  Channels,
   type RoleDeclaration,
 } from '../src/index.js';
-import { ApplicationRuntime, compileApplication } from '../src/core/index.js';
+import {
+  ApplicationRuntime,
+  compileApplication,
+  compileDisclosureApplication,
+} from '../src/core/index.js';
 
 function role(name: string): RoleDeclaration {
   return { kind: 'role', name, description: `${name}.`, instructions: 'Inspect.' };
@@ -164,7 +168,38 @@ test('ControllerManager captures Channels per Application lifetime and rebinds o
   assert.deepEqual([second.opens, second.closes], [1, 1]);
 });
 
-class CountingChannels implements Channels {
+test('ControllerManager preserves ordinary handles without treating open and close names as a lifecycle', async () => {
+  const calls: string[] = [];
+  const first = Object.freeze({
+    name: 'first',
+    open: () => calls.push('wrong open'),
+    close: () => calls.push('wrong close'),
+  });
+  const second = Object.freeze({ name: 'second' });
+  const manager = new ControllerManager({ channels: first });
+  manager.registerTool(() =>
+    defineChannelsTool('status', (_input, context) => {
+      assert.equal(context.channels, first);
+      return (context.channels as { readonly name: string }).name;
+    }),
+  );
+  const oldApplication = manager.application('ordinary-old');
+  const oldIndex = compileApplication(oldApplication);
+  manager.rebindChannels(second);
+  const newIndex = manager.compile('ordinary-new');
+  assert.equal(oldIndex.channels, first);
+  assert.equal(newIndex.channels, second);
+  await new ApplicationRuntime(oldIndex).serve(async () => {
+    assert.equal(
+      await new ApplicationRuntime(oldIndex).invokeReadOnly('status', {}, { channels: second }),
+      'first',
+    );
+  });
+  assert.deepEqual(calls, []);
+  assert.throws(() => compileDisclosureApplication(oldApplication), /cannot declare Channels/);
+});
+
+class CountingChannels extends Channels {
   opens = 0;
   closes = 0;
 
@@ -175,4 +210,21 @@ class CountingChannels implements Channels {
   close(): void {
     this.closes += 1;
   }
+}
+
+function defineChannelsTool(
+  name: string,
+  invoke: (
+    input: Record<string, never>,
+    context: import('../src/index.js').ToolCallContext,
+  ) => unknown,
+) {
+  return {
+    kind: 'tool' as const,
+    name,
+    description: `${name}.`,
+    readOnly: true,
+    input: z.strictObject({}),
+    invoke,
+  };
 }

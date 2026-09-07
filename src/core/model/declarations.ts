@@ -4,4 +4,5 @@ export type { RoleDeclaration } from './role.js';
 export type { SkillDeclaration } from './skill.js';
 export type { ToolCallContext, ToolDeclaration } from './tool.js';
 export { defineTool } from './tool.js';
-export type { Channels, CleanupRegistrar } from './channels.js';
+export { Channels } from './channels.js';
+export type { ChannelHandle, CleanupRegistrar } from './channels.js';

@@ -1,10 +1,13 @@
 import type { output, ZodType } from 'zod';
 
 import type { Principal } from '../foundation/principal.js';
+import type { ChannelHandle } from './channels.js';
 import type { BaseNodeDeclaration } from './node.js';
 
 /** Context supplied by Contexture when it invokes a business Tool. */
 export interface ToolCallContext {
+  /** Framework-owned deployment handle captured by the compiled application. */
+  readonly channels?: ChannelHandle;
   readonly signal?: AbortSignal;
   readonly host?: unknown;
   readonly principal?: Principal | undefined;

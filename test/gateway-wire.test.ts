@@ -4,7 +4,7 @@ import test from 'node:test';
 import { InMemoryTransport, LATEST_PROTOCOL_VERSION } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
-import { defineApplication, InMemoryTelemetry } from '../src/index.js';
+import { Channels, defineApplication, InMemoryTelemetry } from '../src/index.js';
 import {
   ApplicationRuntime,
   compileApplication,
@@ -139,6 +139,74 @@ test('the official SDK exposes only the fixed gateway and preserves its two invo
   );
   await client.close();
   await adapter.server.close();
+});
+
+test('the official MCP path injects the live nominal Channels identity into Tools', async () => {
+  const marks: string[] = [];
+  const channels = new (class extends Channels {
+    live = false;
+
+    open() {
+      this.live = true;
+      marks.push('open');
+    }
+
+    close() {
+      this.live = false;
+      marks.push('close');
+    }
+  })();
+  const application = compileRuntimeApplication(
+    defineApplication({
+      name: 'channels-gateway',
+      channels,
+      roots: [
+        () => ({
+          kind: 'tool' as const,
+          name: 'status',
+          description: 'Read status.',
+          readOnly: true,
+          input: z.strictObject({}),
+          invoke: (_input, context) => {
+            assert.equal(context.channels, channels);
+            assert.equal(channels.live, true);
+            return 'live';
+          },
+        }),
+      ],
+    }),
+  );
+  const adapter = createContextureMcpServer(
+    { name: 'channels-gateway', version: '0.0.0' },
+    new Gateway(application.disclosure, application.runtime),
+  );
+  const [client, host] = InMemoryTransport.createLinkedPair();
+  const replies = new Map<number, unknown>();
+  client.onmessage = (message) => {
+    if ('id' in message && typeof message.id === 'number') replies.set(message.id, message);
+  };
+  await application.runtime.serve(async () => {
+    await client.start();
+    await adapter.server.connect(host);
+    await sendAndWait(client, replies, 1, 'initialize', {
+      protocolVersion: LATEST_PROTOCOL_VERSION,
+      capabilities: {},
+      clientInfo: { name: 'channels-client', version: '0.0.0' },
+    });
+    await client.send({ jsonrpc: '2.0', method: 'notifications/initialized' });
+    assert.deepEqual(
+      response(
+        await sendAndWait(client, replies, 2, 'tools/call', {
+          name: 'contexture_invoke_read_only',
+          arguments: { ref: 'status', arguments: {} },
+        }),
+      ).structuredContent,
+      { result: 'live' },
+    );
+    await client.close();
+    await adapter.server.close();
+  });
+  assert.deepEqual(marks, ['open', 'close']);
 });
 
 test('the official MCP gateway shares compiled telemetry across opens and invocation', async () => {

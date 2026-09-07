@@ -1,7 +1,7 @@
-import { defineApplication, type ApplicationDeclaration } from '../../application.js';
+import { defineManagedApplication, type ManagedApplicationDeclaration } from '../../application.js';
 import { ModelValidationError } from '../foundation/errors.js';
 import { compileApplication, type CompiledApplication } from './compiler.js';
-import type { Channels } from './channels.js';
+import type { ChannelHandle } from './channels.js';
 import type { Factory, NodeDeclaration, NodeKind } from './node.js';
 import type { RoleDeclaration } from './role.js';
 import type { SkillDeclaration } from './skill.js';
@@ -29,9 +29,9 @@ export class ControllerManager {
   readonly #skills: SkillDeclaration[] = [];
   readonly #tools: ToolDeclaration[] = [];
   readonly #seen = new WeakMap<object, string>();
-  #channels: Channels | undefined;
+  #channels: ChannelHandle | undefined;
 
-  constructor(options: { readonly channels?: Channels } = {}) {
+  constructor(options: { readonly channels?: ChannelHandle } = {}) {
     this.#channels = options.channels;
   }
 
@@ -56,7 +56,7 @@ export class ControllerManager {
   }
 
   /** The Channels identity captured by Applications produced after this point. */
-  get channels(): Channels | undefined {
+  get channels(): ChannelHandle | undefined {
     return this.#channels;
   }
 
@@ -85,14 +85,14 @@ export class ControllerManager {
    * Existing ApplicationDeclarations and compiled Index values retain the
    * Channels identity captured when they were produced.
    */
-  rebindChannels(channels: Channels | undefined): void {
+  rebindChannels(channels: ChannelHandle | undefined): void {
     this.#channels = channels;
   }
 
   /** Produce an immutable lazy Application snapshot of roots registered so far. */
-  application(name: string): ApplicationDeclaration {
+  application(name: string): ManagedApplicationDeclaration {
     const roots = this.#roots().map((node) => frozenFactory(node));
-    return defineApplication({
+    return defineManagedApplication({
       name,
       roots,
       ...(this.#channels === undefined ? {} : { channels: this.#channels }),

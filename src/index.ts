@@ -9,14 +9,14 @@ export {
   CONTEXTURE_SPECIFICATION_VERSION,
 } from './core/foundation/specification.js';
 export { Contexture, defineApplication } from './application.js';
-export type { ApplicationDeclaration } from './application.js';
+export type { ApplicationDeclaration, ManagedApplicationDeclaration } from './application.js';
+export { Channels } from './core/model/channels.js';
+export type { ChannelHandle } from './core/model/channels.js';
 export { defineTool } from './core/model/declarations.js';
 export { ControllerManager } from './core/model/manager.js';
 export type { RoleFactory, SkillFactory, ToolFactory } from './core/model/manager.js';
 export type {
   BaseNodeDeclaration,
-  Channels,
-  CleanupRegistrar,
   Factory,
   NodeDeclaration,
   NodeKind,
@@ -25,6 +25,7 @@ export type {
   ToolCallContext,
   ToolDeclaration,
 } from './core/model/declarations.js';
+export type { CleanupRegistrar } from './core/model/channels.js';
 export type { Prompt, PromptDeclaration } from './core/mcp-interface/prompt.js';
 export type { Resource, ResourceDeclaration } from './core/mcp-interface/resource.js';
 export { Principal } from './core/foundation/principal.js';

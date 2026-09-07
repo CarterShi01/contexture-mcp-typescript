@@ -7,6 +7,7 @@ import { z } from 'zod';
 import {
   defineApplication,
   defineTool,
+  Channels,
   ModelValidationError,
   PermissionError,
   Principal,
@@ -436,18 +437,24 @@ test('REST surface validates HTTP route grammar and holds Channels open for its 
     ModelValidationError,
   );
   const marks: string[] = [];
+  const channels = new (class extends Channels {
+    live = false;
+
+    open() {
+      this.live = true;
+      marks.push('open');
+    }
+
+    close() {
+      this.live = false;
+      marks.push('close');
+    }
+  })();
   const live = new ApplicationRuntime(
     compileApplication(
       defineApplication({
         name: 'rest-lifecycle',
-        channels: {
-          open: () => {
-            marks.push('open');
-          },
-          close: () => {
-            marks.push('close');
-          },
-        },
+        channels,
         roots: [
           () =>
             defineTool({
@@ -456,7 +463,11 @@ test('REST surface validates HTTP route grammar and holds Channels open for its 
               description: 'Value.',
               readOnly: true,
               input: z.strictObject({ name: z.string() }),
-              invoke: ({ name }) => ({ hello: name }),
+              invoke: ({ name }, context) => {
+                assert.equal(context.channels, channels);
+                assert.equal(channels.live, true);
+                return { hello: name };
+              },
             }),
         ],
       }),

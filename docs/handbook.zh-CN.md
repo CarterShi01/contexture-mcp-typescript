@@ -84,6 +84,14 @@ captured tree 并拥有 deep snapshot；`roles`、`skills`、`tools` 与 `roots`
 因此后续 registration 或 `rebindChannels()` 不会改变更早的 Application 或 compiled Index。Channels
 有意按 identity snapshot：rebind 只影响之后生成的 Application。
 
+`Channels` 是 nominal lifecycle base class：当 deployment dependency 必须在 serving 前打开、结束后
+关闭时，应继承它。不要仅使用碰巧带有 `open` 和 `close` 方法的 plain object；它不是 lifecycle owner。
+`ControllerManager` 也接受普通的、已经构造好的 deployment handle。它会不检查、不调用地保留该 exact
+value，并且 Tool 会在 `context.channels` 中收到同一个由框架拥有的 identity。这适用于无需 lifecycle 的
+client、configuration 或 test double。声明式 `defineApplication({ channels })` 刻意只接受 `Channels`
+instance；普通 handle 请使用 `ControllerManager`。Contexture 会覆盖 caller 试图提供的
+`context.channels` 值。
+
 每个可执行 server 都暴露同一个有序四工具 `Gateway`：discover、open、read-only invoke 和
 invoke。disclosure-only host 只暴露前两个 navigation entry。lookup 和 wrong-door failure 会在
 这里被渲染为可执行下一步的 `RefusedError` recovery；`RootOutsideSelectionError` 保持 typed，

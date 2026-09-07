@@ -6,7 +6,12 @@ import type {
   SkillDeclaration,
   ToolDeclaration,
 } from './declarations.js';
-import { defineApplication, type ApplicationDeclaration } from '../../application.js';
+import {
+  normalizeApplication,
+  type ApplicationDeclaration,
+  type ManagedApplicationDeclaration,
+} from '../../application.js';
+import type { ChannelHandle } from './channels.js';
 import {
   ContainmentCycleError,
   DuplicateNameError,
@@ -53,7 +58,7 @@ export interface CompiledApplication {
   readonly roots: readonly CompiledNode[];
   readonly modelRoots: readonly CompiledNode[];
   readonly promptRoots: readonly CompiledNode[];
-  readonly channels: import('./declarations.js').Channels | undefined;
+  readonly channels: ChannelHandle | undefined;
   readonly executionBound: boolean;
   readonly size: number;
   find(ref: string): CompiledNode;
@@ -78,18 +83,18 @@ interface CompilationState {
 }
 
 /** The SDK-neutral declaration normalized before every public compilation route. */
-export type ApplicationCompilation = ApplicationDeclaration;
+export type ApplicationCompilation = ApplicationDeclaration | ManagedApplicationDeclaration;
 
 /** Compile one lazy application into an immutable, canonical forest snapshot. */
 export function compileApplication(application: ApplicationCompilation): CompiledApplication {
-  return compile(defineApplication(application), true);
+  return compile(normalizeApplication(application), true);
 }
 
 /** Compile an independent structural projection with neither bindings nor Channels. */
 export function compileDisclosureApplication(
   application: ApplicationCompilation,
 ): CompiledApplication {
-  const declaration = defineApplication(application);
+  const declaration = normalizeApplication(application);
   if (declaration.channels !== undefined) {
     throw new ModelValidationError(
       'A disclosure-only Contexture application cannot declare Channels.',
@@ -392,7 +397,7 @@ class ImmutableIndex implements CompiledApplication {
     readonly name: string,
     modelRoots: readonly CompiledNode[],
     promptRoots: readonly CompiledNode[],
-    readonly channels: import('./declarations.js').Channels | undefined,
+    readonly channels: ChannelHandle | undefined,
     state: CompilationState,
     dependents: ReadonlyMap<string, readonly string[]>,
   ) {

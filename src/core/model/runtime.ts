@@ -134,6 +134,7 @@ export class ApplicationRuntime {
     });
     const callContext = Object.freeze({
       ...context,
+      channels: this.index.channels,
       principal: scope.principal,
       telemetry: scope.telemetry,
       graph: scope.graph,
