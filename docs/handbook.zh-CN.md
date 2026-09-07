@@ -142,8 +142,11 @@ ancestor ref 与直接 sub-Role count；`crossings()` 列出离开其 root 的�
 
 `bindingOf(ref)` 与 `schemaOf(tool)` 仅适用于 bound runtime Index。disclosure-only Index 仍支持
 结构查询，但会拒绝这些 execution fact。schema、node value、pair 与结果 collection 都不可变。
-`Index` 从 `@contexture/mcp/server` 导出；声明 root 则有意保持 SDK-neutral。`SelectedGraph` 在同一
-matcher 上只处理 selected ref，因此不会泄露另一个 request root。
+`Index` 是从 `@contexture/mcp/server` 导出的 type-only export，不是 runtime constructor。TypeScript 的
+`compileApplication`、`compileDisclosureApplication` 以及 server 的 `compileRuntimeApplication` 取代了
+Python 的 `Index.of`、`bound` 与 `unbound` 构造形式；serving 仍由既有 runtime 与 Channels lifecycle 所有。
+声明 root 则有意保持 SDK-neutral。`SelectedGraph` 在同一 matcher 上只处理 selected ref，因此不会泄露
+另一个 request root。
 
 ## 3. 选择正确的节点
 

@@ -584,11 +584,11 @@ class ImmutableIndex implements Index {
   }
 
   *walk(): IterableIterator<readonly [string, CompiledNode]> {
-    yield* this.#byRef.entries();
+    for (const [ref, node] of this.#byRef) yield Object.freeze([ref, node]);
   }
 
   *nodesWithRefs(): IterableIterator<readonly [string, CompiledNode]> {
-    for (const [ref, node] of this.walk()) yield Object.freeze([ref, node]);
+    yield* this.walk();
   }
 
   *skills(): IterableIterator<readonly [string, CompiledSkill]> {

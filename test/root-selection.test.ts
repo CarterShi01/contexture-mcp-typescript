@@ -84,4 +84,10 @@ test('SelectedGraph matching uses projected Unicode code-point ordering and reta
   });
   assert.deepEqual(graph.matchingRefs('', -1), { values: [], total: 3 });
   assert.equal(graph.matchingRefs('', 8).values.includes('alpha'), false);
+  const walked = [...graph.walk()][0];
+  assert.ok(walked !== undefined);
+  assert.equal(Object.isFrozen(walked), true);
+  assert.throws(() => {
+    (walked as unknown as [string, unknown])[0] = 'forged';
+  }, TypeError);
 });

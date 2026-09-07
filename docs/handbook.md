@@ -171,9 +171,13 @@ structural facts, not disclosure cards.
 `bindingOf(ref)` and `schemaOf(tool)` are available only on a bound runtime
 Index. A disclosure-only Index still supports structural queries but rejects
 those execution facts. Schemas, node values, pairs, and result collections are
-immutable. `Index` is exported from `@contexture/mcp/server`; the declaration
-root intentionally remains SDK-neutral. `SelectedGraph` uses the same matcher
-over only its selected refs, so it cannot leak another request root.
+immutable. `Index` is a type-only export from `@contexture/mcp/server`, not a
+runtime constructor. TypeScript's `compileApplication`,
+`compileDisclosureApplication`, and server `compileRuntimeApplication` replace
+Python's `Index.of`, `bound`, and `unbound` construction forms; serving remains
+owned by the existing runtime and Channels lifecycle. The declaration root
+intentionally remains SDK-neutral. `SelectedGraph` uses the same matcher over
+only its selected refs, so it cannot leak another request root.
 
 ## 3. Choose the right node
 

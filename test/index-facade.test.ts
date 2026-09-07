@@ -118,6 +118,12 @@ test('Index exposes immutable canonical containment and typed traversals', () =>
   assert.throws(() => {
     (first as unknown as [string, unknown])[0] = 'forged';
   }, TypeError);
+  const walked = [...index.walk()][0];
+  assert.ok(walked !== undefined);
+  assert.equal(Object.isFrozen(walked), true);
+  assert.throws(() => {
+    (walked as unknown as [string, unknown])[0] = 'forged-walk';
+  }, TypeError);
   assert.equal(index.find('alpha').name, 'alpha');
 });
 

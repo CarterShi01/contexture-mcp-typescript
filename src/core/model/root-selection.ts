@@ -107,7 +107,7 @@ export class SelectedGraph {
 
   *walk(): IterableIterator<readonly [string, CompiledNode]> {
     for (const [ref, node] of this.index.walk()) {
-      if (this.selection.containsRef(ref)) yield [ref, node];
+      if (this.selection.containsRef(ref)) yield Object.freeze([ref, node]);
     }
   }
 
