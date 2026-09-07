@@ -103,6 +103,11 @@ cannot disclose roots outside an identity ceiling. `currentRootSelection()`
 returns the request-local projection inside a Tool and the compatibility
 all-roots value outside an invocation.
 
+`currentPrincipal()` returns the request identity while a Tool is running. It
+returns `undefined` for an unauthenticated call and outside an invocation;
+Contexture never invents an anonymous Principal. The application decides
+whether its capability requires identity.
+
 For an imperative embedding phase, `ControllerManager` captures a root factory
 once through `registerRole`, `registerSkill`, `registerTool`, or `registerRoot`.
 It validates the complete captured tree and owns a deep snapshot; `roles`,

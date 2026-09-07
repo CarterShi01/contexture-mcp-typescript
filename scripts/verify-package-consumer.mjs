@@ -64,7 +64,7 @@ try {
     "if (typeof ControllerManager !== 'function') throw new Error('missing manager facade');",
     "if (typeof LookupFailure !== 'object' || LookupFailure.NO_SUCH_MEMBER !== 'no_such_member') throw new Error('missing lookup classification');",
     "if (!(new NodeNotFoundError({ reason: LookupFailure.EMPTY_REF }) instanceof Error)) throw new Error('missing lookup error');",
-    "if (typeof Principal !== 'function' || typeof currentPrincipal !== 'function') throw new Error('missing root request facts');",
+    "if (typeof Principal !== 'function' || typeof currentPrincipal !== 'function' || currentPrincipal() !== undefined) throw new Error('missing optional root principal fact');",
     "if (typeof trace !== 'function') throw new Error('missing inspection API');",
     "if (typeof newProject !== 'function') throw new Error('missing CLI scaffold API');",
     "if (typeof compileRuntimeApplication !== 'function') throw new Error('missing server facade');",

@@ -90,6 +90,10 @@ dependents 会被过滤。request header 使用同一 projection，不能泄露 
 `currentRootSelection()` 在 Tool 内返回 request-local projection，在 invocation 外返回兼容的
 all-roots 值。
 
+`currentPrincipal()` 在 Tool 运行期间返回 request identity。对于未认证调用以及 invocation 外部，
+它返回 `undefined`；Contexture 绝不会虚构 anonymous Principal。某项 capability 是否要求 identity
+由 application 自己决定。
+
 对于 imperative embedding phase，可使用 `ControllerManager` 通过 `registerRole`、
 `registerSkill`、`registerTool` 或 `registerRoot` 一次性捕获 root factory。它会校验完整的
 captured tree 并拥有 deep snapshot；`roles`、`skills`、`tools` 与 `roots` 返回 defensive snapshot

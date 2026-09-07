@@ -36,13 +36,18 @@ function runtime(telemetry: Telemetry = new InMemoryTelemetry()): ApplicationRun
                   description: 'Read status.',
                   readOnly: true,
                   input: z.strictObject({ value: z.string() }),
-                  invoke: async (input) => ({
-                    value: input.value,
-                    principal: currentPrincipal(),
-                    roots: currentGraph().roots.map((node) => node.name),
-                    selection: currentRootSelection().names,
-                    telemetry: currentTelemetry(),
-                  }),
+                  invoke: async (input) => {
+                    // AsyncLocalStorage must retain each request identity
+                    // across an await while another Tool call is active.
+                    await Promise.resolve();
+                    return {
+                      value: input.value,
+                      principal: currentPrincipal(),
+                      roots: currentGraph().roots.map((node) => node.name),
+                      selection: currentRootSelection().names,
+                      telemetry: currentTelemetry(),
+                    };
+                  },
                 }),
               () =>
                 defineTool({
@@ -96,6 +101,7 @@ test('runtime validates via the disclosed Binding and enforces the fixed read/wr
 });
 
 test('runtime scopes principal, graph, selection and telemetry to concurrent calls', async () => {
+  assert.equal(currentPrincipal(), undefined);
   const service = runtime();
   const alice = new Principal({ subject: 'alice', scopes: ['status.read'] });
   const bob = new Principal({ subject: 'bob', claims: { tenant: 'acme' } });
@@ -117,7 +123,7 @@ test('runtime scopes principal, graph, selection and telemetry to concurrent cal
     selection: undefined,
     telemetry: currentTelemetryOutsideValue(second),
   });
-  assert.throws(() => currentPrincipal(), /No Contexture Tool invocation is active/);
+  assert.equal(currentPrincipal(), undefined);
 });
 
 test('runtime scopes the final attenuated selection independently for concurrent calls', async () => {

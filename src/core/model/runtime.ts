@@ -41,9 +41,15 @@ function requireScope(): RuntimeScope {
   return scope;
 }
 
-/** Request-local Contexture facts, available only while a Tool is running. */
+/**
+ * The caller identity for this invocation, or `undefined` when none exists.
+ *
+ * An unauthenticated Tool call and code outside an invocation are both an
+ * absent identity. Contexture deliberately does not invent an "anonymous"
+ * Principal: an application owns the decision whether identity is required.
+ */
 export function currentPrincipal(): Principal | undefined {
-  return requireScope().principal;
+  return SCOPE.getStore()?.principal;
 }
 
 export function currentTelemetry(): Telemetry {
