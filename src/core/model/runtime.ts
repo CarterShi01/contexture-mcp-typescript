@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 import type { CompiledApplication, CompiledTool } from './compiler.js';
-import { InputValidationError, ModelValidationError } from '../foundation/errors.js';
+import { ModelValidationError, WrongDoorError } from '../foundation/errors.js';
 import type { Principal } from '../foundation/principal.js';
 import { RootSelection, SelectedGraph } from './root-selection.js';
 import type { ToolCallContext } from './declarations.js';
@@ -21,18 +21,6 @@ interface RuntimeScope {
 }
 
 const SCOPE = new AsyncLocalStorage<RuntimeScope>();
-
-/** A Tool reached the invocation door whose fixed host hint does not match it. */
-export class WrongDoorError extends Error {
-  override readonly name = 'WrongDoorError';
-
-  constructor(
-    readonly ref: string,
-    readonly readOnly: boolean,
-  ) {
-    super(`${ref} was called through the wrong Contexture invocation door.`);
-  }
-}
 
 function requireScope(): RuntimeScope {
   const scope = SCOPE.getStore();
@@ -165,4 +153,4 @@ export class ApplicationRuntime {
   }
 }
 
-export { InputValidationError };
+export { InputValidationError, WrongDoorError } from '../foundation/errors.js';

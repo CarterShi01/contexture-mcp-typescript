@@ -164,6 +164,14 @@ TypeScript 中的 `modelMayOpen` 有意使用 boolean：省略或 `true` 表示 
 non-container 的 `known` 为空，其他 `known` 会按 canonical 顺序排序，`scope` 是 resolution 停止处的
 node name。普通 runtime call 对未知 capability 仍会保持原有的 refusal surface。
 
+所有 framework-domain failure 都继承 `ContextureError`。structural failure 仍可分类为
+`ModelValidationError`，其中 `DeclarationError` 与 `DuplicateNameError` 是更窄的 category。
+`NodeNotFoundError` 保存的是 facts，而非 agent prose：它的原生 `message` 与
+`developerSummary()` 是简短的 field-shaped diagnostic；只有 local lookup 尚无完整 ref 时，
+`within(ref)` 才会返回新的 immutable failure。只有 Gateway 会把这些 facts 渲染成 agent recovery
+prose。direct runtime caller 会得到带有 `ref`、`readOnly` 的 typed `WrongDoorError`，其 message 会
+明确 Tool 是 read-only 还是 writing；Gateway 可以将其包装为 agent-facing refusal。
+
 ### 已编译 Index 查询
 
 `compileRuntimeApplication(...).index` 是公开且不可变的 `Index` facade（兼容类型名

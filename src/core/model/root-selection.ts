@@ -1,14 +1,15 @@
 import type { CompiledApplication, CompiledNode, CompiledRole } from './compiler.js';
 import { compareCodePoints, matchingRefs, type ReferenceMatches } from './reference-queries.js';
+import { ContextureError } from '../foundation/errors.js';
 import { DISCOVER_GATEWAY_NAME, REFERENCE_SEPARATOR } from '../foundation/vocabulary.js';
 
 /** A requested projection cannot be represented by this application's roots. */
-export class RootSelectionError extends Error {
+export class RootSelectionError extends ContextureError {
   override readonly name = 'RootSelectionError';
 }
 
 /** A ref points outside the root projection active for the current operation. */
-export class RootOutsideSelectionError extends Error {
+export class RootOutsideSelectionError extends ContextureError {
   override readonly name = 'RootOutsideSelectionError';
 
   constructor(readonly ref: string) {

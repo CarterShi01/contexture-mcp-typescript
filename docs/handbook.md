@@ -204,6 +204,16 @@ empty reference or a non-container, and otherwise is canonically sorted;
 `scope` is the node name where resolution stopped. Normal runtime calls
 continue to render unknown capabilities as their existing refusal surface.
 
+All framework-domain failures extend `ContextureError`. Structural failures
+remain classifiable as `ModelValidationError`, with `DeclarationError` and
+`DuplicateNameError` as narrower categories. A `NodeNotFoundError` keeps facts
+rather than agent prose: its native `message` and `developerSummary()` are
+terse field-shaped diagnostics, and `within(ref)` returns a new immutable
+failure only when a local lookup has no complete ref. Gateway alone renders
+those facts into agent recovery prose. Direct runtime callers receive a typed
+`WrongDoorError` with `ref`, `readOnly`, and a message that says whether the
+Tool is read-only or writing; Gateway may wrap it in an agent-facing refusal.
+
 ### Compiled Index queries
 
 `compileRuntimeApplication(...).index` is the public, immutable `Index`

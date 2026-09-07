@@ -64,7 +64,7 @@ export class NodeNotFoundError extends ContextureError {
   readonly known: readonly string[];
 
   constructor(facts: NodeNotFoundFacts) {
-    super(renderNodeNotFound(facts));
+    super(developerSummary(facts));
     this.reason = facts.reason;
     this.ref = facts.ref;
     this.segment = facts.segment;
@@ -73,24 +73,66 @@ export class NodeNotFoundError extends ContextureError {
     this.wanted = facts.wanted;
     this.known = Object.freeze([...(facts.known ?? [])]);
   }
+
+  /**
+   * Attach a complete ref to a local lookup failure without changing a failure
+   * that already carries one. Lookup code can therefore keep successful local
+   * paths cheap while callers still receive complete immutable facts.
+   */
+  within(ref: string): NodeNotFoundError {
+    if (this.ref !== undefined) return this;
+    return new NodeNotFoundError({
+      reason: this.reason,
+      ref,
+      ...(this.segment === undefined ? {} : { segment: this.segment }),
+      ...(this.scope === undefined ? {} : { scope: this.scope }),
+      ...(this.kind === undefined ? {} : { kind: this.kind }),
+      ...(this.wanted === undefined ? {} : { wanted: this.wanted }),
+      known: this.known,
+    });
+  }
+
+  /** A terse host-neutral diagnosis for logs and native Error consumers. */
+  developerSummary(): string {
+    return developerSummary(this);
+  }
 }
 
-function renderNodeNotFound(facts: NodeNotFoundFacts): string {
-  const subject =
-    facts.ref === undefined
-      ? 'Contexture node'
-      : `Contexture reference ${JSON.stringify(facts.ref)}`;
-  switch (facts.reason) {
-    case LookupFailure.EMPTY_REF:
-      return 'Contexture reference must not be empty.';
-    case LookupFailure.NO_SUCH_ROOT:
-      return `${subject} has no root named ${JSON.stringify(facts.segment)}.`;
-    case LookupFailure.NOT_A_CONTAINER:
-      return `${subject} cannot descend through non-container ${JSON.stringify(facts.scope)}.`;
-    case LookupFailure.NO_SUCH_MEMBER:
-      return `${subject} has no member ${JSON.stringify(facts.segment)} below ${JSON.stringify(facts.scope)}.`;
-    case LookupFailure.WRONG_KIND:
-      return `${subject} is ${JSON.stringify(facts.kind)}, not required ${JSON.stringify(facts.wanted)}.`;
+function developerSummary(
+  facts: Readonly<{
+    reason: LookupFailure;
+    ref?: string | undefined;
+    segment?: string | undefined;
+    scope?: string | undefined;
+    kind?: string | undefined;
+    wanted?: string | undefined;
+    known?: readonly string[] | undefined;
+  }>,
+): string {
+  const fields: Array<readonly [string, string | undefined]> = [
+    ['ref', facts.ref],
+    ['segment', facts.segment],
+    ['scope', facts.scope],
+    ['kind', facts.kind],
+    ['wanted', facts.wanted],
+  ];
+  const stated = fields
+    .filter(([, value]) => value !== undefined)
+    .map(([name, value]) => `${name}=${JSON.stringify(value)}`);
+  if ((facts.known?.length ?? 0) > 0) stated.push(`known=${JSON.stringify(facts.known)}`);
+  return stated.length === 0 ? facts.reason : `${facts.reason}: ${stated.join(' ')}`;
+}
+
+/** A Tool was invoked through the fixed door with the opposite mutation hint. */
+export class WrongDoorError extends ContextureError {
+  override readonly name = 'WrongDoorError';
+
+  constructor(
+    readonly ref: string,
+    readonly readOnly: boolean,
+  ) {
+    const stated = readOnly ? 'read-only' : 'writing';
+    super(`${JSON.stringify(ref)} is a ${stated} Tool`);
   }
 }
 

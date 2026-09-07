@@ -71,5 +71,6 @@ export {
   PermissionError,
   RejectedError,
   UnresolvedReferenceError,
+  WrongDoorError,
 } from './core/foundation/errors.js';
 export type { NodeNotFoundFacts } from './core/foundation/errors.js';

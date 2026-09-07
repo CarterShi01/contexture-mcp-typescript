@@ -1,5 +1,10 @@
 import type { CompiledApplication, CompiledNode, CompiledRole, CompiledTool } from './compiler.js';
-import { LookupFailure, ModelValidationError, NodeNotFoundError } from '../foundation/errors.js';
+import {
+  ContextureError,
+  LookupFailure,
+  ModelValidationError,
+  NodeNotFoundError,
+} from '../foundation/errors.js';
 import { REFERENCE_SEPARATOR } from '../foundation/vocabulary.js';
 import { RootOutsideSelectionError, RootSelection } from './root-selection.js';
 import { InMemoryTelemetry, reportTelemetry, type Telemetry } from './telemetry.js';
@@ -12,7 +17,7 @@ export type Discovery = Readonly<{
 }>;
 
 /** A model-plane navigation request is deliberately refused with a recovery sentence. */
-export class RefusedError extends Error {
+export class RefusedError extends ContextureError {
   override readonly name = 'RefusedError';
 
   constructor(message: string, options: { readonly cause?: unknown } = {}) {
