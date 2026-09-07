@@ -37,6 +37,7 @@ export type {
 } from './rest.js';
 export {
   DISCLOSURE_GATEWAY,
+  DisclosureAPI,
   EXECUTION_GATEWAY,
   Gateway,
   GATEWAY,

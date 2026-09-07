@@ -64,6 +64,7 @@ export { ControllerManager } from './model/manager.js';
 export type { RoleFactory, SkillFactory, ToolFactory } from './model/manager.js';
 export {
   DISCLOSURE_GATEWAY,
+  DisclosureAPI,
   EXECUTION_GATEWAY,
   Gateway,
   GATEWAY,

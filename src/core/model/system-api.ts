@@ -1,14 +1,15 @@
-import { Disclosure } from './disclosure.js';
-import { RefusedError } from './disclosure.js';
+import { Disclosure, RefusedError } from './disclosure.js';
+import type { Discovery, RoutingCard } from './disclosure.js';
 import { ApplicationRuntime, WrongDoorError } from './runtime.js';
-import { RootOutsideSelectionError, RootSelection } from './root-selection.js';
+import { RootOutsideSelectionError, RootSelection, SelectedGraph } from './root-selection.js';
 import type { ToolCallContext } from './declarations.js';
-import { LookupFailure, NodeNotFoundError } from '../foundation/errors.js';
+import { LookupFailure, ModelValidationError, NodeNotFoundError } from '../foundation/errors.js';
 import {
   DISCOVER_GATEWAY_NAME,
   INVOKE_GATEWAY_NAME,
   INVOKE_READ_ONLY_GATEWAY_NAME,
   OPEN_GATEWAY_NAME,
+  REFERENCE_SEPARATOR,
   type GatewayName,
 } from '../foundation/vocabulary.js';
 
@@ -100,12 +101,102 @@ export function takenByPersonMessage(ref: string): string {
   );
 }
 
+/**
+ * SDK-neutral progressive-navigation half of Contexture's fixed gateway.
+ *
+ * It owns neither a Runtime nor a transport. The supplied Disclosure remains
+ * the authority for cards, telemetry, prompt-root visibility, and monotonic
+ * root selection. Optional reservations are an embedding policy only; MCP
+ * Prompt `modelMayOpen` policy stays in the server Publications adapter.
+ */
+export class DisclosureAPI {
+  readonly #reserved: ReadonlySet<string>;
+
+  constructor(
+    readonly disclosure: Disclosure,
+    options: { readonly reserved?: Iterable<string> } = {},
+  ) {
+    if (!(disclosure instanceof Disclosure)) {
+      throw new ModelValidationError('DisclosureAPI requires a Disclosure.');
+    }
+    this.#reserved = new Set([...(options.reserved ?? [])].map((ref) => canonicalRef(ref)));
+    Object.freeze(this);
+  }
+
+  /** The immutable ordered discover/open half, with no execution doors. */
+  get tools(): readonly GatewayTool[] {
+    return DISCLOSURE_GATEWAY;
+  }
+
+  /** Immutable compiled facts underlying this disclosure projection. */
+  get index(): Disclosure['index'] {
+    return this.disclosure.index;
+  }
+
+  /** Request-safe graph facts under the same effective root ceiling as navigation. */
+  selectedGraph(requested: RootSelection = RootSelection.all()): SelectedGraph {
+    return new SelectedGraph(this.disclosure.index, this.disclosure.effectiveSelection(requested));
+  }
+
+  /** Return one routing-card level for each selected model-visible root. */
+  async discover(selection: RootSelection = RootSelection.all()): Promise<Discovery> {
+    return Promise.resolve(this.disclosure.discover(selection));
+  }
+
+  /**
+   * Open through the model door. Ordinary lookup failures become one
+   * agent-facing recovery refusal; a selected-root violation remains typed and
+   * intentionally names no alternative root.
+   */
+  async open(ref: string, selection: RootSelection = RootSelection.all()): Promise<RoutingCard> {
+    const effective = this.disclosure.effectiveSelection(selection);
+    effective.requireRef(ref);
+    if (this.#reserved.has(canonicalRef(ref))) {
+      throw new RefusedError(takenByPersonMessage(ref));
+    }
+    return this.recover(() => Promise.resolve(this.disclosure.open(ref, selection)));
+  }
+
+  /**
+   * Open through the person door, bypassing only model reservations and
+   * prompt-root visibility. It never widens the selected root surface.
+   */
+  async openForPerson(
+    ref: string,
+    selection: RootSelection = RootSelection.all(),
+  ): Promise<RoutingCard> {
+    return this.recover(() => Promise.resolve(this.disclosure.openForPerson(ref, selection)));
+  }
+
+  /** Compatibility spelling retained for hosts that use the Python name. */
+  async openForAPerson(
+    ref: string,
+    selection: RootSelection = RootSelection.all(),
+  ): Promise<RoutingCard> {
+    return this.openForPerson(ref, selection);
+  }
+
+  protected async recover<Result>(operation: () => Promise<Result>): Promise<Result> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (error instanceof RootOutsideSelectionError || error instanceof RefusedError) throw error;
+      if (error instanceof NodeNotFoundError)
+        throw new RefusedError(unresolvedMessage(error), { cause: error });
+      throw error;
+    }
+  }
+}
+
 /** Transport-neutral implementation of Contexture's fixed gateway. */
 export class Gateway {
+  readonly navigation: DisclosureAPI;
+
   constructor(
     readonly disclosure: Disclosure,
     readonly runtime: ApplicationRuntime | undefined,
   ) {
+    this.navigation = new DisclosureAPI(disclosure);
     Object.freeze(this);
   }
 
@@ -114,11 +205,11 @@ export class Gateway {
   }
 
   async discover(selection: RootSelection = RootSelection.all()): Promise<unknown> {
-    return this.recover(() => Promise.resolve(this.disclosure.discover(selection)));
+    return this.navigation.discover(selection);
   }
 
   async open(ref: string, selection: RootSelection = RootSelection.all()): Promise<unknown> {
-    return this.recover(() => Promise.resolve(this.disclosure.open(ref, selection)));
+    return this.navigation.open(ref, selection);
   }
 
   async invokeReadOnly(
@@ -165,4 +256,11 @@ export class Gateway {
       throw error;
     }
   }
+}
+
+function canonicalRef(ref: string): string {
+  return ref
+    .split(REFERENCE_SEPARATOR)
+    .filter((segment) => segment.length > 0)
+    .join(REFERENCE_SEPARATOR);
 }

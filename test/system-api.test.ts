@@ -6,6 +6,7 @@ import { defineApplication } from '../src/index.js';
 import {
   ApplicationRuntime,
   DISCLOSURE_GATEWAY,
+  DisclosureAPI,
   EXECUTION_GATEWAY,
   Gateway,
   GATEWAY,
@@ -88,6 +89,80 @@ test('Gateway owns one fixed ordered inventory and its independently installable
     ['contexture_invoke_read_only', 'contexture_invoke'],
   );
   assert.deepEqual(disclosureOnlyGateway().tools, DISCLOSURE_GATEWAY);
+});
+
+test('DisclosureAPI exposes an independent, stateless navigation half', async () => {
+  const application = compileRuntimeApplication(
+    defineApplication({
+      name: 'disclosure-api',
+      roots: [
+        () => ({
+          kind: 'role',
+          name: 'operations',
+          description: 'Operate.',
+          instructions: 'Inspect.',
+          skills: [
+            () => ({
+              kind: 'skill',
+              name: 'change',
+              description: 'Change.',
+              instructions: 'Ask first.',
+            }),
+          ],
+        }),
+        () => ({
+          kind: 'role',
+          name: 'other',
+          description: 'Other.',
+          instructions: 'Separate.',
+        }),
+      ],
+    }),
+  );
+  const api = new DisclosureAPI(application.disclosure, { reserved: ['operations/change'] });
+
+  assert.deepEqual(api.tools, DISCLOSURE_GATEWAY);
+  assert.equal(api.index, application.index);
+  assert.equal(Object.isFrozen(api), true);
+  assert.deepEqual(
+    (await api.discover()).roles.map((card) => card.ref),
+    ['operations', 'other'],
+  );
+  const opened = await api.open('operations');
+  assert.deepEqual(
+    (opened.skills as readonly { readonly ref: string }[]).map((card) => card.ref),
+    ['operations/change'],
+  );
+  await assert.rejects(
+    api.open('operations/change'),
+    (error: unknown) => error instanceof RefusedError && /opened by a person/.test(error.message),
+  );
+  assert.equal((await api.openForPerson('operations/change')).instructions, 'Ask first.');
+  assert.equal((await api.openForAPerson('operations/change')).instructions, 'Ask first.');
+
+  const selected = api.selectedGraph(RootSelection.only('operations'));
+  assert.deepEqual(
+    [...selected.walk()].map(([ref]) => ref),
+    ['operations', 'operations/change'],
+  );
+  await assert.rejects(
+    api.open('other', RootSelection.only('operations')),
+    (error: unknown) => error instanceof RootOutsideSelectionError,
+  );
+  await assert.rejects(
+    api.open('operations/missing'),
+    (error: unknown) =>
+      error instanceof RefusedError &&
+      error.cause instanceof NodeNotFoundError &&
+      error.message.includes('contexture_open'),
+  );
+});
+
+test('DisclosureAPI rejects an invalid runtime value at its public boundary', () => {
+  assert.throws(
+    () => new DisclosureAPI(undefined as unknown as Disclosure),
+    /requires a Disclosure/,
+  );
 });
 
 test('Gateway makes every canonical lookup failure actionable without retaining traversal state', async () => {

@@ -27,6 +27,17 @@ The server layer maps compiled APIs to the official MCP SDK and optional Host
 surfaces. Business Tools never become top-level MCP tools; Contexture exposes a
 fixed navigation and invocation gateway.
 
+`DisclosureAPI` is the independently installable navigation half of that
+gateway. It accepts a compiled `Disclosure`, has no Runtime or transport
+dependency, and exposes only `discover` and `open` through its immutable tool
+inventory. `selectedGraph` uses the same request-local root ceiling as
+navigation. `openForPerson` (and the compatibility spelling
+`openForAPerson`) bypasses only model reservations and prompt-root visibility;
+it never widens the selected roots. Ordinary lookup failures are recovered at
+this API boundary while `RootOutsideSelectionError` remains typed and
+non-leaking. The raw `Disclosure` remains available to Hosts that need lookup
+facts instead of agent-facing recovery prose.
+
 ## Current implementation status
 
 1. Core node model, registration, validation, and immutable Index.

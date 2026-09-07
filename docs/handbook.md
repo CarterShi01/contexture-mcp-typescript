@@ -169,6 +169,16 @@ actionable `RefusedError` recoveries, while `RootOutsideSelectionError` remains
 typed so an authorization ceiling cannot disclose another root. Prompt
 reservations are checked only after that ceiling.
 
+For an embedding that needs only model navigation, `DisclosureAPI` exposes the
+same first two doors without a Runtime or transport. Construct it with a
+`Disclosure`; its `discover`, `open`, and `selectedGraph` calls are stateless
+and use the same selected-root ceiling. `openForPerson` (also available as
+`openForAPerson`) bypasses only model reservations and prompt-root visibility.
+The API converts ordinary lookup failures into the standard `RefusedError`
+recovery while preserving `RootOutsideSelectionError` as a typed,
+non-leaking authorization result. The raw `Disclosure` remains available when
+a Host needs structured lookup facts instead.
+
 Optional framework telemetry is declared with `telemetry: new InMemoryTelemetry()`.
 It aggregates successful Role and Skill opens plus successful or failed Tool
 invocations as `NodeUsage` (`callCount`, `errorCount`, and `lastUsedAt`). It
