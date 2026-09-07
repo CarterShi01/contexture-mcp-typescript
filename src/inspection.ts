@@ -11,6 +11,11 @@ import { ApplicationRuntime } from './core/model/runtime.js';
 import { GATEWAY, unresolvedMessage } from './core/model/system-api.js';
 import { NodeNotFoundError } from './core/foundation/errors.js';
 import {
+  DISCOVER_GATEWAY_NAME,
+  INVOKE_READ_ONLY_GATEWAY_NAME,
+  OPEN_GATEWAY_NAME,
+} from './core/foundation/vocabulary.js';
+import {
   buildInstructions,
   INSTRUCTIONS_LIMIT,
   SELF_CONTAINED_PREFIX,
@@ -159,8 +164,8 @@ export function connectStep(
       note: `${cost.bytes} of ${INSTRUCTIONS_LIMIT} bytes — Claude Code truncates what is over, mid-sentence`,
     }),
     Object.freeze({
-      ok: instructions.slice(0, SELF_CONTAINED_PREFIX).includes('contexture_open'),
-      note: `contexture_open named in the first ${SELF_CONTAINED_PREFIX} characters — that is how far Codex reads while deciding whether to use this server`,
+      ok: instructions.slice(0, SELF_CONTAINED_PREFIX).includes(OPEN_GATEWAY_NAME),
+      note: `${OPEN_GATEWAY_NAME} named in the first ${SELF_CONTAINED_PREFIX} characters — that is how far Codex reads while deciding whether to use this server`,
     }),
     Object.freeze({
       ok: !cut && listed === roles,
@@ -177,24 +182,24 @@ export function connectStep(
 /** Replay the model-controlled discovery response. */
 export function discoverStep(disclosure: Disclosure): Step {
   const payload = disclosure.discover();
-  return new Step('contexture_discover', wire(payload), { payload });
+  return new Step(DISCOVER_GATEWAY_NAME, wire(payload), { payload });
 }
 
 /** Replay one model-controlled open response, retaining its recovery text on refusal. */
 export function openStep(disclosure: Disclosure, ref: string): Step {
   try {
     const payload = disclosure.open(ref);
-    return new Step('contexture_open', wire(payload), {
+    return new Step(OPEN_GATEWAY_NAME, wire(payload), {
       ref,
       payload,
       checks: routingChecks(payload),
       aside: contentTool(disclosure, ref)
-        ? 'the document itself is not here — an agent runs it with contexture_invoke_read_only; pass --read to include it and its cost'
+        ? `the document itself is not here — an agent runs it with ${INVOKE_READ_ONLY_GATEWAY_NAME}; pass --read to include it and its cost`
         : undefined,
     });
   } catch (error) {
     return new Step(
-      'contexture_open',
+      OPEN_GATEWAY_NAME,
       error instanceof NodeNotFoundError ? unresolvedMessage(error) : message(error),
       {
         ref,
@@ -210,18 +215,18 @@ export async function readStep(runtime: ApplicationRuntime, ref: string): Promis
   try {
     const value = await runtime.invokeReadOnly(ref);
     if (value instanceof Uint8Array) {
-      return new Step('contexture_invoke_read_only', `<${value.byteLength} bytes of binary>`, {
+      return new Step(INVOKE_READ_ONLY_GATEWAY_NAME, `<${value.byteLength} bytes of binary>`, {
         ref,
         aside: 'binary content is described rather than printed',
       });
     }
     return new Step(
-      'contexture_invoke_read_only',
+      INVOKE_READ_ONLY_GATEWAY_NAME,
       typeof value === 'string' ? value : wire(value),
       { ref },
     );
   } catch (error) {
-    return new Step('contexture_invoke_read_only', message(error), { ref, refused: true });
+    return new Step(INVOKE_READ_ONLY_GATEWAY_NAME, message(error), { ref, refused: true });
   }
 }
 

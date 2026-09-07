@@ -1,7 +1,6 @@
 import { Channels } from './core/model/channels.js';
 import type { ChannelHandle, Factory, NodeDeclaration } from './core/model/declarations.js';
-import type { PromptDeclaration } from './core/mcp-interface/prompt.js';
-import type { ResourceDeclaration } from './core/mcp-interface/resource.js';
+import type { PromptDeclaration, ResourceDeclaration } from './core/foundation/publications.js';
 import type { Telemetry } from './core/model/telemetry.js';
 
 /** The lazy application composition root. */

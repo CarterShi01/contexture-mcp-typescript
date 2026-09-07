@@ -8,6 +8,17 @@ export {
   CONTEXTURE_SPECIFICATION_REVISION,
   CONTEXTURE_SPECIFICATION_VERSION,
 } from './core/foundation/specification.js';
+export {
+  DISCOVER_GATEWAY_NAME,
+  GATEWAY_TOOL_NAMES,
+  INVOKE_GATEWAY_NAME,
+  INVOKE_READ_ONLY_GATEWAY_NAME,
+  OPEN_GATEWAY_NAME,
+  PACKAGE_NAME,
+  PACKAGE_VERSION,
+  REFERENCE_SEPARATOR,
+} from './core/foundation/vocabulary.js';
+export type { GatewayName } from './core/foundation/vocabulary.js';
 export { Contexture, defineApplication } from './application.js';
 export type { ApplicationDeclaration, ManagedApplicationDeclaration } from './application.js';
 export { Channels } from './core/model/channels.js';
@@ -26,8 +37,12 @@ export type {
   ToolDeclaration,
 } from './core/model/declarations.js';
 export type { CleanupRegistrar } from './core/model/channels.js';
-export type { Prompt, PromptDeclaration } from './core/mcp-interface/prompt.js';
-export type { Resource, ResourceDeclaration } from './core/mcp-interface/resource.js';
+export type {
+  Prompt,
+  PromptDeclaration,
+  Resource,
+  ResourceDeclaration,
+} from './core/foundation/publications.js';
 export { Principal } from './core/foundation/principal.js';
 export type { PrincipalOptions } from './core/foundation/principal.js';
 export {

@@ -42,6 +42,14 @@ test('the MCP interface does not reach into the model or Host layers', async () 
   }
 });
 
+test('the model does not climb into the sibling MCP primitive projection', async () => {
+  const model = path.resolve('src/core/model');
+  for (const file of await sourceFiles(model)) {
+    const source = await readFile(file, 'utf8');
+    assert.equal(/from ['"].*mcp-interface\//.test(source), false, file);
+  }
+});
+
 test('the declaration facade does not load a Host adapter', async () => {
   const source = await readFile(path.resolve('src/index.ts'), 'utf8');
   assert.equal(/from ['"].*\/(?:server|web|cli)\//.test(source), false);

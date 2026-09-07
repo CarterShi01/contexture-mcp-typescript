@@ -13,11 +13,15 @@ core/foundation → core/mcp-interface              │
 web route/surface ← server surface ← server/application
 ```
 
-Foundation owns constants and errors. The model owns declaration validation,
-canonical refs, immutable Index facts, root-selected views, disclosure,
-execution bindings, and lifecycle protocols. MCP-interface declares Prompt,
-Resource, and the fixed Tool plane without reaching into the model. Core cannot
-import MCP, HTTP, CLI, or framework-specific packages.
+Foundation owns constants, errors, and SDK-neutral publication declaration
+data. In particular it has the one spelling for package metadata, reference
+segments, the fixed gateway names, and the `Prompt`/`Resource` data shapes.
+The model owns declaration validation, canonical refs, immutable Index facts,
+root-selected views, disclosure, execution bindings, and lifecycle protocols.
+MCP-interface re-exports those publication shapes and declares their MCP-plane
+projection without reaching into the model. Model code does not import that
+sibling package. Core cannot import MCP, HTTP, CLI, or framework-specific
+packages.
 
 The server layer maps compiled APIs to the official MCP SDK and optional Host
 surfaces. Business Tools never become top-level MCP tools; Contexture exposes a

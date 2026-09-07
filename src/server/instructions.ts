@@ -1,4 +1,5 @@
 import { Disclosure } from '../core/model/disclosure.js';
+import { DISCOVER_GATEWAY_NAME } from '../core/foundation/vocabulary.js';
 
 import { PREAMBLE, REF_RULE } from './messages.js';
 
@@ -13,7 +14,7 @@ export const SELF_CONTAINED_PREFIX = 512;
 export function neutralInstructions(): string {
   return (
     'This Contexture server exposes a request-specific set of complete root capabilities. ' +
-    'Call contexture_discover for the roots available to this request, open the one that fits ' +
+    `Call ${DISCOVER_GATEWAY_NAME} for the roots available to this request, open the one that fits ` +
     'the task, and continue one level at a time using refs exactly as returned. Run a disclosed ' +
     'tool through the read-only or writing Contexture invoke door named on its card.'
   );
@@ -45,7 +46,7 @@ export function buildInstructions(
       }
       if (dropped > 0) {
         roster.push(
-          `- ...and ${dropped} more root role(s); call contexture_discover for the complete list.`,
+          `- ...and ${dropped} more root role(s); call ${DISCOVER_GATEWAY_NAME} for the complete list.`,
         );
         return assemble(preamble, roster);
       }

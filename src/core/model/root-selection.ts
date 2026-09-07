@@ -1,7 +1,6 @@
 import type { CompiledApplication, CompiledNode, CompiledRole } from './compiler.js';
 import { compareCodePoints, matchingRefs, type ReferenceMatches } from './reference-queries.js';
-
-const SEPARATOR = '/';
+import { DISCOVER_GATEWAY_NAME, REFERENCE_SEPARATOR } from '../foundation/vocabulary.js';
 
 /** A requested projection cannot be represented by this application's roots. */
 export class RootSelectionError extends Error {
@@ -15,7 +14,7 @@ export class RootOutsideSelectionError extends Error {
   constructor(readonly ref: string) {
     super(
       `Reference ${JSON.stringify(ref)} is outside this request's root surface. ` +
-        'Call contexture_discover and use a ref from its result.',
+        `Call ${DISCOVER_GATEWAY_NAME} and use a ref from its result.`,
     );
   }
 }
@@ -39,7 +38,7 @@ export class RootSelection {
     if (normalized.length === 0 || normalized.some((name) => name.length === 0)) {
       throw new RootSelectionError('A root selection must name at least one root.');
     }
-    const descendants = normalized.filter((name) => name.includes(SEPARATOR));
+    const descendants = normalized.filter((name) => name.includes(REFERENCE_SEPARATOR));
     if (descendants.length > 0) {
       throw new RootSelectionError(
         `Root selection accepts root refs only, not descendant refs: ${descendants
@@ -70,7 +69,7 @@ export class RootSelection {
   }
 
   containsRef(ref: string): boolean {
-    const root = ref.split(SEPARATOR).find((segment) => segment.length > 0);
+    const root = ref.split(REFERENCE_SEPARATOR).find((segment) => segment.length > 0);
     return this.#names === undefined || root === undefined || this.#names.has(root);
   }
 

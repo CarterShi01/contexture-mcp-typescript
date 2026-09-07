@@ -1,5 +1,4 @@
-/** The separator used by canonical Contexture references. */
-const SEPARATOR = '/';
+import { REFERENCE_SEPARATOR } from '../foundation/vocabulary.js';
 
 /** One completion result set, with its total before the caller's limit. */
 export interface ReferenceMatches {
@@ -36,13 +35,13 @@ export function matchingRefs(
   const matches: Array<readonly [number, number, string]> = [];
   for (const ref of refs) {
     const lowered = ref.toLowerCase();
-    const leaf = lowered.slice(lowered.lastIndexOf(SEPARATOR) + 1);
+    const leaf = lowered.slice(lowered.lastIndexOf(REFERENCE_SEPARATOR) + 1);
     const rank =
       wanted.length === 0 || lowered.startsWith(wanted)
         ? 0
         : leaf.startsWith(wanted)
           ? 1
-          : lowered.split(SEPARATOR).some((part) => part.startsWith(wanted))
+          : lowered.split(REFERENCE_SEPARATOR).some((part) => part.startsWith(wanted))
             ? 2
             : lowered.includes(wanted)
               ? 3

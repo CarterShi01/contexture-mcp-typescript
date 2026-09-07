@@ -1,5 +1,6 @@
 import { crashLoopRunbook, rollbackPolicy } from './documents.js';
 import { diagnoseCrashLoopBackOff, rollBackAFailedRelease } from './skills.js';
+import { INVOKE_GATEWAY_NAME } from '../core/foundation/vocabulary.js';
 import {
   getPodEvents,
   getPodLogs,
@@ -38,7 +39,7 @@ export const kubernetesPlatform = () => ({
         'Remediation follows diagnosis and never replaces it. Read the policy, establish',
         'what the previous revision would restore, and say what evidence a rollback',
         'destroys before proposing one. Anything that changes the cluster is run through',
-        'contexture_invoke, where a host can put a human in front of it.',
+        `${INVOKE_GATEWAY_NAME}, where a host can put a human in front of it.`,
       ].join('\n'),
       skills: [rollBackAFailedRelease],
       tools: [getRolloutStatus, rollBackDeployment, rollbackPolicy],

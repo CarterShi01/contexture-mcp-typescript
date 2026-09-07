@@ -5,7 +5,13 @@ import { Gateway } from '../core/model/system-api.js';
 import { RootSelection } from '../core/model/root-selection.js';
 import { principalOf } from './identity.js';
 import { COMPLETION_LIMIT, GOTO_ARGUMENT, GOTO_PROMPT, truncatedCompletion } from './messages.js';
-import type { GatewayName } from '../core/mcp-interface/tool.js';
+import {
+  DISCOVER_GATEWAY_NAME,
+  INVOKE_GATEWAY_NAME,
+  INVOKE_READ_ONLY_GATEWAY_NAME,
+  OPEN_GATEWAY_NAME,
+  type GatewayName,
+} from '../core/foundation/vocabulary.js';
 import { Publications } from './surface/publications.js';
 
 export { compileRuntimeApplication, compileStructuralApplication } from './application.js';
@@ -122,7 +128,7 @@ export function createContextureMcpServer(
   );
   for (const tool of gateway.tools) {
     switch (tool.name) {
-      case 'contexture_discover':
+      case DISCOVER_GATEWAY_NAME:
         server.registerTool(
           tool.name,
           {
@@ -133,7 +139,7 @@ export function createContextureMcpServer(
           async () => toolResult(() => gateway.discover(selection)),
         );
         break;
-      case 'contexture_open':
+      case OPEN_GATEWAY_NAME:
         server.registerTool(
           tool.name,
           {
@@ -148,7 +154,7 @@ export function createContextureMcpServer(
             }),
         );
         break;
-      case 'contexture_invoke_read_only':
+      case INVOKE_READ_ONLY_GATEWAY_NAME:
         server.registerTool(
           tool.name,
           {
@@ -167,7 +173,7 @@ export function createContextureMcpServer(
             ),
         );
         break;
-      case 'contexture_invoke':
+      case INVOKE_GATEWAY_NAME:
         server.registerTool(
           tool.name,
           {

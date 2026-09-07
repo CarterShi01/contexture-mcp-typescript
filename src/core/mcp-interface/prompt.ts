@@ -1,10 +1,6 @@
-/** A person-controlled MCP Prompt pointing at one existing Contexture node. */
-export interface PromptDeclaration {
-  readonly opens: string;
-  readonly description: string;
-  readonly name?: string;
-  readonly modelMayOpen?: boolean;
-}
-
-/** Native TypeScript name for one declared person-facing MCP Prompt. */
-export type Prompt = PromptDeclaration;
+/**
+ * Compatibility exports for the SDK-neutral Prompt declaration data owned by
+ * foundation. This package projects those facts onto MCP; it does not own a
+ * second declaration shape.
+ */
+export type { Prompt, PromptDeclaration } from '../foundation/publications.js';

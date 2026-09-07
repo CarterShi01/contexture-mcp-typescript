@@ -1,3 +1,5 @@
+import { INVOKE_GATEWAY_NAME } from '../core/foundation/vocabulary.js';
+
 export const DIAGNOSIS = 'kubernetes-platform/incident-response/diagnose-crash-loop-backoff';
 
 export const diagnoseCrashLoopBackOff = () => ({
@@ -47,5 +49,5 @@ Constraints:
 - A configuration fault follows the previous revision back. Say so rather than
   presenting a rollback as a fix.
 - roll_back_deployment changes the cluster. It is not read-only, so it must be
-  run through contexture_invoke and a human may be asked first.`,
+  run through ${INVOKE_GATEWAY_NAME} and a human may be asked first.`,
 });

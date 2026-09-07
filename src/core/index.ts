@@ -2,6 +2,17 @@ export {
   CONTEXTURE_SPECIFICATION_REVISION,
   CONTEXTURE_SPECIFICATION_VERSION,
 } from './foundation/specification.js';
+export {
+  DISCOVER_GATEWAY_NAME,
+  GATEWAY_TOOL_NAMES,
+  INVOKE_GATEWAY_NAME,
+  INVOKE_READ_ONLY_GATEWAY_NAME,
+  OPEN_GATEWAY_NAME,
+  PACKAGE_NAME,
+  PACKAGE_VERSION,
+  REFERENCE_SEPARATOR,
+} from './foundation/vocabulary.js';
+export type { GatewayName } from './foundation/vocabulary.js';
 export type {
   BaseNodeDeclaration,
   Factory,
@@ -60,10 +71,12 @@ export {
   wrongDoorMessage,
 } from './model/system-api.js';
 export type { GatewayTool } from './model/system-api.js';
-export { GATEWAY_TOOL_NAMES } from './mcp-interface/tool.js';
-export type { GatewayName } from './mcp-interface/tool.js';
-export type { Prompt, PromptDeclaration } from './mcp-interface/prompt.js';
-export type { Resource, ResourceDeclaration } from './mcp-interface/resource.js';
+export type {
+  Prompt,
+  PromptDeclaration,
+  Resource,
+  ResourceDeclaration,
+} from './foundation/publications.js';
 export { Principal } from './foundation/principal.js';
 export type { PrincipalOptions } from './foundation/principal.js';
 export {

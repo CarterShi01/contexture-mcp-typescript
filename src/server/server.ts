@@ -17,6 +17,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import type { ApplicationCompilation } from '../core/model/compiler.js';
 import { Gateway } from '../core/model/system-api.js';
 import { RootSelection } from '../core/model/root-selection.js';
+import { PACKAGE_VERSION } from '../core/foundation/vocabulary.js';
 
 import { compileRuntimeApplication, type RuntimeApplication } from './application.js';
 import { createContextureMcpServer, type ContextureMcpServer } from './index.js';
@@ -26,7 +27,7 @@ import { configureLogging, log } from './logging.js';
 import { Auth, principalOf } from './identity.js';
 import type { RootSelector } from './root-selector.js';
 
-export const PACKAGE_VERSION = '0.12.0rc1';
+export { PACKAGE_VERSION } from '../core/foundation/vocabulary.js';
 
 /** A live streamable-HTTP Contexture server that its caller may close. */
 export interface HttpServerHandle {

@@ -1,5 +1,6 @@
 import type { CompiledApplication, CompiledNode, CompiledRole, CompiledTool } from './compiler.js';
 import { LookupFailure, ModelValidationError, NodeNotFoundError } from '../foundation/errors.js';
+import { REFERENCE_SEPARATOR } from '../foundation/vocabulary.js';
 import { RootOutsideSelectionError, RootSelection } from './root-selection.js';
 import { InMemoryTelemetry, reportTelemetry, type Telemetry } from './telemetry.js';
 
@@ -228,7 +229,7 @@ function resolveRef(
 }
 
 function rootOf(ref: string): string {
-  return ref.split('/').find((segment) => segment.length > 0) ?? '';
+  return ref.split(REFERENCE_SEPARATOR).find((segment) => segment.length > 0) ?? '';
 }
 
 function selectedRootFailure(

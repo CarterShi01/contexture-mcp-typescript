@@ -20,10 +20,9 @@ import {
   NodeNotFoundError,
   UnresolvedReferenceError,
 } from '../foundation/errors.js';
+import { REFERENCE_SEPARATOR } from '../foundation/vocabulary.js';
 import { bindTool, type JsonObject, type ToolBinding } from './binding.js';
 import { compareCodePoints, matchingRefs, type ReferenceMatches } from './reference-queries.js';
-
-const SEPARATOR = '/';
 
 interface CompiledNodeBase {
   readonly kind: NodeKind;
@@ -207,7 +206,7 @@ function compileDeclaration(
   }
   state.declarations.add(declaration);
   const path = [...parentPath, declaration.name];
-  const ref = path.join(SEPARATOR);
+  const ref = path.join(REFERENCE_SEPARATOR);
   if (state.byRef.has(ref)) {
     throw new DuplicateNameError(
       `Contexture address ${JSON.stringify(ref)} is declared more than once.`,
@@ -310,9 +309,9 @@ function validateDeclaration(declaration: NodeDeclaration, bindTools: boolean): 
     declaration.description,
     `Context node ${JSON.stringify(declaration.name)} must have a routing description.`,
   );
-  if (declaration.name.includes(SEPARATOR)) {
+  if (declaration.name.includes(REFERENCE_SEPARATOR)) {
     throw new ModelValidationError(
-      `Context node name ${JSON.stringify(declaration.name)} must not contain ${JSON.stringify(SEPARATOR)}.`,
+      `Context node name ${JSON.stringify(declaration.name)} must not contain ${JSON.stringify(REFERENCE_SEPARATOR)}.`,
     );
   }
   const uses = declaration.uses ?? [];
@@ -459,14 +458,14 @@ class ImmutableIndex implements Index {
   }
 
   find(ref: string): CompiledNode {
-    const segments = ref.split(SEPARATOR).filter((segment) => segment.length > 0);
+    const segments = ref.split(REFERENCE_SEPARATOR).filter((segment) => segment.length > 0);
     if (segments.length === 0) {
       throw new NodeNotFoundError({
         reason: LookupFailure.EMPTY_REF,
         ref,
       });
     }
-    const canonical = segments.join(SEPARATOR);
+    const canonical = segments.join(REFERENCE_SEPARATOR);
     const found = this.#byRef.get(canonical);
     if (found !== undefined) return found;
     throw this.diagnose(segments, ref);
@@ -484,9 +483,9 @@ class ImmutableIndex implements Index {
       });
     }
     for (let depth = 2; depth <= segments.length; depth += 1) {
-      const candidate = segments.slice(0, depth).join(SEPARATOR);
+      const candidate = segments.slice(0, depth).join(REFERENCE_SEPARATOR);
       if (this.#byRef.has(candidate)) continue;
-      const parentRef = segments.slice(0, depth - 1).join(SEPARATOR);
+      const parentRef = segments.slice(0, depth - 1).join(REFERENCE_SEPARATOR);
       const held = this.#byRef.get(parentRef);
       if (held === undefined)
         throw new ModelValidationError('Index lookup diagnosis lost its parent.');
@@ -622,10 +621,10 @@ class ImmutableIndex implements Index {
 
   signpost(ref: string): readonly SignpostLevel[] {
     const canonical = this.refOf(this.find(ref));
-    const parts = canonical.split(SEPARATOR);
+    const parts = canonical.split(REFERENCE_SEPARATOR);
     const levels: SignpostLevel[] = [];
     for (let depth = 1; depth < parts.length; depth += 1) {
-      const ancestor = parts.slice(0, depth).join(SEPARATOR);
+      const ancestor = parts.slice(0, depth).join(REFERENCE_SEPARATOR);
       const subRoleCount = this.childrenOf(this.find(ancestor)).filter(
         (node) => node.kind === 'role',
       ).length;
@@ -636,9 +635,9 @@ class ImmutableIndex implements Index {
 
   *crossings(): IterableIterator<ReferenceCrossing> {
     for (const [sourceRef, node] of this.walk()) {
-      const sourceRoot = sourceRef.split(SEPARATOR)[0] ?? '';
+      const sourceRoot = sourceRef.split(REFERENCE_SEPARATOR)[0] ?? '';
       for (const targetRef of node.uses) {
-        const targetRoot = targetRef.split(SEPARATOR)[0] ?? '';
+        const targetRoot = targetRef.split(REFERENCE_SEPARATOR)[0] ?? '';
         if (sourceRoot !== targetRoot) {
           yield Object.freeze({ sourceRef, targetRef, targetRoot });
         }

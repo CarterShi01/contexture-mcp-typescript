@@ -14,9 +14,11 @@ core/foundation → core/mcp-interface │
 web route/surface ← server surface ← server/application
 ```
 
-foundation 提供常量与错误。model 负责声明校验、规范 ref、不可变 Index、根选择视图、
-disclosure、执行 binding 与生命周期协议。MCP-interface 声明 Prompt、Resource 和固定
-Tool 平面，不能反向依赖 model。core 不可导入 MCP、HTTP、CLI 或框架相关模块。
+foundation 提供常量、错误和 SDK-neutral 的 publication declaration data。它为 package metadata、
+reference segment、固定 gateway name，以及 `Prompt`/`Resource` data shape 提供唯一写法。model
+负责声明校验、规范 ref、不可变 Index、根选择视图、disclosure、执行 binding 与生命周期协议。
+MCP-interface 会 re-export 这些 publication shape 并声明其 MCP-plane projection，不能反向依赖
+model；model 也不会导入这个 sibling package。core 不可导入 MCP、HTTP、CLI 或框架相关模块。
 
 server 层将编译后的 API 映射到官方 MCP SDK 与 Host surface。业务 Tool 永远不会成为
 顶层 MCP Tool；Contexture 只暴露固定的导航与调用 gateway。

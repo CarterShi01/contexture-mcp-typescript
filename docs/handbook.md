@@ -176,6 +176,16 @@ Tool remain compilation concerns. Every public compilation entry point applies
 this same normalization, so calling a compiler directly with a raw JavaScript
 object cannot bypass declaration validation or Prompt reservation semantics.
 
+Foundation owns the shared declaration vocabulary: `PACKAGE_NAME` is the
+framework name (`contexture`), `PACKAGE_VERSION` is this binding release, and
+`REFERENCE_SEPARATOR` spells a Contexture ref rather than an HTTP path or a
+Resource URI. `DISCOVER_GATEWAY_NAME`, `OPEN_GATEWAY_NAME`,
+`INVOKE_READ_ONLY_GATEWAY_NAME`, and `INVOKE_GATEWAY_NAME` (and their ordered
+`GATEWAY_TOOL_NAMES` inventory) are the same closed names used by the model,
+MCP primitive projection, and server. `Prompt` and `Resource` are likewise
+foundation-owned SDK-neutral data shapes; the retained `core/mcp-interface`
+type exports are compatibility spellings, not duplicate declarations.
+
 `modelMayOpen` is intentionally a boolean in TypeScript: omission or `true`
 keeps a Prompt model-navigable, while `false` reserves that declared capability
 for person-controlled Prompt or `goto` navigation. This has the same

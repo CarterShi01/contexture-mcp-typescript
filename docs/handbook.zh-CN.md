@@ -144,6 +144,14 @@ Disclosure、Runtime 和 gateway surface 共享同一个 collector。
 公开 compilation entry point 都会应用同一份规范化，因此直接向 compiler 传入原始 JavaScript object
 也无法绕过 declaration validation 或 Prompt reservation semantics。
 
+foundation 拥有共享 declaration vocabulary：`PACKAGE_NAME` 是 framework 名称（`contexture`），
+`PACKAGE_VERSION` 是这个 binding 的 release，`REFERENCE_SEPARATOR` 拼写的是 Contexture ref，
+而不是 HTTP path 或 Resource URI。`DISCOVER_GATEWAY_NAME`、`OPEN_GATEWAY_NAME`、
+`INVOKE_READ_ONLY_GATEWAY_NAME` 和 `INVOKE_GATEWAY_NAME`（以及按顺序排列的
+`GATEWAY_TOOL_NAMES` inventory）是 model、MCP primitive projection 与 server 共用的封闭名称。
+`Prompt` 与 `Resource` 同样是 foundation-owned、SDK-neutral 的 data shape；保留的
+`core/mcp-interface` type export 只是 compatibility spelling，并非重复的 declaration。
+
 TypeScript 中的 `modelMayOpen` 有意使用 boolean：省略或 `true` 表示 Prompt 可由模型导航，
 `false` 则把这个已声明 capability 保留给人控制的 Prompt 或 `goto` 导航。它与 Python declaration
 有相同的可观察保留语义，但不复制 Python 的语法。自定义嵌套 `Disclosure` `promptRoots` ref 是无效的，
