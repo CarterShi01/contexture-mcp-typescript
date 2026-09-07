@@ -14,7 +14,7 @@ import {
 } from '@modelcontextprotocol/server';
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
-import type { ApplicationDeclaration } from '../application.js';
+import type { ApplicationCompilation } from '../core/model/compiler.js';
 import { Gateway } from '../core/model/system-api.js';
 import { RootSelection } from '../core/model/root-selection.js';
 
@@ -46,7 +46,7 @@ export class ContextureServer {
   readonly rootSelector: RootSelector | undefined;
 
   constructor(
-    declaration: ApplicationDeclaration,
+    declaration: ApplicationCompilation,
     options: {
       readonly version?: string;
       readonly selection?: RootSelection;
@@ -56,7 +56,7 @@ export class ContextureServer {
     } = {},
   ) {
     this.application = compileRuntimeApplication(declaration);
-    this.name = declaration.name;
+    this.name = this.application.index.name;
     this.version = options.version ?? PACKAGE_VERSION;
     this.selection = (options.selection ?? RootSelection.all()).resolve(this.application.index);
     this.auth = options.auth;
@@ -195,7 +195,7 @@ export class ContextureServer {
 
 /** Compile one declaration into its server-owned application container. */
 export function buildServer(
-  declaration: ApplicationDeclaration,
+  declaration: ApplicationCompilation,
   options: {
     readonly version?: string;
     readonly selection?: RootSelection;

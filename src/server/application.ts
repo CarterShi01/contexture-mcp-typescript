@@ -1,13 +1,14 @@
 import {
   compileApplication,
   compileDisclosureApplication,
+  type ApplicationCompilation,
   type CompiledApplication,
 } from '../core/model/compiler.js';
 import { Disclosure } from '../core/model/disclosure.js';
 import { ApplicationRuntime } from '../core/model/runtime.js';
 import { InMemoryTelemetry } from '../core/model/telemetry.js';
 import type { Telemetry } from '../core/model/telemetry.js';
-import { defineApplication, type ApplicationDeclaration } from '../application.js';
+import { normalizeApplication } from '../application.js';
 import { Publications } from './surface/publications.js';
 
 /** The coordinated runtime projections that share one bound compiled Index. */
@@ -28,8 +29,8 @@ export interface DisclosureApplication {
 }
 
 /** Compile all runtime surfaces with Prompt reservations applied to model navigation. */
-export function compileRuntimeApplication(declaration: ApplicationDeclaration): RuntimeApplication {
-  const normalized = defineApplication(declaration);
+export function compileRuntimeApplication(declaration: ApplicationCompilation): RuntimeApplication {
+  const normalized = normalizeApplication(declaration);
   const index = compileApplication(normalized);
   const telemetry = normalized.telemetry ?? new InMemoryTelemetry();
   const disclosure = new Disclosure(index, {
@@ -48,9 +49,9 @@ export function compileRuntimeApplication(declaration: ApplicationDeclaration): 
 
 /** Compile an independent disclosure-only surface with no execution lifecycle. */
 export function compileStructuralApplication(
-  declaration: ApplicationDeclaration,
+  declaration: ApplicationCompilation,
 ): DisclosureApplication {
-  const normalized = defineApplication(declaration);
+  const normalized = normalizeApplication(declaration);
   const index = compileDisclosureApplication(normalized);
   const telemetry = normalized.telemetry ?? new InMemoryTelemetry();
   const disclosure = new Disclosure(index, {
@@ -65,7 +66,9 @@ export function compileStructuralApplication(
   });
 }
 
-function reservedPromptRefs(declaration: ApplicationDeclaration): readonly string[] {
+function reservedPromptRefs(
+  declaration: Pick<ApplicationCompilation, 'prompts'>,
+): readonly string[] {
   return Object.freeze(
     (declaration.prompts ?? [])
       .filter((prompt) => prompt.modelMayOpen === false)

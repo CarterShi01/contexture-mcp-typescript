@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { InMemoryTransport, LATEST_PROTOCOL_VERSION } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
-import { defineApplication, type ApplicationDeclaration } from '../src/index.js';
+import { ControllerManager, defineApplication, type ApplicationDeclaration } from '../src/index.js';
 import { compileApplication, compileDisclosureApplication } from '../src/core/index.js';
-import { compileRuntimeApplication, compileStructuralApplication } from '../src/server/index.js';
+import {
+  buildServer,
+  compileRuntimeApplication,
+  compileStructuralApplication,
+} from '../src/server/index.js';
 
 test('runtime compilation builds one bound Index shared by disclosure, invocation, and publications', async () => {
   const declaration = defineApplication({
@@ -120,3 +125,81 @@ test('public compilation routes reject raw Prompt and Resource declaration bypas
     }
   }
 });
+
+test('a real official MCP server preserves a raw Manager handle without invoking its lookalike lifecycle', async () => {
+  const lifecycleCalls: string[] = [];
+  const handle = Object.freeze({
+    name: 'raw-server-handle',
+    open: () => lifecycleCalls.push('open'),
+    close: () => lifecycleCalls.push('close'),
+  });
+  const manager = new ControllerManager({ channels: handle });
+  manager.registerTool(() => ({
+    kind: 'tool' as const,
+    name: 'status',
+    description: 'Read status.',
+    readOnly: true,
+    input: z.strictObject({}),
+    invoke: (_input, context) => {
+      assert.equal(context.channels, handle);
+      return 'raw-handle';
+    },
+  }));
+  const server = buildServer(manager.application('raw-manager-server'));
+  assert.equal(server.application.index.channels, handle);
+  assert.throws(
+    () => compileStructuralApplication(manager.application('raw-manager-structural')),
+    /cannot declare Channels/,
+  );
+  const adapter = server.build();
+  const [client, host] = InMemoryTransport.createLinkedPair();
+  const replies = new Map<number, unknown>();
+  client.onmessage = (message) => {
+    if ('id' in message && typeof message.id === 'number') replies.set(message.id, message);
+  };
+  await server.application.runtime.serve(async () => {
+    await client.start();
+    await adapter.server.connect(host);
+    await sendAndWait(client, replies, 1, 'initialize', {
+      protocolVersion: LATEST_PROTOCOL_VERSION,
+      capabilities: {},
+      clientInfo: { name: 'raw-manager-client', version: '0.0.0' },
+    });
+    await client.send({ jsonrpc: '2.0', method: 'notifications/initialized' });
+    assert.deepEqual(
+      response(
+        await sendAndWait(client, replies, 2, 'tools/call', {
+          name: 'contexture_invoke_read_only',
+          arguments: { ref: 'status', arguments: {} },
+        }),
+      ).structuredContent,
+      { result: 'raw-handle' },
+    );
+    await client.close();
+    await adapter.server.close();
+  });
+  assert.deepEqual(lifecycleCalls, []);
+});
+
+function response(reply: unknown): Record<string, unknown> {
+  assert.ok(typeof reply === 'object' && reply !== null && 'result' in reply);
+  const result = reply.result;
+  assert.ok(typeof result === 'object' && result !== null);
+  return result as Record<string, unknown>;
+}
+
+async function sendAndWait(
+  transport: InMemoryTransport,
+  replies: Map<number, unknown>,
+  id: number,
+  method: string,
+  params: Record<string, unknown>,
+): Promise<unknown> {
+  await transport.send({ jsonrpc: '2.0', id, method, params });
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const reply = replies.get(id);
+    if (reply !== undefined) return reply;
+    await new Promise((resolve) => setTimeout(resolve, 1));
+  }
+  throw new Error(`Timed out waiting for ${method}.`);
+}

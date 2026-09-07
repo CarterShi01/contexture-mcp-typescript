@@ -1,4 +1,4 @@
-import type { ApplicationDeclaration } from '../../application.js';
+import type { ApplicationCompilation } from '../../core/model/compiler.js';
 import { ModelValidationError } from '../../core/foundation/errors.js';
 import { RefusedError } from '../../core/model/disclosure.js';
 import { takenByPersonMessage } from '../../core/model/system-api.js';
@@ -40,7 +40,7 @@ export class Publications {
   constructor(
     readonly disclosure: Disclosure,
     readonly runtime: ApplicationRuntime | undefined,
-    declaration: Pick<ApplicationDeclaration, 'prompts' | 'resources'> = {},
+    declaration: Pick<ApplicationCompilation, 'prompts' | 'resources'> = {},
   ) {
     this.prompts = Object.freeze(
       (declaration.prompts ?? []).map((entry) => Object.freeze({ ...entry })),
