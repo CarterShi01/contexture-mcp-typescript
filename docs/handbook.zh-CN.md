@@ -70,6 +70,12 @@ export const app = defineApplication({
 factory 并规范化 application 名称。每个 Role、Skill、Tool 都应通过 factory 声明；编译会
 从这些 factory 创建新的不可变 graph snapshot。
 
+lazy declaration 在 compilation 时会校验 node 的 `name`、`description`、Role 与 Skill 的
+`instructions` 以及每个 `uses` ref 均非空。Skill 可以引用另一个 Skill，包括 cycle：打开它会返回
+自己的 instructions，并只为 `uses` 返回 routing card，绝不会返回被引用 Skill 的 instructions 或其
+`uses`。打开 Role 同样会返回自己的 instructions 及其 contained member 的单层 routing card。这些有界
+card 使声明的 reference cycle 保持安全，也避免一次 open 展开无关 procedure。
+
 `RootSelection` 表示 all-roots 或精确 root allowlist：它会 trim 请求的 root name、拒绝
 descendant，并且只能收窄另一个 selection。`SelectedGraph` 只公开选中范围内的 `roots`、`walk`、
 `find`、`refOf`、`parentOf`、`childrenOf`、`usesOf` 与 `dependentsOf`；cross-root uses 和

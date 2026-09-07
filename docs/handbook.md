@@ -75,6 +75,15 @@ Both preserve lazy factories and normalize the application name. Use a factory
 for every Role, Skill, and Tool: compilation creates a fresh immutable graph
 snapshot from those factories.
 
+Node `name` and `description`, Role and Skill `instructions`, and every `uses`
+ref are validated as non-blank when the lazy declaration compiles. A Skill may
+refer to another Skill, including a cycle: opening it returns its own
+instructions and only routing cards for its `uses`, never the referenced
+Skill's instructions or its own `uses`. Opening a Role likewise gives its own
+instructions plus one-level routing cards for contained members. These bounded
+cards keep declared reference cycles safe and prevent a single open from
+expanding an unrelated procedure.
+
 `RootSelection` is an all-roots value or an exact root allowlist: it trims
 requested root names, rejects descendants, and can only attenuate another
 selection. `SelectedGraph` exposes only selected `roots`, `walk`, `find`,
