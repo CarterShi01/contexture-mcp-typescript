@@ -96,6 +96,12 @@ all-roots 值。
 它返回 `undefined`；Contexture 绝不会虚构 anonymous Principal。某项 capability 是否要求 identity
 由 application 自己决定。
 
+`Principal.claims` 是供 application code 使用的 shallow、immutable snapshot，可能包含完整的
+decoded token。其 `toString()`、Node `inspect`/console representation 以及 JSON representation
+会刻意只公开 `subject`、`clientId`、`issuer` 和按 code point 排序的 `scopes`；不要记录原始 claims。
+identity 穿过 MCP authentication adapter 时，如存在 `claims.iss`，它是 authoritative issuer。
+因此 machine credential 可以保留 `clientId`、issuer、scopes 与 claims，但没有 `subject`。
+
 `currentGraph()` 与 `currentTelemetry()` 更严格：它们只可在正在运行的 Tool 内访问，在没有 active
 invocation 时会拒绝访问。`ToolCallContext` 保留 Host 所有的 `host` 与取消用的 `signal`，而 Contexture
 会为这一次确切 call 重建其中的 `principal`、`channels`、`telemetry`、`graph` 与 `selection` facts。因而

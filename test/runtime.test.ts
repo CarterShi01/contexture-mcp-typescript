@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { format, inspect } from 'node:util';
 import test from 'node:test';
 import { z } from 'zod';
 
@@ -340,7 +341,8 @@ test('currentRootSelection returns the compatibility all-roots selection outside
 });
 
 test('Principal snapshots claims and exposes identity without authorization policy', () => {
-  const claims = { tenant: 'acme' };
+  const nested = { region: 'us-east' };
+  const claims = { tenant: 'acme', bearer: 'do-not-log', nested };
   const principal = new Principal({
     subject: 'ada',
     clientId: 'codex',
@@ -353,11 +355,25 @@ test('Principal snapshots claims and exposes identity without authorization poli
   assert.equal(principal.subject, 'ada');
   assert.equal(principal.scopes.has('tools.read'), true);
   assert.equal('add' in principal.scopes, false);
-  assert.deepEqual(principal.claims, { tenant: 'acme' });
+  assert.deepEqual(principal.claims, { tenant: 'acme', bearer: 'do-not-log', nested });
+  assert.equal(principal.claims.nested, nested);
+  nested.region = 'eu-west';
+  assert.deepEqual(principal.claims.nested, { region: 'eu-west' });
   assert.throws(() => {
     (principal.claims as { tenant: string }).tenant = 'forbidden';
   }, TypeError);
   assert.match(principal.toString(), /Principal\(subject="ada"/);
+  assert.doesNotMatch(principal.toString(), /bearer|claims/);
+  assert.deepEqual(principal.toJSON(), {
+    subject: 'ada',
+    clientId: 'codex',
+    issuer: 'https://issuer.example',
+    scopes: ['tools.read'],
+  });
+  assert.doesNotMatch(JSON.stringify(principal), /bearer|claims|do-not-log/);
+  assert.doesNotMatch(inspect(principal), /bearer|claims|do-not-log/);
+  assert.doesNotMatch(format('%O', principal), /bearer|claims|do-not-log/);
+  assert.match(inspect(principal), /"subject":"ada"/);
 });
 
 test('requested selection can only attenuate an identity ceiling and governs the handler graph', async () => {

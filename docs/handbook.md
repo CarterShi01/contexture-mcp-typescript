@@ -111,6 +111,14 @@ returns `undefined` for an unauthenticated call and outside an invocation;
 Contexture never invents an anonymous Principal. The application decides
 whether its capability requires identity.
 
+`Principal.claims` is a shallow, immutable snapshot for application code, and
+may contain a complete decoded token. Its `toString()`, Node `inspect`/console
+representation, and JSON representation deliberately expose only `subject`,
+`clientId`, `issuer`, and code-point-sorted `scopes`; do not log raw claims.
+When identity crosses the MCP authentication adapter, `claims.iss` is the
+authoritative issuer when present. A machine credential may therefore retain a
+`clientId`, issuer, scopes, and claims while having no `subject`.
+
 `currentGraph()` and `currentTelemetry()` are stricter: they are available only
 inside a running Tool and reject no-active-invocation access. `ToolCallContext`
 preserves Host-owned `host` and cancellation `signal`, while Contexture rebuilds

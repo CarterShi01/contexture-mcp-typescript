@@ -51,19 +51,53 @@ export class Auth {
   }
 
   async verify(token: string): Promise<AuthInfo> {
-    const principal = await this.verifier.verify(token);
-    if (principal === undefined)
+    const verified = await this.verifier.verify(token);
+    if (verified === undefined)
       throw new OAuthError(OAuthErrorCode.InvalidToken, 'Token verification failed.');
+    const principal = roundTrippedPrincipal(verified);
     const expiresAt = expiration(principal);
     return {
       token,
       clientId: principal.clientId ?? '',
-      scopes: [...principal.scopes],
+      scopes: [...principal.scopes].sort(compareCodePoints),
       expiresAt,
       resource: this.resource,
       extra: { [PRINCIPAL_EXTRA]: principal },
     };
   }
+}
+
+/**
+ * Keep the SDK payload self-contained instead of preserving identity in a
+ * token-keyed side table. The token claim is authoritative when it names an
+ * issuer: SDK-native authentication also recovers issuer from `claims.iss`.
+ */
+function roundTrippedPrincipal(principal: Principal): Principal {
+  const issuer = issuerFromClaims(principal);
+  return new Principal({
+    ...(principal.subject === undefined ? {} : { subject: principal.subject }),
+    ...(principal.clientId === undefined ? {} : { clientId: principal.clientId }),
+    ...(issuer === undefined ? {} : { issuer }),
+    scopes: principal.scopes,
+    claims: principal.claims,
+  });
+}
+
+function issuerFromClaims(principal: Principal): string | undefined {
+  if (!Object.hasOwn(principal.claims, 'iss')) return principal.issuer;
+  const issuer = principal.claims.iss;
+  return issuer === undefined || issuer === null ? undefined : String(issuer);
+}
+
+function compareCodePoints(left: string, right: string): number {
+  const leftPoints = [...left];
+  const rightPoints = [...right];
+  for (let index = 0; index < Math.min(leftPoints.length, rightPoints.length); index += 1) {
+    const difference =
+      (leftPoints[index]?.codePointAt(0) ?? 0) - (rightPoints[index]?.codePointAt(0) ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return leftPoints.length - rightPoints.length;
 }
 
 /** Recover the application identity from SDK request context facts. */

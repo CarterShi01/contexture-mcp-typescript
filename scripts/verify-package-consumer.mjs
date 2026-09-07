@@ -53,6 +53,7 @@ try {
 
   const consumer = [
     "import { z } from 'zod';",
+    "import { inspect } from 'node:util';",
     "import { Channels, Contexture, ControllerManager, InMemoryTelemetry, LookupFailure, NodeNotFoundError, Principal, RootSelection, currentPrincipal, defineApplication, reportTelemetry } from '@contexture/mcp';",
     "import { trace } from '@contexture/mcp/inspection';",
     "import { newProject } from '@contexture/mcp/cli';",
@@ -65,6 +66,7 @@ try {
     "if (typeof LookupFailure !== 'object' || LookupFailure.NO_SUCH_MEMBER !== 'no_such_member') throw new Error('missing lookup classification');",
     "if (!(new NodeNotFoundError({ reason: LookupFailure.EMPTY_REF }) instanceof Error)) throw new Error('missing lookup error');",
     "if (typeof Principal !== 'function' || typeof currentPrincipal !== 'function' || currentPrincipal() !== undefined) throw new Error('missing optional root principal fact');",
+    "const redactedPrincipal = new Principal({ subject: 'consumer', clientId: 'packed-client', issuer: 'https://issuer.example', scopes: ['zeta', 'alpha'], claims: { bearer: 'never-print', tenant: 'consumer' } }); const redactedJson = JSON.stringify(redactedPrincipal); const redactedInspect = inspect(redactedPrincipal); if (/bearer|never-print|claims/.test(redactedJson) || /bearer|never-print|claims/.test(redactedInspect) || !/alpha/.test(redactedJson) || !/zeta/.test(redactedInspect)) throw new Error('Principal representations leaked claims or lost identity facts');",
     "if (typeof trace !== 'function') throw new Error('missing inspection API');",
     "if (typeof newProject !== 'function') throw new Error('missing CLI scaffold API');",
     "if (typeof compileRuntimeApplication !== 'function') throw new Error('missing server facade');",
