@@ -1,4 +1,5 @@
 import type { CompiledApplication, CompiledNode, CompiledRole } from './compiler.js';
+import { compareCodePoints, matchingRefs, type ReferenceMatches } from './reference-queries.js';
 
 const SEPARATOR = '/';
 
@@ -145,49 +146,13 @@ export class SelectedGraph {
     );
   }
 
-  matchingRefs(
-    value: string,
-    limit: number,
-  ): { readonly values: readonly string[]; readonly total: number } {
-    const wanted = value.trim().toLowerCase();
-    const matches: Array<readonly [number, number, string]> = [];
-    for (const [ref] of this.walk()) {
-      const lowered = ref.toLowerCase();
-      const leaf = lowered.slice(lowered.lastIndexOf(SEPARATOR) + 1);
-      const rank =
-        wanted.length === 0 || lowered.startsWith(wanted)
-          ? 0
-          : leaf.startsWith(wanted)
-            ? 1
-            : lowered.split(SEPARATOR).some((part) => part.startsWith(wanted))
-              ? 2
-              : lowered.includes(wanted)
-                ? 3
-                : undefined;
-      if (rank !== undefined) matches.push([rank, codePointLength(ref), ref]);
-    }
-    matches.sort(
-      ([leftRank, leftLength, left], [rightRank, rightLength, right]) =>
-        leftRank - rightRank || leftLength - rightLength || compareCodePoints(left, right),
+  matchingRefs(value: string, limit: number): ReferenceMatches {
+    return matchingRefs(
+      (function* selectedRefs(graph: SelectedGraph): IterableIterator<string> {
+        for (const [ref] of graph.walk()) yield ref;
+      })(this),
+      value,
+      limit,
     );
-    return Object.freeze({
-      values: Object.freeze(matches.slice(0, limit).map(([, , ref]) => ref)),
-      total: matches.length,
-    });
   }
-}
-
-function compareCodePoints(left: string, right: string): number {
-  const leftPoints = [...left];
-  const rightPoints = [...right];
-  for (let index = 0; index < Math.min(leftPoints.length, rightPoints.length); index += 1) {
-    const difference =
-      (leftPoints[index]?.codePointAt(0) ?? 0) - (rightPoints[index]?.codePointAt(0) ?? 0);
-    if (difference !== 0) return difference;
-  }
-  return leftPoints.length - rightPoints.length;
-}
-
-function codePointLength(value: string): number {
-  return [...value].length;
 }

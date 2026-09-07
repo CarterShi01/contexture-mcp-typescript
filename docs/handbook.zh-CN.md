@@ -125,6 +125,26 @@ TypeScript 中的 `modelMayOpen` 有意使用 boolean：省略或 `true` 表示 
 non-container 的 `known` 为空，其他 `known` 会按 canonical 顺序排序，`scope` 是 resolution 停止处的
 node name。普通 runtime call 对未知 capability 仍会保持原有的 refusal surface。
 
+### 已编译 Index 查询
+
+`compileRuntimeApplication(...).index` 是公开且不可变的 `Index` facade（兼容类型名
+`CompiledApplication` 仍然保留）。它记录一次 compilation snapshot：`has`、`size`、`isBound`、
+root group、canonical `find`、`tool`、parent/child 与 dependency 查询都不会重新运行 factory，
+也不会获取 Channels。`nodesWithRefs`、`skills` 与 `rolesWithRefs` 按声明顺序 depth-first 遍历
+containment；`rolesByLevel` 按 breadth-first 遍历 Role。它们都不会跟随 `uses`，因为该 overlay
+可以合法地形成 cycle。
+
+`matchingRefs(value, limit)` 依次按完整 prefix、最后 segment prefix、任意 segment prefix 和
+substring 对完整编译地址空间排序；tie-breaker 为 Unicode code-point length 和 order。其 `total`
+是截断前数量；负 `limit` 会有意返回零个值，不会意外扩大受限 response。`signpost(ref)` 只返回
+ancestor ref 与直接 sub-Role count；`crossings()` 列出离开其 root 的声明 `uses` edge。两者都是
+结构事实，不是 disclosure card。
+
+`bindingOf(ref)` 与 `schemaOf(tool)` 仅适用于 bound runtime Index。disclosure-only Index 仍支持
+结构查询，但会拒绝这些 execution fact。schema、node value、pair 与结果 collection 都不可变。
+`Index` 从 `@contexture/mcp/server` 导出；声明 root 则有意保持 SDK-neutral。`SelectedGraph` 在同一
+matcher 上只处理 selected ref，因此不会泄露另一个 request root。
+
 ## 3. 选择正确的节点
 
 | 使用  | 适用情形                                         |

@@ -21,6 +21,9 @@ export type {
   CompiledRole,
   CompiledSkill,
   CompiledTool,
+  Index,
+  ReferenceCrossing,
+  SignpostLevel,
 } from './model/compiler.js';
 export { Disclosure, RefusedError } from './model/disclosure.js';
 export type { Discovery, RoutingCard } from './model/disclosure.js';

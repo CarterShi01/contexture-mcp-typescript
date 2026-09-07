@@ -20,7 +20,8 @@ import {
   NodeNotFoundError,
   UnresolvedReferenceError,
 } from '../foundation/errors.js';
-import { bindTool, type ToolBinding } from './binding.js';
+import { bindTool, type JsonObject, type ToolBinding } from './binding.js';
+import { compareCodePoints, matchingRefs, type ReferenceMatches } from './reference-queries.js';
 
 const SEPARATOR = '/';
 
@@ -53,16 +54,39 @@ export interface CompiledTool extends CompiledNodeBase {
 
 export type CompiledNode = CompiledRole | CompiledSkill | CompiledTool;
 
-export interface CompiledApplication {
+/** One undisclosed ancestor and the number of direct Role choices below it. */
+export interface SignpostLevel {
+  readonly ref: string;
+  readonly subRoleCount: number;
+}
+
+/** One declared `uses` edge whose target belongs to another root. */
+export interface ReferenceCrossing {
+  readonly sourceRef: string;
+  readonly targetRef: string;
+  readonly targetRoot: string;
+}
+
+/**
+ * Immutable compiled facts for one complete Contexture forest.
+ *
+ * This is the TypeScript-native Index facade. Queries never re-run lazy
+ * factories, open Channels, or follow `uses` while traversing containment.
+ */
+export interface Index {
   readonly name: string;
   readonly roots: readonly CompiledNode[];
   readonly modelRoots: readonly CompiledNode[];
   readonly promptRoots: readonly CompiledNode[];
   readonly channels: ChannelHandle | undefined;
   readonly executionBound: boolean;
+  readonly isBound: boolean;
   readonly size: number;
+  has(ref: string): boolean;
   find(ref: string): CompiledNode;
   tool(ref: string): CompiledTool;
+  bindingOf(ref: string): ToolBinding;
+  schemaOf(node: CompiledNode): JsonObject;
   refOf(node: CompiledNode): string;
   parentOf(node: CompiledNode): CompiledRole | undefined;
   childrenOf(node: CompiledNode): readonly CompiledNode[];
@@ -70,7 +94,17 @@ export interface CompiledApplication {
   dependentsOf(ref: string): readonly string[];
   ofKind<K extends NodeKind>(kind: K): readonly Extract<CompiledNode, { readonly kind: K }>[];
   walk(): IterableIterator<readonly [string, CompiledNode]>;
+  nodesWithRefs(): IterableIterator<readonly [string, CompiledNode]>;
+  skills(): IterableIterator<readonly [string, CompiledSkill]>;
+  rolesWithRefs(): IterableIterator<readonly [string, CompiledRole]>;
+  rolesByLevel(): IterableIterator<readonly [string, CompiledRole]>;
+  matchingRefs(value: string, limit: number): ReferenceMatches;
+  signpost(ref: string): readonly SignpostLevel[];
+  crossings(): IterableIterator<ReferenceCrossing>;
 }
+
+/** Backward-compatible name for the native immutable {@link Index} facade. */
+export type CompiledApplication = Index;
 
 interface CompilationState {
   readonly byRef: Map<string, CompiledNode>;
@@ -381,7 +415,7 @@ function deriveDependents(
   return new Map([...dependents].map(([ref, sources]) => [ref, Object.freeze([...sources])]));
 }
 
-class ImmutableIndex implements CompiledApplication {
+class ImmutableIndex implements Index {
   readonly executionBound: boolean;
   readonly size: number;
   readonly roots: readonly CompiledNode[];
@@ -414,6 +448,14 @@ class ImmutableIndex implements CompiledApplication {
     );
     this.#dependents = new Map(dependents);
     Object.freeze(this);
+  }
+
+  get isBound(): boolean {
+    return this.executionBound;
+  }
+
+  has(ref: string): boolean {
+    return this.#byRef.has(ref);
   }
 
   find(ref: string): CompiledNode {
@@ -487,6 +529,25 @@ class ImmutableIndex implements CompiledApplication {
     return node;
   }
 
+  bindingOf(ref: string): ToolBinding {
+    if (!this.executionBound) {
+      throw new ModelValidationError(
+        'This Index is disclosure-only and has no executable bindings. Compile a bound Index for runtime execution.',
+      );
+    }
+    const binding = this.tool(ref).binding;
+    if (binding === undefined) {
+      throw new ModelValidationError(
+        `Tool ${JSON.stringify(ref)} has no executable binding in this Index.`,
+      );
+    }
+    return binding;
+  }
+
+  schemaOf(node: CompiledNode): JsonObject {
+    return this.bindingOf(this.refOf(node)).schema;
+  }
+
   refOf(node: CompiledNode): string {
     const ref = this.#refByNode.get(node);
     if (ref === undefined) throw new ModelValidationError('Node is not registered in this Index.');
@@ -500,6 +561,7 @@ class ImmutableIndex implements CompiledApplication {
   }
 
   childrenOf(node: CompiledNode): readonly CompiledNode[] {
+    this.refOf(node);
     return node.kind === 'role'
       ? Object.freeze([...node.children, ...node.skills, ...node.tools])
       : EMPTY_NODES;
@@ -524,6 +586,65 @@ class ImmutableIndex implements CompiledApplication {
   *walk(): IterableIterator<readonly [string, CompiledNode]> {
     yield* this.#byRef.entries();
   }
+
+  *nodesWithRefs(): IterableIterator<readonly [string, CompiledNode]> {
+    for (const [ref, node] of this.walk()) yield Object.freeze([ref, node]);
+  }
+
+  *skills(): IterableIterator<readonly [string, CompiledSkill]> {
+    for (const node of this.ofKind('skill')) yield Object.freeze([this.refOf(node), node]);
+  }
+
+  *rolesWithRefs(): IterableIterator<readonly [string, CompiledRole]> {
+    for (const [ref, node] of this.walk()) {
+      if (node.kind === 'role') yield Object.freeze([ref, node]);
+    }
+  }
+
+  *rolesByLevel(): IterableIterator<readonly [string, CompiledRole]> {
+    const queue: Array<readonly [string, CompiledRole]> = this.roots.flatMap((node) =>
+      node.kind === 'role' ? [[this.refOf(node), node] as const] : [],
+    );
+    for (let cursor = 0; cursor < queue.length; cursor += 1) {
+      const entry = queue[cursor];
+      if (entry === undefined) continue;
+      const [ref, role] = entry;
+      yield Object.freeze([ref, role]);
+      for (const child of this.childrenOf(role)) {
+        if (child.kind === 'role') queue.push([this.refOf(child), child]);
+      }
+    }
+  }
+
+  matchingRefs(value: string, limit: number): ReferenceMatches {
+    return matchingRefs(this.#byRef.keys(), value, limit);
+  }
+
+  signpost(ref: string): readonly SignpostLevel[] {
+    const canonical = this.refOf(this.find(ref));
+    const parts = canonical.split(SEPARATOR);
+    const levels: SignpostLevel[] = [];
+    for (let depth = 1; depth < parts.length; depth += 1) {
+      const ancestor = parts.slice(0, depth).join(SEPARATOR);
+      const subRoleCount = this.childrenOf(this.find(ancestor)).filter(
+        (node) => node.kind === 'role',
+      ).length;
+      levels.push(Object.freeze({ ref: ancestor, subRoleCount }));
+    }
+    return Object.freeze(levels);
+  }
+
+  *crossings(): IterableIterator<ReferenceCrossing> {
+    for (const [sourceRef, node] of this.walk()) {
+      const sourceRoot = sourceRef.split(SEPARATOR)[0] ?? '';
+      for (const targetRef of node.uses) {
+        const targetRoot = targetRef.split(SEPARATOR)[0] ?? '';
+        if (sourceRoot !== targetRoot) {
+          yield Object.freeze({ sourceRef, targetRef, targetRoot });
+        }
+      }
+    }
+  }
 }
 
 const EMPTY_NODES: readonly CompiledNode[] = Object.freeze([]);
@@ -531,17 +652,4 @@ const EMPTY_REFS: readonly string[] = Object.freeze([]);
 
 function sorted(values: readonly string[]): readonly string[] {
   return [...values].sort(compareCodePoints);
-}
-
-/** Match Python's `sorted(str)` ordering rather than the host locale or UTF-16 units. */
-function compareCodePoints(left: string, right: string): number {
-  const leftPoints = [...left];
-  const rightPoints = [...right];
-  const length = Math.min(leftPoints.length, rightPoints.length);
-  for (let index = 0; index < length; index += 1) {
-    const difference =
-      (leftPoints[index]?.codePointAt(0) ?? 0) - (rightPoints[index]?.codePointAt(0) ?? 0);
-    if (difference !== 0) return difference;
-  }
-  return leftPoints.length - rightPoints.length;
 }

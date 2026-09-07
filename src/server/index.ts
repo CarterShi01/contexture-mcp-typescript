@@ -10,6 +10,16 @@ import { Publications } from './surface/publications.js';
 
 export { compileRuntimeApplication, compileStructuralApplication } from './application.js';
 export type { DisclosureApplication, RuntimeApplication } from './application.js';
+export type {
+  CompiledApplication,
+  CompiledNode,
+  CompiledRole,
+  CompiledSkill,
+  CompiledTool,
+  Index,
+  ReferenceCrossing,
+  SignpostLevel,
+} from '../core/model/compiler.js';
 export { RestRouter, RestSurface } from './rest.js';
 export type {
   Authenticator,

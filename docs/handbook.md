@@ -150,6 +150,31 @@ empty reference or a non-container, and otherwise is canonically sorted;
 `scope` is the node name where resolution stopped. Normal runtime calls
 continue to render unknown capabilities as their existing refusal surface.
 
+### Compiled Index queries
+
+`compileRuntimeApplication(...).index` is the public, immutable `Index`
+facade (also retained under the compatibility type name `CompiledApplication`).
+It records one compilation snapshot: `has`, `size`, `isBound`, root groups,
+canonical `find`, `tool`, parent/child and dependency queries never run a
+factory or acquire Channels. `nodesWithRefs`, `skills`, and `rolesWithRefs`
+walk containment depth-first in declaration order; `rolesByLevel` walks Roles
+breadth-first. None follows `uses`, because that overlay may legally cycle.
+
+`matchingRefs(value, limit)` ranks the whole compiled address space by full
+prefix, final-segment prefix, any-segment prefix, then substring; ties use
+Unicode code-point length and order. Its `total` is pre-limit, and a negative
+limit deliberately yields no values rather than expanding a bounded response.
+`signpost(ref)` returns only ancestor refs and direct sub-Role counts;
+`crossings()` lists declared `uses` edges that leave their root. Both are
+structural facts, not disclosure cards.
+
+`bindingOf(ref)` and `schemaOf(tool)` are available only on a bound runtime
+Index. A disclosure-only Index still supports structural queries but rejects
+those execution facts. Schemas, node values, pairs, and result collections are
+immutable. `Index` is exported from `@contexture/mcp/server`; the declaration
+root intentionally remains SDK-neutral. `SelectedGraph` uses the same matcher
+over only its selected refs, so it cannot leak another request root.
+
 ## 3. Choose the right node
 
 | Use   | When it belongs there                                                 |
