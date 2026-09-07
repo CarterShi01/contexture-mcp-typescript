@@ -6,7 +6,6 @@ import { defineApplication } from '../src/index.js';
 import {
   ApplicationRuntime,
   DISCLOSURE_GATEWAY,
-  DisclosureAPI,
   EXECUTION_GATEWAY,
   Gateway,
   GATEWAY,
@@ -19,7 +18,7 @@ import {
   compileApplication,
   Disclosure,
 } from '../src/core/index.js';
-import { compileRuntimeApplication } from '../src/server/index.js';
+import { compileRuntimeApplication, DisclosureAPI } from '../src/server/index.js';
 
 function gateway(calls: { value: number }) {
   const index = compileApplication(
@@ -151,6 +150,26 @@ test('DisclosureAPI exposes an independent, stateless navigation half', async ()
   );
   await assert.rejects(
     api.open('operations/missing'),
+    (error: unknown) =>
+      error instanceof RefusedError &&
+      error.cause instanceof NodeNotFoundError &&
+      error.message.includes('contexture_open'),
+  );
+
+  const attenuated = new DisclosureAPI(
+    application.disclosure.select(RootSelection.only('operations')),
+  );
+  assert.deepEqual(
+    [...attenuated.selectedGraph().walk()].map(([ref]) => ref),
+    ['operations', 'operations/change'],
+  );
+  await assert.rejects(
+    attenuated.openForAPerson('other'),
+    (error: unknown) =>
+      error instanceof RootOutsideSelectionError && !(error instanceof RefusedError),
+  );
+  await assert.rejects(
+    attenuated.openForAPerson('operations/missing'),
     (error: unknown) =>
       error instanceof RefusedError &&
       error.cause instanceof NodeNotFoundError &&
