@@ -76,6 +76,14 @@ lazy declaration 在 compilation 时会校验 node 的 `name`、`description`、
 `uses`。打开 Role 同样会返回自己的 instructions 及其 contained member 的单层 routing card。这些有界
 card 使声明的 reference cycle 保持安全，也避免一次 open 展开无关 procedure。
 
+`defineTool(...)` 是 TypeScript 原生的 executable Tool constructor。它会立即校验 Tool identity、strict
+Zod input、handler 和 `uses` shape，并 snapshot `uses` list。省略 `readOnly` 时默认是 `false`：未分类的
+Tool 会按 writing 处理，这与 Python 的 `read_only` default 一致。推荐使用该 constructor，因为 bare object
+没有 constructor default；它仍会在 compilation 时再次校验。每个 bound Tool 都会 snapshot 声明的 name、handler
+和渲染出的 JSON schema，因此之后修改 caller-owned declaration 不会改变已经 serving 的 card 或 call path。
+没有 Binding 的 Tool 只可存在于 disclosure-only Index；其 routing card 有意省略 `read_only` 与
+`input_schema`，获取 Binding 或尝试 runtime call 都会得到 typed model-validation failure。
+
 active Tool 或 Role 声明 `uses` 时也采用同一条单层规则。被引用的 node 是 routing card，因此该 response
 绝不会展开它们自身的 instructions 或 dependencies。disclosure-only Tool 仍是 structural：其 card 同时省略
 `read_only` 与 `input_schema`，但显式 open 的 Tool 仍可列出直接的 structural `uses` card。root selection 会在

@@ -35,6 +35,7 @@ export type {
   SkillDeclaration,
   ToolCallContext,
   ToolDeclaration,
+  ToolDefinition,
 } from './core/model/declarations.js';
 export type { CleanupRegistrar } from './core/model/channels.js';
 export type {

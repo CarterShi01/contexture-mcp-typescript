@@ -84,6 +84,19 @@ instructions plus one-level routing cards for contained members. These bounded
 cards keep declared reference cycles safe and prevent a single open from
 expanding an unrelated procedure.
 
+`defineTool(...)` is the native executable Tool constructor. It validates the
+Tool identity, strict Zod input, handler, and `uses` shape immediately, and
+snapshots its `uses` list. Its omitted `readOnly` defaults to `false`: an
+unclassified Tool is treated as writing, just as Python's `read_only` default.
+The constructor is the recommended TypeScript declaration form because a bare
+object has no constructor defaults; it is still validated again when compiled.
+Each bound Tool snapshots the declared name, handler, and rendered JSON schema,
+so later mutation of a caller-owned declaration cannot change a served card or
+call path. A Tool without a Binding is valid only in a disclosure-only Index;
+its routing cards intentionally omit `read_only` and `input_schema`, and every
+attempt to obtain a Binding or make a runtime call is a typed model-validation
+failure.
+
 The same one-layer rule applies when an active Tool or Role declares `uses`.
 Referenced nodes are routing cards, so their own instructions and dependencies
 are never expanded in that response. A disclosure-only Tool remains structural:

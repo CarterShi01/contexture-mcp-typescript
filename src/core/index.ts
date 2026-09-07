@@ -22,6 +22,7 @@ export type {
   SkillDeclaration,
   ToolCallContext,
   ToolDeclaration,
+  ToolDefinition,
 } from './model/declarations.js';
 export { defineTool } from './model/declarations.js';
 export { compileApplication, compileDisclosureApplication } from './model/compiler.js';
