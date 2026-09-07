@@ -91,6 +91,8 @@ value，并且 Tool 会在 `context.channels` 中收到同一个由框架拥有�
 client、configuration 或 test double。声明式 `defineApplication({ channels })` 刻意只接受 `Channels`
 instance；普通 handle 请使用 `ControllerManager`。Contexture 会覆盖 caller 试图提供的
 `context.channels` 值。
+Manager 生成的 raw-handle snapshot 可被 runtime 和 server compilation 接受；但 disclosure-only
+compilation 仍会拒绝任何已提供的 handle。
 
 每个可执行 server 都暴露同一个有序四工具 `Gateway`：discover、open、read-only invoke 和
 invoke。disclosure-only host 只暴露前两个 navigation entry。lookup 和 wrong-door failure 会在

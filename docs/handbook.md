@@ -103,6 +103,9 @@ is useful for clients, configuration, or test doubles that need no lifecycle.
 The declarative `defineApplication({ channels })` entry point intentionally
 accepts only a `Channels` instance; use `ControllerManager` for an ordinary
 handle. Contexture overwrites any caller-provided `context.channels` value.
+Manager-produced raw-handle snapshots are accepted by runtime and server
+compilation, while disclosure-only compilation continues to reject every
+present handle.
 
 Every executable server exposes the same ordered four-tool `Gateway`: discover,
 open, read-only invoke, and invoke. A disclosure-only host exposes its first
