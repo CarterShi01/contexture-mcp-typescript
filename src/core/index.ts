@@ -41,7 +41,6 @@ export { Disclosure, RefusedError } from './model/disclosure.js';
 export type { Discovery, RoutingCard } from './model/disclosure.js';
 export {
   ApplicationRuntime,
-  currentGraph,
   currentPrincipal,
   currentRootSelection,
   currentTelemetry,
@@ -50,6 +49,7 @@ export {
   WrongDoorError,
 } from './model/runtime.js';
 export type { NodeUsage, Telemetry, TelemetryEvent } from './model/runtime.js';
+export { currentGraph, withGraph } from './model/graph-context.js';
 export {
   RootOutsideSelectionError,
   RootSelection,

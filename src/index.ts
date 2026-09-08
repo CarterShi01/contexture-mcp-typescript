@@ -47,13 +47,13 @@ export type {
 export { Principal } from './core/foundation/principal.js';
 export type { PrincipalOptions } from './core/foundation/principal.js';
 export {
-  currentGraph,
   currentPrincipal,
   currentTelemetry,
   InMemoryTelemetry,
   reportTelemetry,
 } from './core/model/runtime.js';
 export type { NodeUsage, Telemetry, TelemetryEvent } from './core/model/runtime.js';
+export { currentGraph, withGraph } from './core/model/graph-context.js';
 export {
   RootOutsideSelectionError,
   RootSelection,

@@ -110,10 +110,13 @@ decoded token。其 `toString()`、Node `inspect`/console representation 以及 
 identity 穿过 MCP authentication adapter 时，如存在 `claims.iss`，它是 authoritative issuer。
 因此 machine credential 可以保留 `clientId`、issuer、scopes 与 claims，但没有 `subject`。
 
-`currentGraph()` 与 `currentTelemetry()` 更严格：它们只可在正在运行的 Tool 内访问，在没有 active
-invocation 时会拒绝访问。`ToolCallContext` 保留 Host 所有的 `host` 与取消用的 `signal`，而 Contexture
-会为这一次确切 call 重建其中的 `principal`、`channels`、`telemetry`、`graph` 与 `selection` facts。因而
-handler 不会收到与其 request-local context 不一致的 caller-supplied framework snapshot。
+`currentGraph()` 返回当前 asynchronous scope 中确切的 immutable graph。Runtime 会为每次 Tool call
+绑定 authoritative selected graph；framework-aware local scope 可以使用
+`withGraph(graph, operation)`。嵌套及重叠 scope 会跨 await 与 failure 恢复并隔离 graph identity；在
+Tool 或 `withGraph` scope 外访问则会被拒绝。`currentTelemetry()` 仍仅在 Tool 内可用。
+`ToolCallContext` 保留 Host 所有的 `host` 与取消用的 `signal`，而 Contexture 会为这一次确切 call
+重建其中的 `principal`、`channels`、`telemetry`、`graph` 与 `selection` facts。因而 handler 不会收到
+与其 request-local context 不一致的 caller-supplied framework snapshot。
 
 对于 imperative embedding phase，可使用 `ControllerManager` 通过 `registerRole`、
 `registerSkill`、`registerTool` 或 `registerRoot` 一次性捕获 root factory。它会校验完整的

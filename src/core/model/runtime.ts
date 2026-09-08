@@ -4,6 +4,7 @@ import type { CompiledApplication, CompiledTool } from './compiler.js';
 import { ModelValidationError, WrongDoorError } from '../foundation/errors.js';
 import type { Principal } from '../foundation/principal.js';
 import { RootSelection, SelectedGraph } from './root-selection.js';
+import { withGraph } from './graph-context.js';
 import type { ToolCallContext } from './declarations.js';
 import { withChannels } from './channels.js';
 import { InMemoryTelemetry, reportTelemetry, type Telemetry } from './telemetry.js';
@@ -42,10 +43,6 @@ export function currentPrincipal(): Principal | undefined {
 
 export function currentTelemetry(): Telemetry {
   return requireScope().telemetry;
-}
-
-export function currentGraph(): SelectedGraph {
-  return requireScope().graph;
 }
 
 export function currentRootSelection(): RootSelection {
@@ -165,7 +162,9 @@ export class ApplicationRuntime {
       if (binding === undefined) {
         throw new ModelValidationError('A disclosure-only Tool cannot be invoked.');
       }
-      const value = await SCOPE.run(scope, () => binding.call(arguments_, callContext));
+      const value = await withGraph(scope.graph, () =>
+        SCOPE.run(scope, () => binding.call(arguments_, callContext)),
+      );
       await reportTelemetry(this.telemetry, ref);
       return value;
     } catch (error) {
@@ -180,3 +179,4 @@ export class ApplicationRuntime {
 }
 
 export { InputValidationError, WrongDoorError } from '../foundation/errors.js';
+export { currentGraph, withGraph } from './graph-context.js';

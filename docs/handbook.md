@@ -132,12 +132,16 @@ When identity crosses the MCP authentication adapter, `claims.iss` is the
 authoritative issuer when present. A machine credential may therefore retain a
 `clientId`, issuer, scopes, and claims while having no `subject`.
 
-`currentGraph()` and `currentTelemetry()` are stricter: they are available only
-inside a running Tool and reject no-active-invocation access. `ToolCallContext`
-preserves Host-owned `host` and cancellation `signal`, while Contexture rebuilds
-its `principal`, `channels`, `telemetry`, `graph`, and `selection` facts for the
-exact call. A handler therefore cannot receive a caller-supplied framework
-snapshot that disagrees with its request-local context.
+`currentGraph()` returns the exact immutable graph in the current asynchronous
+scope. Runtime binds the authoritative selected graph for every Tool call;
+framework-aware local scopes can use `withGraph(graph, operation)`. Nested and
+overlapping scopes restore and isolate graph identity across awaits and
+failures, while access outside a Tool or `withGraph` scope is rejected.
+`currentTelemetry()` remains Tool-only. `ToolCallContext` preserves Host-owned
+`host` and cancellation `signal`, while Contexture rebuilds its `principal`,
+`channels`, `telemetry`, `graph`, and `selection` facts for the exact call. A
+handler therefore cannot receive a caller-supplied framework snapshot that
+disagrees with its request-local context.
 
 For an imperative embedding phase, `ControllerManager` captures a root factory
 once through `registerRole`, `registerSkill`, `registerTool`, or `registerRoot`.
