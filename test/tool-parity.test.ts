@@ -21,7 +21,7 @@ test('defineTool validates and snapshots its native declaration facts', () => {
     kind: 'tool',
     name: 'entry',
     description: 'Read the entry.',
-    input: z.strictObject({ value: z.string() }),
+    input: z.object({ value: z.string() }),
     invoke: (input) => input.value,
     uses,
   });
@@ -34,7 +34,7 @@ test('defineTool validates and snapshots its native declaration facts', () => {
     (tool.uses as unknown as { push(value: string): void }).push('forged');
   }, TypeError);
 
-  const validInput = z.strictObject({});
+  const validInput = z.object({});
   for (const invalid of [
     () =>
       defineTool({
@@ -97,7 +97,7 @@ test('a compiled Tool snapshots callable facts, uses, and its disclosed schema',
     name: 'entry',
     description: 'Read the entry.',
     readOnly: true,
-    input: z.strictObject({ value: z.string() }),
+    input: z.object({ value: z.string() }),
     invoke: (input: { readonly value: string }) => `original:${input.value}`,
     uses: ['target'],
   };
@@ -112,7 +112,7 @@ test('a compiled Tool snapshots callable facts, uses, and its disclosed schema',
             name: 'target',
             description: 'Read the target.',
             readOnly: true,
-            input: z.strictObject({}),
+            input: z.object({}),
             invoke: () => 'target',
           }),
       ],
@@ -125,7 +125,7 @@ test('a compiled Tool snapshots callable facts, uses, and its disclosed schema',
   source.description = 'Forged.';
   source.readOnly = false;
   source.uses[0] = 'forged';
-  (source as { input: unknown }).input = z.strictObject({ forged: z.boolean() });
+  (source as { input: unknown }).input = z.object({ forged: z.boolean() });
   (source as { invoke: unknown }).invoke = () => 'forged';
 
   assert.equal(compiled.name, 'entry');
@@ -197,7 +197,7 @@ test('a structural Tool is unbound, while the runtime enforces the writing door 
               kind: 'tool',
               name: 'change',
               description: 'Change one value.',
-              input: z.strictObject({ value: z.string() }),
+              input: z.object({ value: z.string() }),
               invoke: (input) => input.value,
             }),
         ],
@@ -222,7 +222,7 @@ test('a structural Tool is unbound, while the runtime enforces the writing door 
                 name: 'self',
                 description: 'Try to use itself.',
                 readOnly: true,
-                input: z.strictObject({}),
+                input: z.object({}),
                 invoke: () => 'never',
                 uses: ['self'],
               }),

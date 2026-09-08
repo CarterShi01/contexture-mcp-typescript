@@ -13,7 +13,7 @@ function run(command, args, cwd) {
   const result = spawnSync(command, args, {
     cwd,
     encoding: 'utf8',
-    shell: process.platform === 'win32',
+    shell: process.platform === 'win32' && command !== process.execPath,
   });
   if (result.status !== 0) {
     throw new Error(
@@ -63,18 +63,26 @@ try {
   const projectRoot = run(process.execPath, ['create-project.mjs'], temporaryRoot).trim();
   assert.equal(path.basename(projectRoot), 'generated-context');
 
-  const command = path.join(temporaryRoot, 'node_modules', '.bin', 'contexture');
+  const command = path.join(
+    temporaryRoot,
+    'node_modules',
+    '@contexture',
+    'mcp',
+    'dist',
+    'cli',
+    'main.js',
+  );
+  const runContexture = (args, cwd) => run(process.execPath, [command, ...args], cwd);
   assert.match(
-    run(command, ['check'], projectRoot),
+    runContexture(['check'], projectRoot),
     /OK generated-context: 1 role\(s\), 1 skill\(s\), 1 tool\(s\)/,
   );
-  assert.match(run(command, ['list'], projectRoot), /generated-context-assistant/);
-  const inspected = JSON.parse(run(command, ['inspect', '--all', '--json'], projectRoot));
+  assert.match(runContexture(['list'], projectRoot), /generated-context-assistant/);
+  const inspected = JSON.parse(runContexture(['inspect', '--all', '--json'], projectRoot));
   assert.equal(inspected.steps.length, 5);
   assert.deepEqual(
     JSON.parse(
-      run(
-        command,
+      runContexture(
         ['call', 'generated-context-assistant/ping', '--input', '{"target":"local"}'],
         projectRoot,
       ),

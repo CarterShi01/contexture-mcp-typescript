@@ -90,7 +90,7 @@ function tool(
   name: string,
   description: string,
   readOnly: boolean,
-  input = z.strictObject({}),
+  input = z.object({}),
   result: unknown = undefined,
 ) {
   return () => ({
@@ -133,13 +133,13 @@ function demo(): { readonly gateway: Gateway; readonly publications: Publication
                   'get_pod_status',
                   'Return the current phase, container state, and restart count of a Pod.',
                   true,
-                  z.strictObject({ namespace: z.string(), pod: z.string() }),
+                  z.object({ namespace: z.string(), pod: z.string() }),
                 ),
                 tool(
                   'get_pod_logs',
                   'Return the recent container logs for a Pod.',
                   true,
-                  z.strictObject({
+                  z.object({
                     namespace: z.string(),
                     pod: z.string(),
                     previous: z.boolean().default(false),
@@ -149,13 +149,13 @@ function demo(): { readonly gateway: Gateway; readonly publications: Publication
                   'get_pod_events',
                   'Return the Kubernetes events recorded against a Pod.',
                   true,
-                  z.strictObject({ namespace: z.string(), pod: z.string() }),
+                  z.object({ namespace: z.string(), pod: z.string() }),
                 ),
                 tool(
                   'crash_loop_runbook',
                   'How to diagnose a container that keeps restarting, and what not to do.',
                   true,
-                  z.strictObject({}),
+                  z.object({}),
                   fixture('CRASH_LOOP_RUNBOOK'),
                 ),
               ],
@@ -179,19 +179,19 @@ function demo(): { readonly gateway: Gateway; readonly publications: Publication
                   'get_rollout_status',
                   "Return the current and previous revision of a Deployment's rollout.",
                   true,
-                  z.strictObject({ namespace: z.string(), deployment: z.string() }),
+                  z.object({ namespace: z.string(), deployment: z.string() }),
                 ),
                 tool(
                   'roll_back_deployment',
                   "Restore a Deployment's previous revision, replacing its running Pods.",
                   false,
-                  z.strictObject({ namespace: z.string(), deployment: z.string() }),
+                  z.object({ namespace: z.string(), deployment: z.string() }),
                 ),
                 tool(
                   'rollback_policy',
                   'When a rollback is the right remediation, and what it costs.',
                   true,
-                  z.strictObject({}),
+                  z.object({}),
                   fixture('ROLLBACK_POLICY'),
                 ),
               ],

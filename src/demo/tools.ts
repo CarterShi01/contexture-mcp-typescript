@@ -32,7 +32,7 @@ export const getPodStatus = () =>
     name: 'get_pod_status',
     description: 'Return the current phase, container state, and restart count of a Pod.',
     readOnly: true,
-    input: z.strictObject({ namespace: z.string(), pod: z.string() }),
+    input: z.object({ namespace: z.string(), pod: z.string() }),
     invoke: ({ namespace, pod }) => {
       requirePod(namespace, pod);
       return POD_STATUS;
@@ -45,7 +45,7 @@ export const getPodLogs = () =>
     name: 'get_pod_logs',
     description: 'Return the recent container logs for a Pod.',
     readOnly: true,
-    input: z.strictObject({
+    input: z.object({
       namespace: z.string(),
       pod: z.string(),
       previous: z.boolean().default(false),
@@ -62,7 +62,7 @@ export const getPodEvents = () =>
     name: 'get_pod_events',
     description: 'Return the Kubernetes events recorded against a Pod.',
     readOnly: true,
-    input: z.strictObject({ namespace: z.string(), pod: z.string() }),
+    input: z.object({ namespace: z.string(), pod: z.string() }),
     invoke: ({ namespace, pod }) => {
       requirePod(namespace, pod);
       return POD_EVENTS;
@@ -75,7 +75,7 @@ export const getRolloutStatus = () =>
     name: 'get_rollout_status',
     description: "Return the current and previous revision of a Deployment's rollout.",
     readOnly: true,
-    input: z.strictObject({ namespace: z.string(), deployment: z.string() }),
+    input: z.object({ namespace: z.string(), deployment: z.string() }),
     invoke: ({ namespace, deployment }) => {
       requireDeployment(namespace, deployment);
       return ROLLOUT_STATUS;
@@ -88,7 +88,7 @@ export const rollBackDeployment = () =>
     name: 'roll_back_deployment',
     description: "Restore a Deployment's previous revision, replacing its running Pods.",
     readOnly: false,
-    input: z.strictObject({ namespace: z.string(), deployment: z.string() }),
+    input: z.object({ namespace: z.string(), deployment: z.string() }),
     invoke: ({ namespace, deployment }) => {
       requireDeployment(namespace, deployment);
       return `Rolled ${namespace}/${deployment} back from revision ${ROLLOUT_STATUS.current_revision} to ${ROLLOUT_STATUS.previous_revision} (${ROLLOUT_STATUS.previous_image}). The failing Pods have been replaced, so their logs and events are no longer available.`;

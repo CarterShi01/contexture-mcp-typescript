@@ -3,4 +3,4 @@ export const CONTEXTURE_SPECIFICATION_VERSION = '0.12' as const;
 
 /** The immutable upstream revision used by the conformance suite. */
 export const CONTEXTURE_SPECIFICATION_REVISION =
-  'e107a81a933c5eb5b4530e762311619be3a7a80f' as const;
+  '3b274421360d5569a23922bfc72b71d5828cf995' as const;

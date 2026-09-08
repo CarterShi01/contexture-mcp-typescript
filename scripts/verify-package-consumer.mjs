@@ -13,7 +13,7 @@ function run(command, args, cwd) {
   const result = spawnSync(command, args, {
     cwd,
     encoding: 'utf8',
-    shell: process.platform === 'win32',
+    shell: process.platform === 'win32' && command !== process.execPath,
   });
   if (result.status !== 0) {
     throw new Error(

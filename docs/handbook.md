@@ -43,7 +43,7 @@ const status = defineTool({
   name: 'status',
   description: 'Return one service status.',
   readOnly: true,
-  input: z.strictObject({ service: z.string() }),
+  input: z.object({ service: z.string() }),
   invoke: ({ service }) => ({ service, healthy: true }),
 });
 
@@ -69,6 +69,14 @@ export const app = defineApplication({
   ],
 });
 ```
+
+Each executable Tool has one Binding that owns both its disclosed JSON Schema
+and its validated invocation. Use `z.object(...)` for the Python-compatible
+default: unknown input keys are accepted and stripped before the handler, and
+the disclosed schema leaves `additionalProperties` unspecified. Contexture
+also preserves deliberate Zod policies: `z.strictObject(...)` discloses
+`additionalProperties: false` and rejects unknown keys, while
+`z.looseObject(...)` discloses and preserves them.
 
 `Contexture(declaration)` is the named public alias for `defineApplication`.
 Both preserve lazy factories and normalize the application name. Use a factory

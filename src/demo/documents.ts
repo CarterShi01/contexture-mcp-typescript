@@ -9,7 +9,7 @@ export const crashLoopRunbook = () =>
     name: 'crash_loop_runbook',
     description: 'How to diagnose a container that keeps restarting, and what not to do.',
     readOnly: true,
-    input: z.strictObject({}),
+    input: z.object({}),
     invoke: () => CRASH_LOOP_RUNBOOK,
   });
 
@@ -19,6 +19,6 @@ export const rollbackPolicy = () =>
     name: 'rollback_policy',
     description: 'When a rollback is the right remediation, and what it costs.',
     readOnly: true,
-    input: z.strictObject({}),
+    input: z.object({}),
     invoke: () => ROLLBACK_POLICY,
   });

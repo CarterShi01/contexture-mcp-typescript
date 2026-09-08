@@ -55,7 +55,7 @@ function nodeFixture() {
               name: 'status',
               description: 'Read status.',
               readOnly: true,
-              input: z.strictObject({}),
+              input: z.object({}),
               invoke: () => 'ok',
             }),
           ],

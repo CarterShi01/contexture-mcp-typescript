@@ -39,7 +39,7 @@ const status = defineTool({
   name: 'status',
   description: 'Return one service status.',
   readOnly: true,
-  input: z.strictObject({ service: z.string() }),
+  input: z.object({ service: z.string() }),
   invoke: ({ service }) => ({ service, healthy: true }),
 });
 
@@ -65,6 +65,12 @@ export const app = defineApplication({
   ],
 });
 ```
+
+每个可执行 Tool 都只有一个 Binding，并由它同时拥有所披露的 JSON Schema 与经过校验的调用路径。
+Python-compatible 默认写法是 `z.object(...)`：unknown input key 会被接受，并在进入 handler 前剥离；
+披露的 schema 不指定 `additionalProperties`。Contexture 也会保留明确选择的 Zod policy：
+`z.strictObject(...)` 披露 `additionalProperties: false` 并拒绝 unknown key，而
+`z.looseObject(...)` 会披露并保留这些 key。
 
 `Contexture(declaration)` 是 `defineApplication` 的具名公开别名。两者都会保留惰性
 factory 并规范化 application 名称。每个 Role、Skill、Tool 都应通过 factory 声明；编译会

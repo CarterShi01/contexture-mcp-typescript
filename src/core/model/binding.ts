@@ -36,13 +36,39 @@ export function bindTool<Input, Output>(declaration: ToolDeclaration<Input, Outp
 }
 
 function requireObjectSchema<Input>(schema: ZodType<Input>): ZodType<Input> {
+  requireProjectableSchema(schema);
   const rendered = z.toJSONSchema(schema, { io: 'input' });
-  if (rendered.type !== 'object' || rendered.additionalProperties !== false) {
-    throw new ModelValidationError(
-      'A Contexture Tool input schema must be a strict JSON object; unknown properties are not permitted.',
-    );
+  if (rendered.type !== 'object') {
+    throw new ModelValidationError('A Contexture Tool input schema must render as a JSON object.');
   }
   return schema;
+}
+
+function requireProjectableSchema(schema: ZodType): void {
+  const seen = new WeakSet<object>();
+  const visit = (value: unknown): void => {
+    if (typeof value !== 'object' || value === null || seen.has(value)) return;
+    seen.add(value);
+    const candidate = value as { readonly _zod?: { readonly def?: Record<string, unknown> } };
+    const definition = candidate._zod?.def;
+    if (definition !== undefined) {
+      const type = definition.type;
+      if (
+        definition.coerce === true ||
+        type === 'catch' ||
+        type === 'transform' ||
+        type === 'pipe'
+      ) {
+        throw new ModelValidationError(
+          'A Contexture Tool input schema cannot coerce, catch, or transform values because that behavior cannot be disclosed faithfully as JSON Schema.',
+        );
+      }
+      visit(definition);
+      return;
+    }
+    for (const item of Array.isArray(value) ? value : Object.values(value)) visit(item);
+  };
+  visit(schema);
 }
 
 function normalizeSchema(value: unknown): JsonObject {
@@ -55,17 +81,14 @@ function normalizeSchema(value: unknown): JsonObject {
 function normalizeObject(value: Record<string, unknown>): JsonObject {
   const result: Record<string, JsonValue> = {};
   for (const [key, item] of orderedEntries(value)) {
-    // Zod-generated names and strictness implementation are incidental to
-    // Contexture's schema contract; validation remains strict in the Binding.
-    if (
-      key === '$schema' ||
-      key === 'title' ||
-      (key === 'additionalProperties' && item === false) ||
-      (key === 'minimum' && item === -Number.MAX_SAFE_INTEGER) ||
-      (key === 'maximum' && item === Number.MAX_SAFE_INTEGER)
-    )
-      continue;
+    // Zod-generated names are incidental. Validation constraints and object
+    // unknown-key policy remain because this same schema enforces invocation.
+    if (key === '$schema' || key === 'title') continue;
     result[key] = normalizeValue(item);
+  }
+  if (value.type === 'number') {
+    if (result.minimum === undefined) result.minimum = -Number.MAX_VALUE;
+    if (result.maximum === undefined) result.maximum = Number.MAX_VALUE;
   }
   return Object.freeze(result);
 }

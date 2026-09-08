@@ -26,7 +26,7 @@ test('the official SDK exposes only the fixed gateway and preserves its two invo
         name: 'read-status',
         description: 'Read status.',
         readOnly: true,
-        input: z.strictObject({}),
+        input: z.object({}),
         invoke: () => 'healthy',
       }),
       () => ({
@@ -34,7 +34,7 @@ test('the official SDK exposes only the fixed gateway and preserves its two invo
         name: 'restart',
         description: 'Restart a service.',
         readOnly: false,
-        input: z.strictObject({ service: z.string() }),
+        input: z.object({ service: z.string() }),
         invoke: ({ service }) => `restarted ${service}`,
       }),
     ],
@@ -166,7 +166,7 @@ test('the official MCP path injects the live nominal Channels identity into Tool
           name: 'status',
           description: 'Read status.',
           readOnly: true,
-          input: z.strictObject({}),
+          input: z.object({}),
           invoke: (_input, context) => {
             assert.equal(context.channels, channels);
             assert.equal(channels.live, true);
@@ -235,7 +235,7 @@ test('the official MCP gateway shares compiled telemetry across opens and invoca
               name: 'status',
               description: 'Status.',
               readOnly: true,
-              input: z.strictObject({}),
+              input: z.object({}),
               invoke: () => 'ok',
             }),
           ],
