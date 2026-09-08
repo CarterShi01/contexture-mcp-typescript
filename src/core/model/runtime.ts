@@ -98,6 +98,11 @@ export class ApplicationRuntime {
     return this.invokeAtDoor(ref, arguments_, false, context, requested);
   }
 
+  /** Resolve the request-local root surface under both runtime ceilings. */
+  effectiveRootSelection(requested: RootSelection = RootSelection.all()): RootSelection {
+    return this.identityCeiling.intersect(this.selection).intersect(requested).resolve(this.index);
+  }
+
   /** Open application Channels around a Host serving lifetime. */
   async serve<Result>(operation: () => Promise<Result>): Promise<Result> {
     return withChannels(this.index.channels, operation);
@@ -133,10 +138,7 @@ export class ApplicationRuntime {
     context: ToolCallContext,
     requested: RootSelection,
   ): Promise<unknown> {
-    const selection = this.identityCeiling
-      .intersect(this.selection)
-      .intersect(requested)
-      .resolve(this.index);
+    const selection = this.effectiveRootSelection(requested);
     selection.requireRef(ref);
     const node = this.nodeAt(ref);
     if (node.readOnly !== readOnly) {

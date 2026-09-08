@@ -2,7 +2,7 @@ import type { ApplicationCompilation } from '../../core/model/compiler.js';
 import { ModelValidationError } from '../../core/foundation/errors.js';
 import { REFERENCE_SEPARATOR } from '../../core/foundation/vocabulary.js';
 import { RefusedError } from '../../core/model/disclosure.js';
-import { takenByPersonMessage } from '../../core/model/system-api.js';
+import { ExecutionAPI, takenByPersonMessage } from '../../core/model/system-api.js';
 import type { PromptDeclaration } from '../../core/mcp-interface/prompt.js';
 import type { ResourceDeclaration } from '../../core/mcp-interface/resource.js';
 import { Disclosure } from '../../core/model/disclosure.js';
@@ -37,12 +37,14 @@ export interface ResourceCard {
 export class Publications {
   readonly prompts: readonly PromptDeclaration[];
   readonly resources: readonly ResourceDeclaration[];
+  readonly execution: ExecutionAPI | undefined;
 
   constructor(
     readonly disclosure: Disclosure,
     readonly runtime: ApplicationRuntime | undefined,
     declaration: Pick<ApplicationCompilation, 'prompts' | 'resources'> = {},
   ) {
+    this.execution = runtime === undefined ? undefined : new ExecutionAPI(runtime);
     this.prompts = Object.freeze(
       (declaration.prompts ?? []).map((entry) => Object.freeze({ ...entry })),
     );
@@ -131,12 +133,12 @@ export class Publications {
   }
 
   async read(uri: string, selection: RootSelection = RootSelection.all()): Promise<unknown> {
-    if (this.runtime === undefined)
+    if (this.execution === undefined)
       throw new ModelValidationError('A disclosure-only application has no Resources.');
     const entry = this.resources.find((candidate) => candidate.uri === uri);
     if (entry === undefined)
       throw new ModelValidationError(`No Contexture Resource at ${JSON.stringify(uri)}.`);
-    return this.runtime.invokeReadOnly(entry.opens, undefined, {}, selection);
+    return this.execution.readForHost(entry.opens, {}, selection);
   }
 
   instructions(selection: RootSelection = RootSelection.all()): string {

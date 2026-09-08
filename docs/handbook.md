@@ -179,6 +179,18 @@ recovery while preserving `RootOutsideSelectionError` as a typed,
 non-leaking authorization result. The raw `Disclosure` remains available when
 a Host needs structured lookup facts instead.
 
+For an embedding that needs only invocation, `ExecutionAPI` exposes the two
+fixed execution doors over a bound `ApplicationRuntime`, without discovery or
+transport dependencies. `invokeReadOnly` and `invoke` carry the same principal,
+selected graph, root selection, telemetry, and abort signal as direct Runtime
+calls. Lookup and wrong-door mistakes become actionable `RefusedError` values
+with their typed causes preserved. Model calls cannot enter a `promptRoots`
+tree, and the effective root ceiling is checked before that refusal so an
+excluded Prompt root does not leak person ownership. `readForHost` (also
+available as `readForAHost`) is the separate no-argument, read-only host path:
+it may read a Prompt root, recovers stale lookups, and preserves an unexpected
+`WrongDoorError`.
+
 Optional framework telemetry is declared with `telemetry: new InMemoryTelemetry()`.
 It aggregates successful Role and Skill opens plus successful or failed Tool
 invocations as `NodeUsage` (`callCount`, `errorCount`, and `lastUsedAt`). It
@@ -379,9 +391,11 @@ export const app = defineApplication({
 ```
 
 Resources outside the Host's selected root surface are neither listed nor
-readable. Do not use a Resource for a parameterized lookup, a write, or a
-second implementation of a Tool; use the declared Tool through Contexture's
-gateway instead.
+readable. A Resource reader delegates to `ExecutionAPI.readForHost`, so it
+shares the validated binding, request context, and stale-lookup
+`RefusedError` boundary of a direct host read. Do not use a Resource for a
+parameterized lookup, a write, or a second implementation of a Tool; use the
+declared Tool through Contexture's gateway instead.
 
 ## 8. Publish an explicit REST surface
 

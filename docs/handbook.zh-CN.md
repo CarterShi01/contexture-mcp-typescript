@@ -145,6 +145,15 @@ root。普通 lookup failure 会在这个 API 边界转换为标准 `RefusedErro
 `RootOutsideSelectionError` 仍保持 typed 且不泄露信息。若 Host 需要结构化 lookup facts，仍可直接
 使用原始 `Disclosure`。
 
+只需要调用能力的 embedding 可使用 `ExecutionAPI`：它在 bound
+`ApplicationRuntime` 上公开两个固定 execution door，不包含 discovery surface 或 transport
+依赖。`invokeReadOnly` 与 `invoke` 会携带和直接 Runtime 调用相同的 principal、selected
+graph、root selection、telemetry 与 abort signal。普通 lookup 和 wrong-door error 会转换为
+保留 typed cause 的 `RefusedError`。model 不能调用 `promptRoots` tree；effective root
+ceiling 会先于该拒绝执行，避免被排除的 Prompt root 泄漏 person ownership。
+`readForHost`（也保留 `readForAHost`）是独立的无参数、read-only host path：它可以读取
+Prompt root，会恢复 stale lookup，并保留意外的 `WrongDoorError`。
+
 可选的 framework telemetry 可声明为 `telemetry: new InMemoryTelemetry()`。它会把成功的 Role 和
 Skill open，以及成功或失败的 Tool invocation 聚合成 `NodeUsage`（`callCount`、`errorCount` 和
 `lastUsedAt`）；不会观察 discover 或打开 Tool card。可使用自定义 `Telemetry` 做 export，exporter 的
@@ -307,8 +316,10 @@ export const app = defineApplication({
 });
 ```
 
-位于 Host selected root surface 外的 Resource 既不会被列出，也不可读取。不要用 Resource 实现带参数的
-查询、写操作，或再实现一次 Tool；这类能力应当通过 Contexture gateway 使用已声明的 Tool。
+位于 Host selected root surface 外的 Resource 既不会被列出，也不可读取。Resource reader 会委派给
+`ExecutionAPI.readForHost`，因此会共享 direct host read 的 validated binding、request context 与
+stale-lookup `RefusedError` boundary。不要用 Resource 实现带参数的查询、写操作，或再实现一次
+Tool；这类能力应当通过 Contexture gateway 使用已声明的 Tool。
 
 ## 8. 发布显式 REST surface
 

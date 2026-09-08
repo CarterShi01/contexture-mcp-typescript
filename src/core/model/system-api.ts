@@ -188,20 +188,126 @@ export class DisclosureAPI {
   }
 }
 
+/** SDK-neutral invocation half of Contexture's fixed gateway. */
+export class ExecutionAPI {
+  constructor(readonly runtime: ApplicationRuntime) {
+    if (!(runtime instanceof ApplicationRuntime)) {
+      throw new ModelValidationError('ExecutionAPI requires a bound ApplicationRuntime.');
+    }
+    Object.freeze(this);
+  }
+
+  /** The immutable ordered read-only/write invocation half. */
+  get tools(): readonly GatewayTool[] {
+    return EXECUTION_GATEWAY;
+  }
+
+  /** Immutable compiled facts underlying this execution projection. */
+  get index(): ApplicationRuntime['index'] {
+    return this.runtime.index;
+  }
+
+  async invokeReadOnly(
+    ref: string,
+    arguments_: unknown = undefined,
+    context: ToolCallContext = {},
+    selection: RootSelection = RootSelection.all(),
+  ): Promise<unknown> {
+    return this.invokeForModel(ref, arguments_, true, context, selection);
+  }
+
+  async invoke(
+    ref: string,
+    arguments_: unknown = undefined,
+    context: ToolCallContext = {},
+    selection: RootSelection = RootSelection.all(),
+  ): Promise<unknown> {
+    return this.invokeForModel(ref, arguments_, false, context, selection);
+  }
+
+  /**
+   * Read an argument-free, read-only target through a Host-controlled path.
+   * Prompt roots remain available here because the model does not own this door.
+   */
+  async readForHost(
+    ref: string,
+    context: ToolCallContext = {},
+    selection: RootSelection = RootSelection.all(),
+  ): Promise<unknown> {
+    try {
+      return await this.runtime.invokeReadOnly(ref, undefined, context, selection);
+    } catch (error) {
+      if (error instanceof NodeNotFoundError) {
+        throw new RefusedError(unresolvedMessage(error), { cause: error });
+      }
+      throw error;
+    }
+  }
+
+  /** Compatibility spelling retained for hosts that use the Python name. */
+  async readForAHost(
+    ref: string,
+    context: ToolCallContext = {},
+    selection: RootSelection = RootSelection.all(),
+  ): Promise<unknown> {
+    return this.readForHost(ref, context, selection);
+  }
+
+  private async invokeForModel(
+    ref: string,
+    arguments_: unknown,
+    readOnly: boolean,
+    context: ToolCallContext,
+    selection: RootSelection,
+  ): Promise<unknown> {
+    const effective = this.runtime.effectiveRootSelection(selection);
+    effective.requireRef(ref);
+    const root = ref.split(REFERENCE_SEPARATOR).find((segment) => segment.length > 0);
+    if (
+      root !== undefined &&
+      this.runtime.index.promptRoots.some((candidate) => candidate.name === root)
+    ) {
+      throw new RefusedError(takenByPersonMessage(ref));
+    }
+    return this.recover(() =>
+      readOnly
+        ? this.runtime.invokeReadOnly(ref, arguments_, context, selection)
+        : this.runtime.invoke(ref, arguments_, context, selection),
+    );
+  }
+
+  private async recover<Result>(operation: () => Promise<Result>): Promise<Result> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (error instanceof RootOutsideSelectionError || error instanceof RefusedError) throw error;
+      if (error instanceof WrongDoorError) {
+        throw new RefusedError(wrongDoorMessage(error.ref, error.readOnly), { cause: error });
+      }
+      if (error instanceof NodeNotFoundError) {
+        throw new RefusedError(unresolvedMessage(error), { cause: error });
+      }
+      throw error;
+    }
+  }
+}
+
 /** Transport-neutral implementation of Contexture's fixed gateway. */
 export class Gateway {
   readonly navigation: DisclosureAPI;
+  readonly execution: ExecutionAPI | undefined;
 
   constructor(
     readonly disclosure: Disclosure,
     readonly runtime: ApplicationRuntime | undefined,
   ) {
     this.navigation = new DisclosureAPI(disclosure);
+    this.execution = runtime === undefined ? undefined : new ExecutionAPI(runtime);
     Object.freeze(this);
   }
 
   get tools(): readonly GatewayTool[] {
-    return this.runtime === undefined ? DISCLOSURE_GATEWAY : GATEWAY;
+    return this.execution === undefined ? DISCLOSURE_GATEWAY : GATEWAY;
   }
 
   async discover(selection: RootSelection = RootSelection.all()): Promise<unknown> {
@@ -218,13 +324,12 @@ export class Gateway {
     context: ToolCallContext = {},
     selection: RootSelection = RootSelection.all(),
   ): Promise<unknown> {
-    const runtime = this.runtime;
-    if (runtime === undefined) {
+    if (this.execution === undefined) {
       throw new RefusedError(
         `This Contexture server is disclosure-only. Call ${DISCOVER_GATEWAY_NAME} or ${OPEN_GATEWAY_NAME} instead.`,
       );
     }
-    return this.recover(() => runtime.invokeReadOnly(ref, arguments_, context, selection));
+    return this.execution.invokeReadOnly(ref, arguments_, context, selection);
   }
 
   async invoke(
@@ -233,28 +338,12 @@ export class Gateway {
     context: ToolCallContext = {},
     selection: RootSelection = RootSelection.all(),
   ): Promise<unknown> {
-    const runtime = this.runtime;
-    if (runtime === undefined) {
+    if (this.execution === undefined) {
       throw new RefusedError(
         `This Contexture server is disclosure-only. Call ${DISCOVER_GATEWAY_NAME} or ${OPEN_GATEWAY_NAME} instead.`,
       );
     }
-    return this.recover(() => runtime.invoke(ref, arguments_, context, selection));
-  }
-
-  private async recover<Result>(operation: () => Promise<Result>): Promise<Result> {
-    try {
-      return await operation();
-    } catch (error) {
-      // A root ceiling is authorization, not a model-navigation mistake. Its
-      // typed error deliberately carries no alternative roots or recovery path.
-      if (error instanceof RootOutsideSelectionError || error instanceof RefusedError) throw error;
-      if (error instanceof WrongDoorError)
-        throw new RefusedError(wrongDoorMessage(error.ref, error.readOnly), { cause: error });
-      if (error instanceof NodeNotFoundError)
-        throw new RefusedError(unresolvedMessage(error), { cause: error });
-      throw error;
-    }
+    return this.execution.invoke(ref, arguments_, context, selection);
   }
 }
 

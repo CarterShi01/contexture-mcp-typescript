@@ -8,6 +8,7 @@ import { Disclosure } from '../core/model/disclosure.js';
 import { ApplicationRuntime } from '../core/model/runtime.js';
 import { InMemoryTelemetry } from '../core/model/telemetry.js';
 import type { Telemetry } from '../core/model/telemetry.js';
+import { ExecutionAPI } from '../core/model/system-api.js';
 import { normalizeApplication } from '../application.js';
 import { Publications } from './surface/publications.js';
 
@@ -16,6 +17,7 @@ export interface RuntimeApplication {
   readonly index: CompiledApplication;
   readonly disclosure: Disclosure;
   readonly runtime: ApplicationRuntime;
+  readonly execution: ExecutionAPI;
   readonly publications: Publications;
   readonly telemetry: Telemetry;
 }
@@ -38,10 +40,12 @@ export function compileRuntimeApplication(declaration: ApplicationCompilation): 
     telemetry,
   });
   const runtime = new ApplicationRuntime(index, { telemetry });
+  const execution = new ExecutionAPI(runtime);
   return Object.freeze({
     index,
     disclosure,
     runtime,
+    execution,
     telemetry,
     publications: new Publications(disclosure, runtime, normalized),
   });

@@ -66,6 +66,7 @@ export {
   DISCLOSURE_GATEWAY,
   DisclosureAPI,
   EXECUTION_GATEWAY,
+  ExecutionAPI,
   Gateway,
   GATEWAY,
   takenByPersonMessage,
