@@ -371,8 +371,28 @@ npx contexture demo --transport streamable-http --port 8000
 ```
 
 stdio 是默认 transport。只有在明确配置 Host 与网络时才使用 `--transport streamable-http`。
-非 loopback 启动需要对应的 Host、origin 和 anonymous-access 决策；应处理 server option error，
-而不是放宽这些限制。
+非 loopback 启动需要对应的 Host/origin 策略，并且必须提供 `auth` 或显式设置
+`allowAnonymous: true`；应处理 server option error，而不是放宽这些限制。
+
+程序化 HTTP 启动应把 request authentication 与 body boundary 放在 transport policy 上：
+
+```ts
+const options = new ContextureOptions({
+  transport: 'streamable-http',
+  auth,
+  maxRequestBodyBytes: 1024 * 1024,
+  path: '/mcp',
+});
+const handle = await buildServer(application).start(options);
+```
+
+现有调用方仍可使用 `buildServer(application, { auth })`，但不能同时在这里和
+`ContextureOptions` 中设置 auth。stdio 会拒绝 HTTP-only option（包括 auth、body size 和
+request-local root selection）。path 必须以 `/` 开头，不能包含 `?` 或 `#`，并使用
+URL 规范化后的百分号编码形式。无论 overflow 来自声明的 Content-Length 还是 chunked
+stream，body limit 都会在 MCP dispatch 前返回 413。绑定后，Contexture 会验证实际 TCP
+host 并重新执行 public-bind policy；只有 `localhost`、`127.0.0.1` 和规范 IPv6 loopback
+会被视为等价。
 
 程序化启动时，`ContextureOptions` 还接受 `logLevel: 'debug' | 'info' | 'warn' |
 'error'`。Contexture 的生命周期日志始终写入 stderr，因此 MCP stdio 独占 stdout。

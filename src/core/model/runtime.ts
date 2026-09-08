@@ -56,6 +56,7 @@ export function currentRootSelection(): RootSelection {
 
 /** Transport-neutral validated invocation over a bound compiled Index. */
 export class ApplicationRuntime {
+  readonly #activeInvocations = new Set<Promise<unknown>>();
   readonly selection: RootSelection;
   readonly identityCeiling: RootSelection;
   readonly telemetry: Telemetry;
@@ -102,7 +103,30 @@ export class ApplicationRuntime {
     return withChannels(this.index.channels, operation);
   }
 
-  private async invokeAtDoor(
+  /** Wait until every invocation already admitted to this runtime has settled. */
+  async waitForIdle(): Promise<void> {
+    while (this.#activeInvocations.size > 0) {
+      await Promise.allSettled([...this.#activeInvocations]);
+    }
+  }
+
+  private invokeAtDoor(
+    ref: string,
+    arguments_: unknown,
+    readOnly: boolean,
+    context: ToolCallContext,
+    requested: RootSelection,
+  ): Promise<unknown> {
+    const invocation = this.executeAtDoor(ref, arguments_, readOnly, context, requested);
+    this.#activeInvocations.add(invocation);
+    void invocation.then(
+      () => this.#activeInvocations.delete(invocation),
+      () => this.#activeInvocations.delete(invocation),
+    );
+    return invocation;
+  }
+
+  private async executeAtDoor(
     ref: string,
     arguments_: unknown,
     readOnly: boolean,

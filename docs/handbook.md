@@ -452,8 +452,30 @@ npx contexture demo --transport streamable-http --port 8000
 
 Stdio is the default. Use `--transport streamable-http` only with a deliberate
 Host/network configuration. Non-loopback startup requires the corresponding
-Host, origin, and anonymous-access decisions; see the server option errors
-rather than weakening them.
+Host/origin policy plus either `auth` or an explicit `allowAnonymous: true`;
+see the server option errors rather than weakening them.
+
+For programmatic HTTP startup, put request authentication and the body boundary
+on the transport policy:
+
+```ts
+const options = new ContextureOptions({
+  transport: 'streamable-http',
+  auth,
+  maxRequestBodyBytes: 1024 * 1024,
+  path: '/mcp',
+});
+const handle = await buildServer(application).start(options);
+```
+
+`buildServer(application, { auth })` remains supported for existing callers,
+but setting auth there and in `ContextureOptions` is an error. HTTP-only options
+(including auth, body size, and request-local root selection) are rejected with
+stdio. Paths begin with `/`, contain neither `?` nor `#`, and use their
+URL-canonical percent-encoded form. The body limit returns 413 before MCP
+dispatch for both declared and chunked overflow. After binding, Contexture
+verifies the concrete TCP host and reapplies public-bind policy; only
+`localhost`, `127.0.0.1`, and canonical IPv6 loopback are treated as equivalent.
 
 `ContextureOptions` also accepts `logLevel: 'debug' | 'info' | 'warn' |
 'error'` for programmatic startup. Contexture lifecycle records always use

@@ -4,6 +4,7 @@ import {
   type Server as NodeServer,
   type ServerResponse,
 } from 'node:http';
+import type { Socket } from 'node:net';
 import { Readable } from 'node:stream';
 
 import {
@@ -22,7 +23,7 @@ import { PACKAGE_VERSION } from '../core/foundation/vocabulary.js';
 import { compileRuntimeApplication, type RuntimeApplication } from './application.js';
 import { createContextureMcpServer, type ContextureMcpServer } from './index.js';
 import { buildInstructions } from './instructions.js';
-import { ContextureOptions } from './options.js';
+import { ContextureOptions, ServeError, validateBoundHost, validateHttpAccess } from './options.js';
 import { configureLogging, log } from './logging.js';
 import { Auth, principalOf } from './identity.js';
 import type { RootSelector } from './root-selector.js';
@@ -91,7 +92,19 @@ export class ContextureServer {
     options: ContextureOptions = new ContextureOptions(),
   ): Promise<HttpServerHandle | undefined> {
     configureLogging(options.logLevel);
-    return options.transport === 'stdio' ? this.serveStdio() : this.listenHttp(options);
+    if (options.auth !== undefined && this.auth !== undefined) {
+      throw new ServeError(
+        'State HTTP auth in ContextureOptions or buildServer options, not both.',
+      );
+    }
+    if (options.transport === 'stdio') {
+      if (this.auth !== undefined || this.rootSelector !== undefined)
+        throw new ServeError('stdio cannot use HTTP identity or root selection.');
+      return this.serveStdio();
+    }
+    const httpOptions = withLegacyAuth(options, this.auth);
+    validateHttpAccess(httpOptions);
+    return this.listenHttp(httpOptions);
   }
 
   private async serveStdio(): Promise<undefined> {
@@ -115,71 +128,150 @@ export class ContextureServer {
     const stopped = new Promise<void>((resolve) => {
       stop = resolve;
     });
-    void this.application.runtime
-      .serve(async () => {
-        const handler = createMcpHandler(
-          (context) => this.buildForSelection(this.selectionForRequest(context)).server,
-          {
-            responseMode: 'json',
-          },
-        );
-        const gate = this.auth?.gate();
-        const node = createServer(async (request, response) => {
-          try {
-            if (new URL(request.url ?? '/', options.url).pathname !== options.resolvedPath) {
-              response.writeHead(404).end('Not Found');
-              return;
-            }
-            const webRequest = nodeRequest(request, options);
-            const rejected =
-              (options.allowedHosts.length === 0
-                ? undefined
-                : hostHeaderValidationResponse(webRequest, [...options.allowedHosts])) ??
-              (options.allowedOrigins.length === 0
-                ? undefined
-                : originValidationResponse(webRequest, [...options.allowedOrigins]));
-            if (rejected !== undefined) {
-              await writeResponse(response, rejected);
-              return;
-            }
-            const authInfo = gate === undefined ? undefined : await gate(webRequest);
-            if (authInfo instanceof Response) {
-              await writeResponse(response, authInfo);
-              return;
-            }
-            await writeResponse(
+    const serving = this.application.runtime.serve(async () => {
+      const handler = createMcpHandler(
+        (context) => this.buildForSelection(this.selectionForRequest(context)).server,
+        {
+          responseMode: 'json',
+        },
+      );
+      const gate = options.auth?.gate();
+      const activeRequests = new Set<Promise<void>>();
+      const requestControllers = new Map<Promise<void>, AbortController>();
+      const serveRequest = async (
+        request: IncomingMessage,
+        response: ServerResponse,
+        signal: AbortSignal,
+      ): Promise<void> => {
+        try {
+          if (new URL(request.url ?? '/', options.url).pathname !== options.resolvedPath) {
+            response.writeHead(404).end('Not Found');
+            return;
+          }
+          const webRequest = await nodeRequest(request, options, signal);
+          const rejected =
+            (options.allowedHosts.length === 0
+              ? undefined
+              : hostHeaderValidationResponse(webRequest, [...options.allowedHosts])) ??
+            (options.allowedOrigins.length === 0
+              ? undefined
+              : originValidationResponse(webRequest, [...options.allowedOrigins]));
+          if (rejected !== undefined) {
+            await writeResponse(response, rejected);
+            return;
+          }
+          const authInfo = gate === undefined ? undefined : await gate(webRequest);
+          if (authInfo instanceof Response) {
+            await writeResponse(response, authInfo);
+            return;
+          }
+          await writeResponse(
+            response,
+            await handler.fetch(webRequest, authInfo === undefined ? {} : { authInfo }),
+          );
+        } catch (error) {
+          if (response.destroyed || response.writableEnded) return;
+          if (error instanceof RequestBodyTooLargeError) {
+            response.writeHead(413, { 'content-type': 'text/plain; charset=utf-8' });
+            response.end(error.message);
+            return;
+          }
+          response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
+          response.end(error instanceof Error ? error.message : 'Contexture HTTP request failed.');
+        }
+      };
+      const node = createServer((request, response) => {
+        const controller = new AbortController();
+        const abort = () => {
+          if (!response.writableFinished)
+            controller.abort(new Error('HTTP request connection closed.'));
+        };
+        const socket = request.socket;
+        request.once('aborted', abort);
+        socket.once('close', abort);
+        response.once('close', abort);
+        response.once('error', abort);
+        const active = serveRequest(request, response, controller.signal);
+        activeRequests.add(active);
+        requestControllers.set(active, controller);
+        void active.then(
+          () =>
+            forgetRequest(
+              active,
+              request,
               response,
-              await handler.fetch(webRequest, authInfo === undefined ? {} : { authInfo }),
+              socket,
+              abort,
+              activeRequests,
+              requestControllers,
+            ),
+          (error: unknown) => {
+            forgetRequest(
+              active,
+              request,
+              response,
+              socket,
+              abort,
+              activeRequests,
+              requestControllers,
             );
-          } catch (error) {
-            response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
-            response.end(
+            log(
+              'error',
               error instanceof Error ? error.message : 'Contexture HTTP request failed.',
             );
+          },
+        );
+      });
+      let cleanupPromise: Promise<void> | undefined;
+      const cleanup = (): Promise<void> => {
+        cleanupPromise ??= (async () => {
+          const listenerClosing = node.listening ? close(node) : Promise.resolve();
+          for (const controller of requestControllers.values()) {
+            controller.abort(new Error('Contexture HTTP server is closing.'));
           }
-        });
+          node.closeAllConnections();
+          const [listenerResult, handlerResult] = await Promise.allSettled([
+            listenerClosing,
+            handler.close(),
+          ]);
+          await settleActiveRequests(activeRequests);
+          await this.application.runtime.waitForIdle();
+          if (listenerResult.status === 'rejected') throw listenerResult.reason;
+          if (handlerResult.status === 'rejected') throw handlerResult.reason;
+        })();
+        return cleanupPromise;
+      };
+      try {
         try {
-          await listen(node, options.resolvedHost, options.resolvedPort);
+          await listen(node, tcpBindHost(options.resolvedHost), options.resolvedPort);
         } catch (error) {
-          await handler.close();
+          if (isNameResolutionError(error)) {
+            throw new ServeError(
+              `Could not resolve ContextureOptions host ${JSON.stringify(options.resolvedHost)}.`,
+              { cause: error },
+            );
+          }
           throw error;
         }
         const address = node.address();
         if (address === null || typeof address === 'string')
-          throw new Error('HTTP server did not expose a TCP address.');
+          throw new ServeError('HTTP server did not expose a TCP address.');
+        await validateBoundHost(options, address.address);
         const handle: HttpServerHandle = Object.freeze({
-          url: `http://${options.resolvedHost}:${address.port}${options.resolvedPath}`,
+          url: `http://${formatUrlHost(options.resolvedHost)}:${address.port}${options.resolvedPath}`,
           close: async () => {
-            await close(node);
             stop?.();
+            await serving;
           },
         });
         log('info', `Serving MCP on ${handle.url}`);
         started?.(handle);
         await stopped;
-        await handler.close();
-      })
-      .catch((error: unknown) => failed?.(error));
+      } finally {
+        await cleanup();
+      }
+    });
+    void serving.catch((error: unknown) => failed?.(error));
     return ready;
   }
 
@@ -215,7 +307,11 @@ function transportCompletion(transport: StdioServerTransport): Promise<void> {
   });
 }
 
-function nodeRequest(request: IncomingMessage, options: ContextureOptions): Request {
+async function nodeRequest(
+  request: IncomingMessage,
+  options: ContextureOptions,
+  signal: AbortSignal,
+): Promise<Request> {
   const url = new URL(request.url ?? '/', options.url);
   const method = request.method ?? 'GET';
   const headers = new Headers();
@@ -223,13 +319,49 @@ function nodeRequest(request: IncomingMessage, options: ContextureOptions): Requ
     if (value === undefined) continue;
     headers.set(name, Array.isArray(value) ? value.join(', ') : value);
   }
-  if (method === 'GET' || method === 'HEAD') return new Request(url, { method, headers });
+  if (options.maxRequestBodyBytes !== undefined) {
+    const bytes = await boundedBody(request, options.maxRequestBodyBytes);
+    if (method === 'GET' || method === 'HEAD') return new Request(url, { method, headers, signal });
+    const body = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength,
+    ) as ArrayBuffer;
+    return new Request(url, { method, headers, body, signal });
+  }
+  if (method === 'GET' || method === 'HEAD') return new Request(url, { method, headers, signal });
   return new Request(url, {
     method,
     headers,
     body: Readable.toWeb(request) as ReadableStream,
     duplex: 'half',
+    signal,
   } as RequestInit);
+}
+
+class RequestBodyTooLargeError extends Error {
+  constructor(readonly limit: number) {
+    super(`Request body exceeds the configured ${limit}-byte limit.`);
+  }
+}
+
+async function boundedBody(request: IncomingMessage, limit: number): Promise<Uint8Array> {
+  const declared = request.headers['content-length'];
+  if (declared !== undefined && Number(declared) > limit) {
+    request.resume();
+    throw new RequestBodyTooLargeError(limit);
+  }
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const value of request) {
+    const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value as Uint8Array);
+    size += chunk.byteLength;
+    if (size > limit) {
+      request.resume();
+      throw new RequestBodyTooLargeError(limit);
+    }
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks, size);
 }
 
 async function writeResponse(response: ServerResponse, source: Response): Promise<void> {
@@ -239,10 +371,34 @@ async function writeResponse(response: ServerResponse, source: Response): Promis
     return;
   }
   await new Promise<void>((resolve, reject) => {
-    Readable.fromWeb(source.body as import('node:stream/web').ReadableStream)
-      .on('error', reject)
-      .on('end', resolve)
-      .pipe(response);
+    const body = Readable.fromWeb(source.body as import('node:stream/web').ReadableStream);
+    let settled = false;
+    const finish = (error?: unknown): void => {
+      if (settled) return;
+      settled = true;
+      body.off('error', fail);
+      response.off('error', fail);
+      response.off('finish', succeed);
+      response.off('close', closed);
+      if (error !== undefined) {
+        if (!body.destroyed) body.destroy();
+        if (!response.destroyed) response.destroy();
+        reject(error);
+      } else {
+        resolve();
+      }
+    };
+    const fail = (error: unknown): void => finish(error);
+    const succeed = (): void => finish();
+    const closed = (): void => {
+      if (response.writableFinished) succeed();
+      else fail(new Error('HTTP response connection closed before completion.'));
+    };
+    body.once('error', fail);
+    response.once('error', fail);
+    response.once('finish', succeed);
+    response.once('close', closed);
+    body.pipe(response);
   });
 }
 
@@ -260,4 +416,56 @@ function close(server: NodeServer): Promise<void> {
   return new Promise((resolve, reject) => {
     server.close((error) => (error === undefined ? resolve() : reject(error)));
   });
+}
+
+function withLegacyAuth(options: ContextureOptions, auth: Auth | undefined): ContextureOptions {
+  if (auth === undefined) return options;
+  return new ContextureOptions({
+    transport: options.transport,
+    ...(options.host === undefined ? {} : { host: options.host }),
+    ...(options.port === undefined ? {} : { port: options.port }),
+    ...(options.path === undefined ? {} : { path: options.path }),
+    auth,
+    allowedHosts: options.allowedHosts,
+    allowedOrigins: options.allowedOrigins,
+    allowAnonymous: options.allowAnonymous,
+    logLevel: options.logLevel,
+    ...(options.maxRequestBodyBytes === undefined
+      ? {}
+      : { maxRequestBodyBytes: options.maxRequestBodyBytes }),
+  });
+}
+
+function formatUrlHost(host: string): string {
+  return host.includes(':') && !(host.startsWith('[') && host.endsWith(']')) ? `[${host}]` : host;
+}
+
+function tcpBindHost(host: string): string {
+  return host.startsWith('[') && host.endsWith(']') ? host.slice(1, -1) : host;
+}
+
+function isNameResolutionError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null || !('code' in error)) return false;
+  return ['ENOTFOUND', 'EAI_AGAIN', 'EAI_FAIL', 'EAI_NODATA'].includes(String(error.code));
+}
+
+function forgetRequest(
+  active: Promise<void>,
+  request: IncomingMessage,
+  response: ServerResponse,
+  socket: Socket,
+  abort: () => void,
+  activeRequests: Set<Promise<void>>,
+  requestControllers: Map<Promise<void>, AbortController>,
+): void {
+  request.off('aborted', abort);
+  socket.off('close', abort);
+  response.off('close', abort);
+  response.off('error', abort);
+  activeRequests.delete(active);
+  requestControllers.delete(active);
+}
+
+async function settleActiveRequests(activeRequests: ReadonlySet<Promise<void>>): Promise<void> {
+  while (activeRequests.size > 0) await Promise.allSettled([...activeRequests]);
 }

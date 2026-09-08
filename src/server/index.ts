@@ -169,7 +169,10 @@ export function createContextureMcpServer(
               gateway.invokeReadOnly(
                 ref,
                 arguments_,
-                { principal: principalOf(context.http?.authInfo) },
+                {
+                  principal: principalOf(context.http?.authInfo),
+                  signal: context.mcpReq.signal,
+                },
                 selection,
               ),
             ),
@@ -188,7 +191,10 @@ export function createContextureMcpServer(
               gateway.invoke(
                 ref,
                 arguments_,
-                { principal: principalOf(context.http?.authInfo) },
+                {
+                  principal: principalOf(context.http?.authInfo),
+                  signal: context.mcpReq.signal,
+                },
                 selection,
               ),
             ),

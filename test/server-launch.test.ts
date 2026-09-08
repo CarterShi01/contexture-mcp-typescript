@@ -1,12 +1,19 @@
 import assert from 'node:assert/strict';
+import { createServer, request as httpRequest } from 'node:http';
 import test from 'node:test';
 
 import { LATEST_PROTOCOL_VERSION } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
-import { currentPrincipal, defineApplication, Principal } from '../src/index.js';
+import { Channels, currentPrincipal, defineApplication, Principal } from '../src/index.js';
 import { app } from '../src/demo/server.js';
-import { Auth, buildServer, ContextureOptions, HeaderRootSelector } from '../src/server/index.js';
+import {
+  Auth,
+  buildServer,
+  ContextureOptions,
+  HeaderRootSelector,
+  ServeError,
+} from '../src/server/index.js';
 
 test('the native streamable HTTP launcher binds the official MCP transport and closes cleanly', async () => {
   const server = buildServer(app);
@@ -53,6 +60,7 @@ test('the HTTP launcher rejects an unauthenticated request before MCP dispatch',
       headers: { 'content-type': 'application/json' },
       body: '{}',
     });
+
     assert.equal(denied.status, 401);
     assert.match(denied.headers.get('www-authenticate') ?? '', /Bearer/);
     const accepted = await fetch(handle.url, {
@@ -65,6 +73,287 @@ test('the HTTP launcher rejects an unauthenticated request before MCP dispatch',
     await handle.close();
   }
 });
+
+test('ContextureOptions owns HTTP auth and rejects legacy conflicts and stdio HTTP policy', async () => {
+  const identity = new Auth(
+    {
+      verify: async () => new Principal({ subject: 'operator', claims: { exp: 2_000_000_000 } }),
+    },
+    { issuer: 'https://issuer.example', resource: 'https://mcp.example/mcp' },
+  );
+  await assert.rejects(
+    buildServer(app, { auth: identity }).start(
+      new ContextureOptions({ transport: 'streamable-http', auth: identity, port: 0 }),
+    ),
+    (error) => error instanceof ServeError && /not both/.test(error.message),
+  );
+  await assert.rejects(
+    buildServer(app, { auth: identity }).start(),
+    (error) => error instanceof ServeError && /stdio cannot use HTTP identity/.test(error.message),
+  );
+  await assert.rejects(
+    buildServer(app, { rootSelector: new HeaderRootSelector() }).start(),
+    (error) => error instanceof ServeError && /root selection/.test(error.message),
+  );
+  const publicOptions = new ContextureOptions({
+    transport: 'streamable-http',
+    host: '0.0.0.0',
+    port: 0,
+    allowedHosts: ['localhost:*'],
+  });
+  await assert.rejects(
+    buildServer(app).start(publicOptions),
+    (error) => error instanceof ServeError && /Pass auth/.test(error.message),
+  );
+  const legacyHandle = await buildServer(app, { auth: identity }).start(publicOptions);
+  if (legacyHandle === undefined)
+    throw new Error('HTTP startup unexpectedly returned no listener.');
+  await legacyHandle.close();
+
+  await assert.rejects(
+    buildServer(app).start(
+      new ContextureOptions({
+        transport: 'streamable-http',
+        host: 'contexture-does-not-exist.invalid',
+        auth: identity,
+        allowedHosts: ['contexture-does-not-exist.invalid:*'],
+      }),
+    ),
+    (error) =>
+      error instanceof ServeError &&
+      /Could not resolve ContextureOptions host/.test(error.message) &&
+      error.cause instanceof Error,
+  );
+});
+
+test('the HTTP launcher returns 413 for declared and chunked overflow before authentication', async () => {
+  let authentications = 0;
+  const identity = new Auth(
+    {
+      verify: async () => {
+        authentications += 1;
+        return new Principal({ subject: 'operator', claims: { exp: 2_000_000_000 } });
+      },
+    },
+    { issuer: 'https://issuer.example', resource: 'https://mcp.example/mcp' },
+  );
+  const handle = await buildServer(app).start(
+    new ContextureOptions({
+      transport: 'streamable-http',
+      port: 0,
+      auth: identity,
+      maxRequestBodyBytes: 32,
+    }),
+  );
+  if (handle === undefined) throw new Error('HTTP startup unexpectedly returned no listener.');
+  try {
+    const body = '{"jsonrpc":"2.0","id":1,"method":"tools/list"}';
+    assert.equal(await postStatus(handle.url, body, true), 413);
+    assert.equal(await postStatus(handle.url, body, false), 413);
+    assert.equal(await postStatus(handle.url, body, true, 'GET'), 413);
+    assert.equal(await postStatus(handle.url, body, true, 'HEAD'), 413);
+    assert.equal(authentications, 0);
+  } finally {
+    await handle.close();
+  }
+});
+
+test('localhost startup validates its concrete loopback listener and releases it on close', async () => {
+  const handle = await buildServer(app).start(
+    new ContextureOptions({ transport: 'streamable-http', host: 'localhost', port: 0 }),
+  );
+  if (handle === undefined) throw new Error('HTTP startup unexpectedly returned no listener.');
+  const endpoint = new URL(handle.url);
+  await handle.close();
+  const probe = createServer();
+  await new Promise<void>((resolve, reject) => {
+    probe.once('error', reject);
+    probe.listen(Number(endpoint.port), endpoint.hostname, () => {
+      probe.off('error', reject);
+      resolve();
+    });
+  });
+  await new Promise<void>((resolve, reject) =>
+    probe.close((error) => (error === undefined ? resolve() : reject(error))),
+  );
+});
+
+test('HTTP close waits for channel cleanup and propagates its failure', async () => {
+  const cleanupFailure = new Error('channel cleanup failed');
+  let releaseCleanup: (() => void) | undefined;
+  const cleanupReleased = new Promise<void>((resolve) => {
+    releaseCleanup = resolve;
+  });
+  let cleanupStarted = false;
+  const channels = new (class extends Channels {
+    open() {}
+
+    async close() {
+      cleanupStarted = true;
+      await cleanupReleased;
+      throw cleanupFailure;
+    }
+  })();
+  const lifecycleApp = defineApplication({
+    name: 'http-close-lifecycle',
+    channels,
+    roots: [
+      () => ({
+        kind: 'tool',
+        name: 'status',
+        description: 'Read status.',
+        readOnly: true,
+        input: z.strictObject({}),
+        invoke: () => 'ok',
+      }),
+    ],
+  });
+  const handle = await buildServer(lifecycleApp).start(
+    new ContextureOptions({ transport: 'streamable-http', port: 0 }),
+  );
+  if (handle === undefined) throw new Error('HTTP startup unexpectedly returned no listener.');
+
+  let closeSettled = false;
+  const closeResult = handle.close().then(
+    () => undefined,
+    (error: unknown) => error,
+  );
+  void closeResult.then(() => {
+    closeSettled = true;
+  });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(cleanupStarted, true);
+  assert.equal(closeSettled, false);
+  releaseCleanup?.();
+  assert.strictEqual(await closeResult, cleanupFailure);
+  assert.equal(closeSettled, true);
+});
+
+test('HTTP close terminates an incomplete request instead of blocking shutdown', async () => {
+  const handle = await buildServer(app).start(
+    new ContextureOptions({
+      transport: 'streamable-http',
+      port: 0,
+      maxRequestBodyBytes: 1024,
+    }),
+  );
+  if (handle === undefined) throw new Error('HTTP startup unexpectedly returned no listener.');
+
+  const pending = httpRequest(handle.url, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'transfer-encoding': 'chunked',
+    },
+  });
+  pending.on('error', () => {});
+  await new Promise<void>((resolve, reject) => {
+    pending.once('socket', (socket) => {
+      socket.once('connect', resolve);
+      socket.once('error', reject);
+    });
+    pending.write('{"jsonrpc":');
+  });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+
+  let timeout: NodeJS.Timeout | undefined;
+  try {
+    await Promise.race([
+      handle.close(),
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(() => reject(new Error('HTTP close remained blocked')), 1000);
+      }),
+    ]);
+  } finally {
+    if (timeout !== undefined) clearTimeout(timeout);
+    pending.destroy();
+  }
+});
+
+test(
+  'HTTP close waits for active Tool work before releasing Channels',
+  { timeout: 3000 },
+  async () => {
+    let markInvocationStarted!: () => void;
+    const invocationStarted = new Promise<void>((resolve) => {
+      markInvocationStarted = resolve;
+    });
+    let releaseInvocation!: () => void;
+    const invocationReleased = new Promise<void>((resolve) => {
+      releaseInvocation = resolve;
+    });
+    let invocationSignal: AbortSignal | undefined;
+    let channelsClosed = false;
+    const channels = new (class extends Channels {
+      open() {}
+      close() {
+        channelsClosed = true;
+      }
+    })();
+    const activeApp = defineApplication({
+      name: 'active-http-invocation',
+      channels,
+      roots: [
+        () => ({
+          kind: 'tool',
+          name: 'wait',
+          description: 'Wait until the test releases this invocation.',
+          readOnly: true,
+          input: z.strictObject({}),
+          invoke: async (_input, context) => {
+            invocationSignal = context.signal;
+            markInvocationStarted();
+            await invocationReleased;
+            return 'done';
+          },
+        }),
+      ],
+    });
+    const handle = await buildServer(activeApp).start(
+      new ContextureOptions({ transport: 'streamable-http', port: 0 }),
+    );
+    if (handle === undefined) throw new Error('HTTP startup unexpectedly returned no listener.');
+    try {
+      const body = JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {
+          name: 'contexture_invoke_read_only',
+          arguments: { ref: 'wait', arguments: {} },
+        },
+      });
+      const call = httpRequest(handle.url, {
+        method: 'POST',
+        headers: {
+          accept: 'application/json, text/event-stream',
+          'content-type': 'application/json',
+          'content-length': Buffer.byteLength(body),
+        },
+      });
+      call.on('error', () => {});
+      call.end(body);
+      await invocationStarted;
+      call.destroy();
+      await waitUntil(() => invocationSignal?.aborted === true);
+
+      let closeSettled = false;
+      const closing = handle.close().then(() => {
+        closeSettled = true;
+      });
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      assert.equal(channelsClosed, false);
+      assert.equal(closeSettled, false);
+
+      releaseInvocation();
+      await closing;
+      assert.equal(channelsClosed, true);
+    } finally {
+      releaseInvocation();
+      await handle.close();
+    }
+  },
+);
 
 test('the authenticated streamable MCP boundary carries complete request identity without inventing a subject', async () => {
   const auth = new Auth(
@@ -285,4 +574,42 @@ async function mcpStructuredResult(response: Response): Promise<unknown> {
   const data = text.match(/^data: (.+)$/m)?.[1] ?? text;
   const body = JSON.parse(data) as { readonly result?: { readonly structuredContent?: unknown } };
   return body.result?.structuredContent;
+}
+
+function postStatus(
+  url: string,
+  body: string,
+  declaredLength: boolean,
+  method = 'POST',
+): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const request = httpRequest(url, {
+      method,
+      headers: {
+        accept: 'application/json, text/event-stream',
+        authorization: 'Bearer accepted',
+        'content-type': 'application/json',
+        ...(declaredLength ? { 'content-length': Buffer.byteLength(body) } : {}),
+      },
+    });
+    request.once('error', reject);
+    request.once('response', (response) => {
+      response.resume();
+      response.once('end', () => resolve(response.statusCode ?? 0));
+    });
+    if (declaredLength) {
+      request.end(body);
+    } else {
+      request.write(body.slice(0, 20));
+      request.end(body.slice(20));
+    }
+  });
+}
+
+async function waitUntil(predicate: () => boolean): Promise<void> {
+  const deadline = Date.now() + 1000;
+  while (!predicate()) {
+    if (Date.now() >= deadline) throw new Error('Condition was not reached before timeout.');
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+  }
 }
