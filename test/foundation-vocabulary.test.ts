@@ -99,7 +99,7 @@ test('core reference parsing consumes the foundation separator, not a local spel
     }),
   );
   assert.equal(index.find(`${REFERENCE_SEPARATOR}${ref}${REFERENCE_SEPARATOR}`).name, 'status');
-  assert.throws(() => RootSelection.only(ref), /root refs only/);
+  assert.deepEqual(RootSelection.only(ref).selectors, [ref]);
 });
 
 test('model code does not import the sibling MCP primitive projection', async () => {

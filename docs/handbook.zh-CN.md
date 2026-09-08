@@ -106,10 +106,15 @@ active Tool 或 Role 声明 `uses` 时也采用同一条单层规则。被引用
 模型 open 会被拒绝，而具名 Prompt 或 `goto` 会为该人打开相同的 canonical active payload。
 `unrestricted()` 只移除 prompt-root 的模型所有权，保留已有的 root-selection ceiling。
 
-`RootSelection` 表示 all-roots 或精确 root allowlist：它会 trim 请求的 root name、拒绝
-descendant，并且只能收窄另一个 selection。`SelectedGraph` 只公开选中范围内的 `roots`、`walk`、
+`SurfaceSelection` 表示全部 capability，或由 exact path / direct-child selector 构成的 allowlist。
+exact ref 会把完整 subtree 提升为 surface root，而不会泄漏其 ancestor 或 sibling；末尾 `/*` 只展开
+direct member，绝不会跨越另一个 `/`。resolve 会校验 ref、拒绝没有匹配项的 wildcard，并把重叠 anchor
+归约为最小 antichain。intersection 按 path 计算，且只能继续收窄 selection。`RootSelection` 为 0.12
+client 保留为同一语义的 alias。`SelectedGraph` 只公开选中范围内的 `roots`、`walk`、
 `find`、`refOf`、`parentOf`、`childrenOf`、`usesOf` 与 `dependentsOf`；cross-root uses 和
-dependents 会被过滤。request header 使用同一 projection，不能泄露 identity ceiling 之外的 root。
+dependents 会被过滤。request header 使用同一 projection，不能泄露 identity ceiling 之外的 capability。
+`Contexture-Select` 是 canonical header；`Contexture-Roots` 作为大小写不敏感的 legacy fallback 保留，
+同时发送两者会被拒绝。
 `currentRootSelection()` 在 Tool 内返回 request-local projection，在 invocation 外返回兼容的
 all-roots 值。
 

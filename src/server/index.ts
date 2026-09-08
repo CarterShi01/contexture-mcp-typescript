@@ -86,8 +86,20 @@ export type { Transport } from './options.js';
 export { buildServer, ContextureServer, PACKAGE_VERSION } from './server.js';
 export type { HttpServerHandle } from './server.js';
 export { Launch, claudeCodeConfig, cliCommands, codexConfig, cursorConfig } from './launch.js';
-export { FixedRootSelector, HeaderRootSelector, ROOTS_HEADER } from './root-selector.js';
-export type { RootCeiling, RootSelector } from './root-selector.js';
+export {
+  FixedRootSelector,
+  FixedSurfaceSelector,
+  HeaderRootSelector,
+  HeaderSurfaceSelector,
+  ROOTS_HEADER,
+  SELECT_HEADER,
+} from './root-selector.js';
+export type {
+  RootCeiling,
+  RootSelector,
+  SurfaceCeiling,
+  SurfaceSelector,
+} from './root-selector.js';
 export { Auth, principalOf, PRINCIPAL_EXTRA } from './identity.js';
 export type { TokenVerifier } from './identity.js';
 
@@ -166,8 +178,9 @@ export function createContextureMcpServer(
             annotations: { readOnlyHint: true },
           },
           async ({ ref, arguments: arguments_ }, context) =>
-            toolResult(() =>
-              gateway.invokeReadOnly(
+            toolResult(() => {
+              publications?.checkModelOpen(ref, selection);
+              return gateway.invokeReadOnly(
                 ref,
                 arguments_,
                 {
@@ -175,8 +188,8 @@ export function createContextureMcpServer(
                   signal: context.mcpReq.signal,
                 },
                 selection,
-              ),
-            ),
+              );
+            }),
         );
         break;
       case INVOKE_GATEWAY_NAME:
@@ -188,8 +201,9 @@ export function createContextureMcpServer(
             annotations: { readOnlyHint: false },
           },
           async ({ ref, arguments: arguments_ }, context) =>
-            toolResult(() =>
-              gateway.invoke(
+            toolResult(() => {
+              publications?.checkModelOpen(ref, selection);
+              return gateway.invoke(
                 ref,
                 arguments_,
                 {
@@ -197,8 +211,8 @@ export function createContextureMcpServer(
                   signal: context.mcpReq.signal,
                 },
                 selection,
-              ),
-            ),
+              );
+            }),
         );
         break;
     }

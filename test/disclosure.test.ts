@@ -161,7 +161,7 @@ test('model navigation excludes prompt roots but person navigation reaches them'
   });
 });
 
-test('root selections are exact, monotonic, and hide cross-root dependency cards', () => {
+test('root selection aliases are path-aware, monotonic, and hide cross-surface dependency cards', () => {
   const index = compileApplication(
     defineApplication({
       name: 'roots',
@@ -191,10 +191,10 @@ test('root selections are exact, monotonic, and hide cross-root dependency cards
     uses: [],
   });
   assert.throws(() => selected.open('beta'), RootOutsideSelectionError);
-  assert.throws(() => RootSelection.only('alpha/child'), /root refs only/);
+  assert.deepEqual(RootSelection.only('alpha/child').selectors, ['alpha/child']);
   assert.throws(
     () => selected.select(RootSelection.only('beta')),
-    /effective root selection is empty/,
+    /effective surface selection is empty/,
   );
   assert.deepEqual(
     [...new SelectedGraph(index, RootSelection.only('alpha')).walk()].map(([ref]) => ref),

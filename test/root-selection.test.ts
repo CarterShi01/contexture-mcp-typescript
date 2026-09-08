@@ -3,11 +3,12 @@ import test from 'node:test';
 
 import { defineApplication } from '../src/index.js';
 import {
-  LookupFailure,
-  NodeNotFoundError,
+  Disclosure,
   RootOutsideSelectionError,
   RootSelection,
+  RootSelectionError,
   SelectedGraph,
+  SurfaceSelection,
   compileApplication,
 } from '../src/core/index.js';
 
@@ -52,17 +53,14 @@ function index() {
   );
 }
 
-test('SelectedGraph rejects excluded refs but leaves the canonical empty-ref diagnostic intact', () => {
+test('SelectedGraph rejects every ref outside the exact selected surface', () => {
   const compiled = index();
   const graph = new SelectedGraph(compiled, RootSelection.only('alpha'));
 
   assert.equal(graph.find('alpha/child').name, 'child');
   assert.throws(() => graph.find('beta'), RootOutsideSelectionError);
-  assert.throws(
-    () => graph.find(''),
-    (error: unknown) =>
-      error instanceof NodeNotFoundError && error.reason === LookupFailure.EMPTY_REF,
-  );
+  assert.throws(() => graph.find(''), RootOutsideSelectionError);
+  assert.throws(() => graph.find('/alpha/child'), RootOutsideSelectionError);
 });
 
 test('SelectedGraph projects parent and complete children inside a selected tree', () => {
@@ -73,6 +71,63 @@ test('SelectedGraph projects parent and complete children inside a selected tree
 
   assert.equal(graph.parentOf(child), alpha);
   assert.deepEqual(graph.childrenOf(alpha), [child]);
+});
+
+test('SurfaceSelection resolves exact paths to an antichain and expands direct children only', () => {
+  const compiled = index();
+  const selected = SurfaceSelection.only(['alpha', 'alpha/child']).resolve(compiled);
+  assert.deepEqual(selected.names, ['alpha']);
+  const wildcard = SurfaceSelection.only('alpha/*').resolve(compiled);
+  assert.deepEqual(wildcard.names, ['alpha/child']);
+  assert.equal(wildcard.containsRef('alpha/child/tool'), true);
+  assert.equal(wildcard.containsRef('alpha'), false);
+  for (const selectors of [[], ['alpha/**'], ['alpha/ch*'], ['alpha/*/inspect']]) {
+    assert.throws(() => SurfaceSelection.only(selectors), RootSelectionError);
+  }
+  let unknown: unknown;
+  try {
+    SurfaceSelection.only('missing').resolve(compiled);
+  } catch (error) {
+    unknown = error;
+  }
+  assert.ok(unknown instanceof RootSelectionError);
+  assert.doesNotMatch(unknown.message, /alpha|beta/);
+});
+
+test('SurfaceSelection intersection is path-aware, monotonic, and commutative', () => {
+  const alpha = RootSelection.only('alpha');
+  const child = RootSelection.only('alpha/child');
+  const both = RootSelection.only(['alpha', 'beta']);
+  assert.deepEqual(alpha.intersect(both).names, both.intersect(alpha).names);
+  assert.deepEqual(alpha.intersect(child).names, ['alpha/child']);
+  assert.deepEqual(RootSelection.all().intersect(alpha).names, ['alpha']);
+});
+
+test('SelectedGraph promotes a selected descendant and hides its parent', () => {
+  const compiled = index();
+  const graph = new SelectedGraph(compiled, SurfaceSelection.only('alpha/child'));
+  assert.deepEqual(
+    graph.roots.map((node) => graph.refOf(node)),
+    ['alpha/child'],
+  );
+  const child = graph.find('alpha/child');
+  assert.equal(graph.parentOf(child), undefined);
+  assert.deepEqual(
+    [...graph.walk()].map(([ref]) => ref),
+    ['alpha/child'],
+  );
+  assert.throws(() => graph.find('alpha'), RootOutsideSelectionError);
+});
+
+test('Disclosure discovers and opens a promoted descendant surface root', () => {
+  const compiled = index();
+  const disclosure = new Disclosure(compiled).select(SurfaceSelection.only('alpha/child'));
+  assert.deepEqual(
+    disclosure.discover().roles.map((card) => card.ref),
+    ['alpha/child'],
+  );
+  assert.equal(disclosure.open('alpha/child').ref, 'alpha/child');
+  assert.throws(() => disclosure.open('alpha'), RootOutsideSelectionError);
 });
 
 test('SelectedGraph matching uses projected Unicode code-point ordering and retains total before limit', () => {

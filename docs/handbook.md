@@ -127,12 +127,19 @@ open is refused, while the named Prompt or `goto` opens the same canonical
 active payload for that person. `unrestricted()` removes prompt-root model
 ownership only: it preserves the existing root-selection ceiling.
 
-`RootSelection` is an all-roots value or an exact root allowlist: it trims
-requested root names, rejects descendants, and can only attenuate another
-selection. `SelectedGraph` exposes only selected `roots`, `walk`, `find`,
+`SurfaceSelection` is an all-capabilities value or an exact path/direct-child
+selector allowlist. An exact ref promotes that complete subtree to a surface
+root without exposing its ancestors or siblings; a final `/*` expands direct
+members only, never crossing another `/`. Resolution validates refs, rejects
+empty wildcard matches, and reduces overlapping anchors to a minimal
+antichain. Intersection is path-aware and can only attenuate another
+selection. `RootSelection` remains an alias with the same semantics for
+0.12 clients. `SelectedGraph` exposes only selected `roots`, `walk`, `find`,
 `refOf`, `parentOf`, `childrenOf`, `usesOf`, and `dependentsOf`; cross-root
 uses and dependents are filtered. Request headers use the same projection and
-cannot disclose roots outside an identity ceiling. `currentRootSelection()`
+cannot disclose capabilities outside an identity ceiling. `Contexture-Select`
+is the canonical header; `Contexture-Roots` remains a case-insensitive legacy
+fallback, and sending both is rejected. `currentRootSelection()`
 returns the request-local projection inside a Tool and the compatibility
 all-roots value outside an invocation.
 

@@ -93,7 +93,7 @@ test('ContextureOptions owns HTTP auth and rejects legacy conflicts and stdio HT
   );
   await assert.rejects(
     buildServer(app, { rootSelector: new HeaderRootSelector() }).start(),
-    (error) => error instanceof ServeError && /root selection/.test(error.message),
+    (error) => error instanceof ServeError && /surface selection/.test(error.message),
   );
   const publicOptions = new ContextureOptions({
     transport: 'streamable-http',

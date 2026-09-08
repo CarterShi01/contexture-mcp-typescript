@@ -65,10 +65,13 @@ export {
 export type { NodeUsage, Telemetry, TelemetryEvent } from './core/model/runtime.js';
 export { currentGraph, withGraph } from './core/model/graph-context.js';
 export {
+  OutsideSelectionError,
   RootOutsideSelectionError,
   RootSelection,
   RootSelectionError,
   SelectedGraph,
+  SurfaceSelection,
+  SurfaceSelectionError,
 } from './core/model/root-selection.js';
 export {
   ContextureError,

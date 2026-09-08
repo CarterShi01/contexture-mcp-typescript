@@ -300,6 +300,16 @@ test('the official MCP path keeps Gateway recovery when Publications guard a res
               instructions: 'Ask.',
             }),
           ],
+          tools: [
+            () => ({
+              kind: 'tool' as const,
+              name: 'apply',
+              description: 'Apply.',
+              readOnly: false,
+              input: z.strictObject({}),
+              invoke: () => 'applied',
+            }),
+          ],
         }),
         () => ({
           kind: 'role' as const,
@@ -321,6 +331,12 @@ test('the official MCP path keeps Gateway recovery when Publications guard a res
           name: 'operations-change',
           opens: 'operations/change',
           description: 'Change.',
+          modelMayOpen: false,
+        },
+        {
+          name: 'operations-apply',
+          opens: 'operations/apply',
+          description: 'Apply.',
           modelMayOpen: false,
         },
         {
@@ -385,6 +401,18 @@ test('the official MCP path keeps Gateway recovery when Publications guard a res
     assert.equal(excluded.isError, true);
     const excludedText = String((excluded.content as Array<{ readonly text: string }>)[0]?.text);
     assert.doesNotMatch(excludedText, /opened by a person|operations/);
+
+    const invoked = response(
+      await sendAndWait(client, replies, 5, 'tools/call', {
+        name: 'contexture_invoke',
+        arguments: { ref: 'operations/apply', arguments: {} },
+      }),
+    );
+    assert.equal(invoked.isError, true);
+    assert.match(
+      String((invoked.content as Array<{ readonly text: string }>)[0]?.text),
+      /opened by a person/,
+    );
   } finally {
     await client.close();
     await adapter.server.close();

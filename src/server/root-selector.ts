@@ -1,60 +1,57 @@
 import type { Principal } from '../core/foundation/principal.js';
 import type { CompiledApplication } from '../core/model/compiler.js';
-import { RootSelection } from '../core/model/root-selection.js';
+import { SurfaceSelection, SurfaceSelectionError } from '../core/model/root-selection.js';
 
-/** The request header that can attenuate, but never assert, a root surface. */
+/** Canonical request header for path-selected capability surfaces. */
+export const SELECT_HEADER = 'Contexture-Select';
+/** Legacy request header retained for root-only clients. */
 export const ROOTS_HEADER = 'Contexture-Roots';
 
-/** Application policy deriving the maximum root surface for an authenticated caller. */
-export type RootCeiling = (principal: Principal | undefined) => RootSelection;
-
-/** Transport-neutral resolution of request facts into an immutable root surface. */
-export interface RootSelector {
+export type SurfaceCeiling = (principal: Principal | undefined) => SurfaceSelection;
+export interface SurfaceSelector {
   select(
     index: CompiledApplication,
     headers?: Readonly<Record<string, string>>,
     principal?: Principal,
-  ): RootSelection;
+  ): SurfaceSelection;
 }
 
-/** A fixed root surface, useful for stdio and single-tenant embeddings. */
-export class FixedRootSelector implements RootSelector {
-  constructor(readonly selection: RootSelection) {
+export class FixedSurfaceSelector implements SurfaceSelector {
+  constructor(readonly selection: SurfaceSelection) {
     Object.freeze(this);
   }
 
-  select(index: CompiledApplication): RootSelection {
+  select(index: CompiledApplication): SurfaceSelection {
     return this.selection.resolve(index);
   }
 }
 
-/**
- * Resolve a comma-separated root request header, intersecting it with an
- * optional identity-derived ceiling. A header is a request to see less, never
- * evidence that a caller may see more.
- */
-export class HeaderRootSelector implements RootSelector {
+/** Resolve a path selector header and intersect it with an identity ceiling. */
+export class HeaderSurfaceSelector implements SurfaceSelector {
   readonly header: string;
-  readonly ceiling: RootCeiling | undefined;
+  readonly legacyHeader: string | undefined;
+  readonly ceiling: SurfaceCeiling | undefined;
   readonly maxLength: number;
   readonly maxRoots: number;
 
   constructor(
     options: {
       readonly header?: string;
-      readonly ceiling?: RootCeiling;
+      readonly legacyHeader?: string | undefined;
+      readonly ceiling?: SurfaceCeiling;
       readonly maxLength?: number;
       readonly maxRoots?: number;
     } = {},
   ) {
-    this.header = options.header ?? ROOTS_HEADER;
+    this.header = options.header ?? SELECT_HEADER;
+    this.legacyHeader = 'legacyHeader' in options ? options.legacyHeader : ROOTS_HEADER;
     this.ceiling = options.ceiling;
     this.maxLength = options.maxLength ?? 4096;
     this.maxRoots = options.maxRoots ?? 128;
     if (!Number.isInteger(this.maxLength) || this.maxLength < 1)
-      throw new TypeError('HeaderRootSelector maxLength must be a positive integer.');
+      throw new TypeError('HeaderSurfaceSelector maxLength must be a positive integer.');
     if (!Number.isInteger(this.maxRoots) || this.maxRoots < 1)
-      throw new TypeError('HeaderRootSelector maxRoots must be a positive integer.');
+      throw new TypeError('HeaderSurfaceSelector maxRoots must be a positive integer.');
     Object.freeze(this);
   }
 
@@ -62,16 +59,31 @@ export class HeaderRootSelector implements RootSelector {
     index: CompiledApplication,
     headers: Readonly<Record<string, string>> = {},
     principal: Principal | undefined = undefined,
-  ): RootSelection {
+  ): SurfaceSelection {
     const raw = headerValue(headers, this.header);
-    let requested = RootSelection.all();
-    if (raw !== undefined) {
-      if (raw.length > this.maxLength)
-        throw new Error(`${this.header} exceeds the ${this.maxLength}-character limit.`);
-      const roots = [...new Set(raw.split(',').map((value) => value.trim()))];
-      if (roots.length > this.maxRoots)
-        throw new Error(`${this.header} exceeds the ${this.maxRoots}-root limit.`);
-      requested = RootSelection.only(roots);
+    const legacy =
+      this.legacyHeader === undefined || this.legacyHeader === this.header
+        ? undefined
+        : headerValue(headers, this.legacyHeader);
+    if (raw !== undefined && legacy !== undefined) {
+      throw new SurfaceSelectionError(
+        `Send either ${this.header} or ${this.legacyHeader}, not both.`,
+      );
+    }
+    const usedHeader = raw === undefined ? this.legacyHeader : this.header;
+    const value = raw ?? legacy;
+    let requested = SurfaceSelection.all();
+    if (value !== undefined) {
+      if (value.length > this.maxLength)
+        throw new SurfaceSelectionError(
+          `${String(usedHeader)} exceeds the ${this.maxLength}-character limit.`,
+        );
+      const selectors = value.split(',').map((item) => item.trim());
+      if (selectors.length > this.maxRoots)
+        throw new SurfaceSelectionError(
+          `${String(usedHeader)} exceeds the ${this.maxRoots}-${usedHeader === ROOTS_HEADER ? 'root' : 'selector'} limit.`,
+        );
+      requested = SurfaceSelection.only(selectors).resolve(index);
     }
     requested = requested.resolve(index);
     if (this.ceiling === undefined) return requested;
@@ -88,3 +100,9 @@ function headerValue(
   );
   return match?.[1];
 }
+
+// Compatibility names are aliases, not parallel root-only implementations.
+export { FixedSurfaceSelector as FixedRootSelector };
+export { HeaderSurfaceSelector as HeaderRootSelector };
+export type RootCeiling = SurfaceCeiling;
+export type RootSelector = SurfaceSelector;

@@ -61,10 +61,13 @@ export {
 export type { NodeUsage, Telemetry, TelemetryEvent } from './model/runtime.js';
 export { currentGraph, withGraph } from './model/graph-context.js';
 export {
+  OutsideSelectionError,
   RootOutsideSelectionError,
   RootSelection,
   RootSelectionError,
   SelectedGraph,
+  SurfaceSelection,
+  SurfaceSelectionError,
 } from './model/root-selection.js';
 export { bindTool } from './model/binding.js';
 export type { JsonObject, JsonValue, ToolBinding } from './model/binding.js';

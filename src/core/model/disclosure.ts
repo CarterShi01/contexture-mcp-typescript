@@ -95,9 +95,10 @@ export class Disclosure implements View<CompiledNode> {
   }
 
   discover(requested: RootSelection = RootSelection.all()): Discovery {
-    const roots = this.index.roots.filter((node) =>
-      this.modelCanSee(this.index.refOf(node), requested),
-    );
+    const selection = this.effectiveSelection(requested);
+    const roots = selection
+      .rootsIn(this.index)
+      .filter((node) => this.modelCanSee(this.index.refOf(node), selection));
     return groupCards(roots, this);
   }
 
@@ -242,7 +243,10 @@ function resolveRef(
   selection: RootSelection,
   candidates: readonly CompiledNode[],
 ): CompiledNode {
-  const roots = candidates.filter((root) => selection.containsRef(index.refOf(root)));
+  const candidateRoots = new Set(candidates.map((root) => index.refOf(root)));
+  const roots = selection
+    .rootsIn(index)
+    .filter((root) => candidateRoots.has(rootOf(index.refOf(root))));
   let node: CompiledNode;
   try {
     // The Index alone owns structured lookup facts. Gateway is the sole
@@ -255,7 +259,7 @@ function resolveRef(
     throw error;
   }
   const root = rootOf(ref);
-  if (roots.some((candidate) => candidate.name === root)) return node;
+  if (candidateRoots.has(root) && selection.containsRef(ref)) return node;
   throw selectedRootFailure(
     new NodeNotFoundError({
       reason: LookupFailure.NO_SUCH_ROOT,

@@ -21,6 +21,7 @@ import {
   createMcpServer,
   Gateway,
   Publications,
+  HeaderSurfaceSelector,
 } from '../src/server/index.js';
 
 test('the server seam uses the official MCP SDK', () => {
@@ -42,6 +43,24 @@ test('a sealed Contexture server builds its default adapter exactly once', () =>
   });
   const server = buildServer(declaration);
   assert.strictEqual(server.build(), server.build());
+});
+
+test('server accepts canonical surfaceSelector and rejects a legacy conflict', () => {
+  const declaration = defineApplication({
+    name: 'surface-selector-server',
+    roots: [
+      () => ({ kind: 'skill' as const, name: 'read', description: 'Read.', instructions: 'Read.' }),
+    ],
+  });
+  const selector = new HeaderSurfaceSelector();
+  assert.strictEqual(
+    buildServer(declaration, { surfaceSelector: selector }).surfaceSelector,
+    selector,
+  );
+  assert.throws(
+    () => buildServer(declaration, { surfaceSelector: selector, rootSelector: selector }),
+    /not both/,
+  );
 });
 
 test('the official initialization response carries generated or explicit Contexture instructions', async () => {

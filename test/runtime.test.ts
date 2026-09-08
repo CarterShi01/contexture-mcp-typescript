@@ -409,7 +409,7 @@ test('requested selection can only attenuate an identity ceiling and governs the
   await assert.rejects(narrowed.invokeReadOnly('beta'), RootOutsideSelectionError);
   await assert.rejects(
     narrowed.invokeReadOnly('alpha', undefined, {}, RootSelection.only('beta')),
-    /effective root selection is empty/,
+    /effective surface selection is empty/,
   );
 });
 

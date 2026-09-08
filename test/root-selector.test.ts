@@ -1,16 +1,34 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { defineApplication, Principal } from '../src/index.js';
+import { defineApplication, Principal, SurfaceSelection } from '../src/index.js';
 import { compileApplication, RootSelection, RootSelectionError } from '../src/core/index.js';
-import { HeaderRootSelector, ROOTS_HEADER } from '../src/server/index.js';
+import {
+  HeaderRootSelector,
+  HeaderSurfaceSelector,
+  ROOTS_HEADER,
+  SELECT_HEADER,
+} from '../src/server/index.js';
 
 function index() {
   return compileApplication(
     defineApplication({
       name: 'roots',
       roots: [
-        () => ({ kind: 'role', name: 'diagnose', description: 'Diagnose.', instructions: 'Read.' }),
+        () => ({
+          kind: 'role',
+          name: 'diagnose',
+          description: 'Diagnose.',
+          instructions: 'Read.',
+          children: [
+            () => ({
+              kind: 'role',
+              name: 'service',
+              description: 'Service.',
+              instructions: 'Inspect.',
+            }),
+          ],
+        }),
         () => ({ kind: 'role', name: 'release', description: 'Release.', instructions: 'Read.' }),
       ],
     }),
@@ -35,7 +53,7 @@ test('header root selection attenuates but cannot widen an identity ceiling', ()
   assert.equal(limited.containsRef('release/tool'), false);
   assert.throws(
     () => selector.select(compiled, { [ROOTS_HEADER]: 'release' }),
-    /effective root selection is empty/,
+    /effective surface selection is empty/,
   );
 });
 
@@ -63,7 +81,7 @@ test('header root selection validates size, count, and named roots', () => {
     unknown = error;
   }
   assert.ok(unknown instanceof RootSelectionError);
-  assert.match(unknown.message, /Unknown Contexture root selection: "missing"/);
+  assert.match(unknown.message, /Unknown or empty Contexture selector: "missing"/);
   assert.doesNotMatch(unknown.message, /diagnose|release/);
 });
 
@@ -72,6 +90,35 @@ test('header root selection trims and deduplicates without leaking excluded root
     [ROOTS_HEADER]: ' diagnose, diagnose ',
   });
   assert.deepEqual(selected.names, ['diagnose']);
-  assert.equal(selected.containsRef('/diagnose/child'), true);
+  assert.equal(selected.containsRef('diagnose/child'), true);
+  assert.equal(selected.containsRef('/diagnose/child'), false);
   assert.equal(selected.containsRef('release'), false);
+});
+
+test('surface header selects exact paths and direct children with legacy compatibility', () => {
+  const compiled = index();
+  const selector = new HeaderSurfaceSelector();
+  const exact = selector.select(compiled, { [SELECT_HEADER]: 'diagnose/service' });
+  const wildcard = selector.select(compiled, { [SELECT_HEADER]: 'diagnose/*' });
+  assert.deepEqual(exact.names, ['diagnose/service']);
+  assert.deepEqual(wildcard.names, exact.names);
+  assert.deepEqual(
+    new HeaderRootSelector().select(compiled, { 'contexture-roots': 'diagnose' }).names,
+    ['diagnose'],
+  );
+  assert.throws(
+    () =>
+      selector.select(compiled, {
+        [SELECT_HEADER]: 'diagnose',
+        [ROOTS_HEADER]: 'release',
+      }),
+    RootSelectionError,
+  );
+});
+
+test('surface ceiling can only narrow a path request', () => {
+  const selected = new HeaderSurfaceSelector({
+    ceiling: () => SurfaceSelection.only('diagnose'),
+  }).select(index(), { [SELECT_HEADER]: 'diagnose/service,release' });
+  assert.deepEqual(selected.names, ['diagnose/service']);
 });

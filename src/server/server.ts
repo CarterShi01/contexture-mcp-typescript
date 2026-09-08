@@ -26,7 +26,7 @@ import { buildInstructions } from './instructions.js';
 import { ContextureOptions, ServeError, validateBoundHost, validateHttpAccess } from './options.js';
 import { configureLogging, log } from './logging.js';
 import { Auth, principalOf } from './identity.js';
-import type { RootSelector } from './root-selector.js';
+import type { RootSelector, SurfaceSelector } from './root-selector.js';
 
 export { PACKAGE_VERSION } from '../core/foundation/vocabulary.js';
 
@@ -45,6 +45,7 @@ export class ContextureServer {
   readonly selection: RootSelection;
   readonly auth: Auth | undefined;
   readonly instructions: string | undefined;
+  readonly surfaceSelector: SurfaceSelector | undefined;
   readonly rootSelector: RootSelector | undefined;
 
   constructor(
@@ -54,6 +55,7 @@ export class ContextureServer {
       readonly selection?: RootSelection;
       readonly auth?: Auth;
       readonly instructions?: string;
+      readonly surfaceSelector?: SurfaceSelector;
       readonly rootSelector?: RootSelector;
     } = {},
   ) {
@@ -63,6 +65,10 @@ export class ContextureServer {
     this.selection = (options.selection ?? RootSelection.all()).resolve(this.application.index);
     this.auth = options.auth;
     this.instructions = options.instructions;
+    if (options.surfaceSelector !== undefined && options.rootSelector !== undefined) {
+      throw new ServeError('State surfaceSelector or legacy rootSelector, not both.');
+    }
+    this.surfaceSelector = options.surfaceSelector ?? options.rootSelector;
     this.rootSelector = options.rootSelector;
     Object.freeze(this);
   }
@@ -98,8 +104,8 @@ export class ContextureServer {
       );
     }
     if (options.transport === 'stdio') {
-      if (this.auth !== undefined || this.rootSelector !== undefined)
-        throw new ServeError('stdio cannot use HTTP identity or root selection.');
+      if (this.auth !== undefined || this.surfaceSelector !== undefined)
+        throw new ServeError('stdio cannot use HTTP identity or surface selection.');
       return this.serveStdio();
     }
     const httpOptions = withLegacyAuth(options, this.auth);
@@ -275,10 +281,11 @@ export class ContextureServer {
     return ready;
   }
 
-  /** Resolve the request-local root surface only for HTTP factory instances. */
+  /** Resolve the request-local selected surface only for HTTP factory instances. */
   private selectionForRequest(context: McpRequestContext): RootSelection {
-    if (this.rootSelector === undefined || context.requestInfo === undefined) return this.selection;
-    return this.rootSelector.select(
+    if (this.surfaceSelector === undefined || context.requestInfo === undefined)
+      return this.selection;
+    return this.surfaceSelector.select(
       this.application.index,
       Object.fromEntries(context.requestInfo.headers.entries()),
       principalOf(context.authInfo),
@@ -294,6 +301,7 @@ export function buildServer(
     readonly selection?: RootSelection;
     readonly auth?: Auth;
     readonly instructions?: string;
+    readonly surfaceSelector?: SurfaceSelector;
     readonly rootSelector?: RootSelector;
   } = {},
 ): ContextureServer {

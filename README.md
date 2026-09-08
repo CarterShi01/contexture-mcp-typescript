@@ -13,9 +13,9 @@ Implementations:
 
 > **Status: active 0.12 product port; not yet a release-ready Python
 > replacement.** The kernel has focused evidence and this repository ships a
-> native CLI, scaffold, inspection, maintained demo, MCP transports, fixed
-> root surfaces, and HTTP bearer identity. Remaining parity work includes
-> request-selected HTTP roots, complete documentation/scenario mapping, and a
+> native CLI, scaffold, inspection, maintained demo, MCP transports, fixed and
+> request-selected HTTP surfaces, and HTTP bearer identity. Remaining parity
+> work includes complete documentation/scenario mapping and a
 > clean-checkout release audit. The npm package remains private until those
 > release gates pass.
 
