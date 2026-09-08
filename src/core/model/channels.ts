@@ -29,38 +29,50 @@ export async function withChannels<Result>(
 ): Promise<Result> {
   if (!(channels instanceof Channels)) return serve();
   const cleanups: Array<() => void | Promise<void>> = [];
+  let acceptingCleanups = true;
   const registrar: CleanupRegistrar = Object.freeze({
     defer(cleanup: () => void | Promise<void>): void {
+      if (!acceptingCleanups) {
+        throw new Error('Contexture cleanup registration is outside the Channels.open lifecycle.');
+      }
       cleanups.push(cleanup);
     },
   });
   let opened = false;
+  let hasPrimary = false;
   let primary: unknown;
   let result: Result | undefined;
   try {
     await channels.open(registrar);
+    acceptingCleanups = false;
     opened = true;
     result = await serve();
   } catch (error) {
+    acceptingCleanups = false;
+    hasPrimary = true;
     primary = error;
   }
   if (opened) {
     try {
       await channels.close();
     } catch (error) {
-      if (primary === undefined) primary = error;
-      else attachSuppressed(primary, error);
+      if (!hasPrimary) {
+        hasPrimary = true;
+        primary = error;
+      } else attachSuppressed(primary, error);
     }
   }
   for (const cleanup of [...cleanups].reverse()) {
     try {
       await cleanup();
     } catch (error) {
-      if (primary === undefined) primary = error;
-      else attachSuppressed(primary, error);
+      if (!hasPrimary) {
+        hasPrimary = true;
+        primary = error;
+      } else attachSuppressed(primary, error);
     }
   }
-  if (primary !== undefined) throw primary;
+  if (hasPrimary) throw primary;
   return result as Result;
 }
 
