@@ -84,6 +84,15 @@ instructions plus one-level routing cards for contained members. These bounded
 cards keep declared reference cycles safe and prevent a single open from
 expanding an unrelated procedure.
 
+The public Node facade uses the fixed `CompileLevel.ROUTE` and
+`CompileLevel.ACTIVE` values. `routeOf` and `compileNode` render immutable
+route/active payloads through a typed `View`; `Disclosure` is the standard
+forest-backed View. `groupCards` always returns the closed `roles`, `skills`,
+and `tools` sibling shape. `branchesOf` and `membersOf` return frozen compiled
+snapshots for every node kind; asking an uncompiled Role with lazy members does
+not evaluate its factories and instead reports that a compiled Index is
+required.
+
 `defineTool(...)` is the native executable Tool constructor. It validates the
 Tool identity, strict Zod input, handler, and `uses` shape immediately, and
 snapshots its `uses` list. Its omitted `readOnly` defaults to `false`: an

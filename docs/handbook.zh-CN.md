@@ -76,6 +76,13 @@ lazy declaration 在 compilation 时会校验 node 的 `name`、`description`、
 `uses`。打开 Role 同样会返回自己的 instructions 及其 contained member 的单层 routing card。这些有界
 card 使声明的 reference cycle 保持安全，也避免一次 open 展开无关 procedure。
 
+公开 Node facade 使用固定的 `CompileLevel.ROUTE` 与 `CompileLevel.ACTIVE`。
+`routeOf` 和 `compileNode` 通过 typed `View` 生成 immutable route/active payload；
+`Disclosure` 是标准的 forest-backed View。`groupCards` 始终返回封闭的 `roles`、
+`skills`、`tools` sibling shape。`branchesOf` 与 `membersOf` 对所有 node kind 返回
+frozen compiled snapshot；若对仍含 lazy member 的未编译 Role 查询，它不会执行 factory，
+而会明确要求 compiled Index。
+
 `defineTool(...)` 是 TypeScript 原生的 executable Tool constructor。它会立即校验 Tool identity、strict
 Zod input、handler 和 `uses` shape，并 snapshot `uses` list。省略 `readOnly` 时默认是 `false`：未分类的
 Tool 会按 writing 处理，这与 Python 的 `read_only` default 一致。推荐使用该 constructor，因为 bare object

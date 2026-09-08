@@ -25,6 +25,16 @@ export type {
   ToolDefinition,
 } from './model/declarations.js';
 export { defineTool } from './model/declarations.js';
+export {
+  branchesOf,
+  cardOf,
+  compileNode,
+  CompileLevel,
+  groupCards,
+  membersOf,
+  routeOf,
+} from './model/node.js';
+export type { CompiledContext, ContextNode, GroupedCards, View } from './model/node.js';
 export { compileApplication, compileDisclosureApplication } from './model/compiler.js';
 export type {
   ApplicationCompilation,

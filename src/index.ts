@@ -24,6 +24,16 @@ export type { ApplicationDeclaration, ManagedApplicationDeclaration } from './ap
 export { Channels } from './core/model/channels.js';
 export type { ChannelHandle } from './core/model/channels.js';
 export { defineTool } from './core/model/declarations.js';
+export {
+  branchesOf,
+  cardOf,
+  compileNode,
+  CompileLevel,
+  groupCards,
+  membersOf,
+  routeOf,
+} from './core/model/node.js';
+export type { CompiledContext, ContextNode, GroupedCards, View } from './core/model/node.js';
 export { ControllerManager } from './core/model/manager.js';
 export type { RoleFactory, SkillFactory, ToolFactory } from './core/model/manager.js';
 export type {

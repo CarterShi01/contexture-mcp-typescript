@@ -1,4 +1,5 @@
-import type { CompiledApplication, CompiledNode, CompiledRole, CompiledTool } from './compiler.js';
+import type { CompiledApplication, CompiledNode, CompiledRole } from './compiler.js';
+import type { JsonObject } from './binding.js';
 import {
   ContextureError,
   LookupFailure,
@@ -8,6 +9,13 @@ import {
 import { REFERENCE_SEPARATOR } from '../foundation/vocabulary.js';
 import { RootOutsideSelectionError, RootSelection } from './root-selection.js';
 import { InMemoryTelemetry, reportTelemetry, type Telemetry } from './telemetry.js';
+import {
+  cardOf as nodeCard,
+  groupCards,
+  type CompiledContext,
+  type GroupedCards,
+  type View,
+} from './node.js';
 
 export type RoutingCard = Readonly<Record<string, unknown>>;
 export type Discovery = Readonly<{
@@ -27,7 +35,7 @@ export class RefusedError extends ContextureError {
 }
 
 /** A pure, stateless progressive-disclosure projection over a compiled Index. */
-export class Disclosure {
+export class Disclosure implements View<CompiledNode> {
   readonly selection: RootSelection;
   readonly telemetry: Telemetry;
   readonly #promptRoots: ReadonlySet<string>;
@@ -90,11 +98,7 @@ export class Disclosure {
     const roots = this.index.roots.filter((node) =>
       this.modelCanSee(this.index.refOf(node), requested),
     );
-    return Object.freeze({
-      roles: Object.freeze(roots.filter(isRole).map((node) => this.card(node))),
-      skills: Object.freeze(roots.filter(isSkill).map((node) => this.card(node))),
-      tools: Object.freeze(roots.filter(isTool).map((node) => this.card(node))),
-    });
+    return groupCards(roots, this);
   }
 
   open(ref: string, requested: RootSelection = RootSelection.all()): RoutingCard {
@@ -133,10 +137,54 @@ export class Disclosure {
     if (card.kind === 'role' || card.kind === 'skill') void reportTelemetry(this.telemetry, ref);
   }
 
+  refOf(node: CompiledNode): string {
+    return this.index.refOf(node);
+  }
+
+  cardOf(node: CompiledNode): RoutingCard {
+    return nodeCard(node, this);
+  }
+
+  cardFor(ref: string): RoutingCard {
+    this.effectiveSelection().requireRef(ref);
+    if (!this.modelCanSee(ref) || this.#reserved.has(ref)) {
+      throw new ModelValidationError(
+        `${JSON.stringify(ref)} has no model-visible routing card in this Disclosure.`,
+      );
+    }
+    return this.cardOf(this.index.find(ref));
+  }
+
+  cardsOf(nodes: Iterable<CompiledNode>): GroupedCards {
+    return groupCards(
+      [...nodes].filter((node) => this.modelCanSee(this.index.refOf(node))),
+      this,
+    );
+  }
+
+  cardsFor(refs: Iterable<string>): readonly RoutingCard[] {
+    return Object.freeze(
+      [...refs]
+        .filter((ref) => this.modelCanSee(ref) && !this.#reserved.has(ref))
+        .map((ref) => this.cardFor(ref)),
+    );
+  }
+
+  executionOf(node: CompiledNode): CompiledContext {
+    if (node.kind !== 'tool') {
+      throw new ModelValidationError('Only a Tool has an executable disclosure facet.');
+    }
+    return node.binding === undefined
+      ? EMPTY_DETAILS
+      : Object.freeze({ read_only: node.readOnly, input_schema: this.schemaOf(node) });
+  }
+
+  schemaOf(node: CompiledNode): JsonObject {
+    return this.index.schemaOf(node);
+  }
+
   card(node: CompiledNode): RoutingCard {
-    const ref = this.index.refOf(node);
-    if (node.kind === 'tool') return toolCard(node, ref);
-    return Object.freeze({ kind: node.kind, name: node.name, description: node.description, ref });
+    return this.cardOf(node);
   }
 
   private active(node: CompiledNode, selection: RootSelection): RoutingCard {
@@ -178,26 +226,12 @@ export class Disclosure {
       selection.containsRef(this.index.refOf(node)) &&
       this.modelCanSee(this.index.refOf(node), selection);
     return Object.freeze({
-      ...this.card(role),
+      ...this.cardOf(role),
       instructions: role.instructions,
-      roles: Object.freeze(role.children.filter(visible).map((node) => this.card(node))),
-      skills: Object.freeze(role.skills.filter(visible).map((node) => this.card(node))),
-      tools: Object.freeze(role.tools.filter(visible).map((node) => this.card(node))),
+      ...groupCards(role.members().filter(visible), this),
       ...this.activeUses(role, selection),
     });
   }
-}
-
-function toolCard(node: CompiledTool, ref: string): RoutingCard {
-  return Object.freeze({
-    kind: 'tool',
-    name: node.name,
-    description: node.description,
-    ref,
-    ...(node.binding === undefined
-      ? {}
-      : { read_only: node.readOnly, input_schema: node.binding.schema }),
-  });
 }
 
 const EMPTY_DETAILS: Readonly<Record<string, never>> = Object.freeze({});
@@ -259,18 +293,6 @@ function compareCodePoints(left: string, right: string): number {
     if (difference !== 0) return difference;
   }
   return leftPoints.length - rightPoints.length;
-}
-
-function isRole(node: CompiledNode): node is CompiledRole {
-  return node.kind === 'role';
-}
-
-function isSkill(node: CompiledNode): node is Extract<CompiledNode, { readonly kind: 'skill' }> {
-  return node.kind === 'skill';
-}
-
-function isTool(node: CompiledNode): node is CompiledTool {
-  return node.kind === 'tool';
 }
 
 export { RootOutsideSelectionError };

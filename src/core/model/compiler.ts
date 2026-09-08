@@ -1,5 +1,6 @@
 import type {
   Factory,
+  ContextNode,
   NodeDeclaration,
   NodeKind,
   RoleDeclaration,
@@ -11,6 +12,7 @@ import {
   type ApplicationDeclaration,
   type ManagedApplicationDeclaration,
 } from '../../application.js';
+import { registerCompiledReference } from './node.js';
 import type { ChannelHandle } from './channels.js';
 import {
   ContainmentCycleError,
@@ -24,11 +26,12 @@ import { REFERENCE_SEPARATOR } from '../foundation/vocabulary.js';
 import { bindTool, type JsonObject, type ToolBinding } from './binding.js';
 import { compareCodePoints, matchingRefs, type ReferenceMatches } from './reference-queries.js';
 
-interface CompiledNodeBase {
-  readonly kind: NodeKind;
-  readonly name: string;
-  readonly description: string;
+interface CompiledNodeBase extends ContextNode {
   readonly uses: readonly string[];
+  /** Direct child Roles, or an immutable empty snapshot for a leaf. */
+  branches(): readonly CompiledRole[];
+  /** Direct members, or an immutable empty snapshot for a leaf. */
+  members(): readonly CompiledNode[];
 }
 
 export interface CompiledRole extends CompiledNodeBase {
@@ -275,6 +278,8 @@ function compileDeclaration(
       ...baseOf(declaration as SkillDeclaration),
       kind: 'skill' as const,
       instructions: declaration.instructions,
+      branches: () => EMPTY_ROLES,
+      members: () => EMPTY_NODES,
     });
     registerNode(node, ref, parent, state);
     return node;
@@ -284,6 +289,8 @@ function compileDeclaration(
     ...baseOf(declaration as ToolDeclaration),
     kind: 'tool' as const,
     readOnly: declaration.readOnly,
+    branches: () => EMPTY_ROLES,
+    members: () => EMPTY_NODES,
     declaration: Object.freeze({
       ...declaration,
       uses: Object.freeze([...(declaration.uses ?? [])]),
@@ -294,7 +301,9 @@ function compileDeclaration(
   return node;
 }
 
-function baseOf(declaration: NodeDeclaration): Omit<CompiledNodeBase, 'kind'> {
+function baseOf(
+  declaration: NodeDeclaration,
+): Pick<CompiledNodeBase, 'name' | 'description' | 'uses'> {
   return {
     name: declaration.name,
     description: declaration.description,
@@ -308,6 +317,7 @@ function registerNode(
   parent: CompiledRole | undefined,
   state: CompilationState,
 ): void {
+  registerCompiledReference(node, ref);
   state.byRef.set(ref, node);
   state.parentByNode.set(node, parent);
   state.refByNode.set(node, ref);
@@ -671,6 +681,7 @@ class ImmutableIndex implements Index {
 }
 
 const EMPTY_NODES: readonly CompiledNode[] = Object.freeze([]);
+const EMPTY_ROLES: readonly CompiledRole[] = Object.freeze([]);
 const EMPTY_REFS: readonly string[] = Object.freeze([]);
 
 function sorted(values: readonly string[]): readonly string[] {
