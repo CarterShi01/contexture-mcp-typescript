@@ -293,6 +293,9 @@ programmatic consumer 从 `@contexture/mcp/cli` 导入 `main`、`CLI_VERSION`、
 
 `check` 会编译但不会打开 application Channels。`call` 使用和 serving 相同的、已经校验的
 Tool Binding。默认只允许 read-only Tool；writing Tool 必须显式传入 `--allow-write`。
+`call` 只接受 `--input JSON` 或 `--input-file FILE` 之一。`inspect` 还支持 `--read`、
+`--no-discover` 与 `--roster-budget BYTES`。HTTP serving 接受 canonical `--path`、可重复的
+`--allow-host`/`--allow-origin` 以及显式 `--allow-anonymous`；不安全组合会在 startup 前成为 usage error。
 
 ## 5. 检查 Agent 可见 context
 

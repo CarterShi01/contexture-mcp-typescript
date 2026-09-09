@@ -171,6 +171,28 @@ export const app = {
     );
     assert.deepEqual(called.out, ['read:ok']);
 
+    const inputFile = path.join(root, 'input.json');
+    await writeFile(inputFile, '{"value":"file"}');
+    const fileCalled = output();
+    assert.equal(
+      await main(
+        ['call', 'assistant/read', '--input-file', inputFile],
+        fileCalled.writer,
+        environment,
+      ),
+      0,
+    );
+    assert.deepEqual(fileCalled.out, ['read:file']);
+    const duplicateInput = output();
+    assert.equal(
+      await main(
+        ['call', 'assistant/read', '--input', '{}', '--input-file', inputFile],
+        duplicateInput.writer,
+        environment,
+      ),
+      2,
+    );
+
     const refused = output();
     assert.equal(
       await main(
@@ -192,6 +214,50 @@ export const app = {
       0,
     );
     assert.deepEqual(written.out, ['{"wrote":"yes"}']);
+
+    const controlledInspect = output();
+    assert.equal(
+      await main(
+        ['inspect', '--all', '--read', '--no-discover', '--json'],
+        controlledInspect.writer,
+        environment,
+      ),
+      0,
+    );
+    assert.doesNotMatch(controlledInspect.out[0] ?? '', /"call": "contexture_discover"/);
+    const badBudget = output();
+    assert.equal(
+      await main(['inspect', '--roster-budget', '-1'], badBudget.writer, environment),
+      2,
+    );
+
+    const httpOptions = output();
+    assert.equal(
+      await main(
+        [
+          'serve',
+          '--transport',
+          'streamable-http',
+          '--host',
+          '0.0.0.0',
+          '--port',
+          '0',
+          '--path',
+          'not-absolute',
+          '--allow-host',
+          'localhost:*',
+          '--allow-host',
+          '127.0.0.1:*',
+          '--allow-origin',
+          'https://example.test',
+          '--allow-anonymous',
+        ],
+        httpOptions.writer,
+        environment,
+      ),
+      2,
+    );
+    assert.match(httpOptions.error[0] ?? '', /path must begin/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

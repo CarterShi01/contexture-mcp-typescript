@@ -373,6 +373,11 @@ than a second project configuration shape.
 `check` compiles without opening application Channels. `call` uses the same
 validated Tool Binding as serving. It permits read-only Tools by default; a
 writing Tool requires the explicit `--allow-write` decision.
+`call` accepts exactly one of `--input JSON` or `--input-file FILE`. `inspect`
+also supports `--read`, `--no-discover`, and `--roster-budget BYTES`. HTTP
+serving accepts a canonical `--path`, repeatable `--allow-host` and
+`--allow-origin`, and explicit `--allow-anonymous`; unsafe combinations remain
+usage errors before startup.
 
 ## 5. Inspect agent-visible context
 
