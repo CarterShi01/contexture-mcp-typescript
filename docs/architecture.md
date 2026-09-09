@@ -35,6 +35,13 @@ SDK. The `@contexture/mcp/server` entry owns `ApplicationRuntime`, compiled
 application containers, `ContextureServer`, options/auth/selectors, telemetry,
 launch configuration, logging, and compile/build helpers.
 
+`compileRuntimeApplication()` returns one bound container whose Index,
+Disclosure, Runtime, Publications, and telemetry are shared. The independent
+`compileStructuralApplication()` returns an unbound container whose `server()`
+installs only discover/open plus Prompts; it has no Runtime, invoke doors, or
+Resources. Python's temporary `compile_parts` helpers map to the same raw
+declaration compilers, and `serve(app)` maps to `buildServer(app).start()`.
+
 `DisclosureAPI` is the independently installable navigation half of that
 gateway. It accepts a compiled `Disclosure`, has no Runtime or transport
 dependency, and exposes only `discover` and `open` through its immutable tool

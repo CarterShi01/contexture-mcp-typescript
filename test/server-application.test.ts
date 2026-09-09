@@ -51,6 +51,42 @@ test('runtime compilation builds one bound Index shared by disclosure, invocatio
   assert.equal(compiled.disclosure.open('assistant/read').ref, 'assistant/read');
 });
 
+test('structural compilation builds one unbound navigation-only MCP container', () => {
+  const declaration = defineApplication({
+    name: 'structural-application',
+    roots: [
+      () => ({
+        kind: 'role' as const,
+        name: 'architecture',
+        description: 'Architecture.',
+        instructions: 'Inspect.',
+        tools: [
+          () => ({
+            kind: 'tool' as const,
+            name: 'provider',
+            description: 'Provider.',
+            readOnly: true,
+            invoke: () => 'never bound',
+          }),
+        ],
+      }),
+    ],
+    prompts: [{ opens: 'architecture', description: 'Review architecture.' }],
+  });
+  const structural = compileStructuralApplication(declaration);
+  assert.equal(structural.index.isBound, false);
+  assert.strictEqual(structural.disclosure.index, structural.index);
+  assert.strictEqual(structural.publications.disclosure, structural.disclosure);
+  const card = (
+    structural.disclosure.open('architecture').tools as readonly Record<string, unknown>[]
+  )[0];
+  assert.ok(card !== undefined);
+  assert.equal('read_only' in card, false);
+  assert.equal('input_schema' in card, false);
+  assert.deepEqual(structural.server().gatewayNames, ['contexture_discover', 'contexture_open']);
+  assert.equal(structural.publications.resourceCards().length, 0);
+});
+
 test('every public compilation route normalizes raw declarations through defineApplication', () => {
   const raw = (): ApplicationDeclaration =>
     ({

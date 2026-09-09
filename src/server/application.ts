@@ -9,8 +9,10 @@ import { ApplicationRuntime } from '../core/model/runtime.js';
 import { InMemoryTelemetry } from '../core/model/telemetry.js';
 import type { Telemetry } from '../core/model/telemetry.js';
 import { ExecutionAPI } from '../core/model/system-api.js';
+import { Gateway } from '../core/model/system-api.js';
 import { normalizeApplication } from '../application.js';
 import { Publications } from './surface/publications.js';
+import { createContextureMcpServer, type ContextureMcpServer } from './index.js';
 
 /** The coordinated runtime projections that share one bound compiled Index. */
 export interface RuntimeApplication {
@@ -28,6 +30,7 @@ export interface DisclosureApplication {
   readonly disclosure: Disclosure;
   readonly publications: Publications;
   readonly telemetry: Telemetry;
+  server(): ContextureMcpServer;
 }
 
 /** Compile all runtime surfaces with Prompt reservations applied to model navigation. */
@@ -62,12 +65,19 @@ export function compileStructuralApplication(
     reserved: reservedPromptRefs(normalized),
     telemetry,
   });
-  return Object.freeze({
+  const application = {
     index,
     disclosure,
     telemetry,
     publications: new Publications(disclosure, undefined, normalized),
-  });
+    server: (): ContextureMcpServer =>
+      createContextureMcpServer(
+        { name: index.name, version: '0.12.0rc1' },
+        new Gateway(disclosure, undefined),
+        application.publications,
+      ),
+  };
+  return Object.freeze(application);
 }
 
 function reservedPromptRefs(
