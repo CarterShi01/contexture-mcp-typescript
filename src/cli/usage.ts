@@ -1,4 +1,6 @@
-/** A command-line request was invalid but did not indicate a framework failure. */
-export class UsageError extends Error {
+import { ContextureError } from '../core/foundation/errors.js';
+
+/** A command-line request was invalid and remains classifiable as a Contexture error. */
+export class UsageError extends ContextureError {
   override readonly name = 'UsageError';
 }

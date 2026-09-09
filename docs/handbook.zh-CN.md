@@ -276,6 +276,8 @@ Python 的 `Index.of`、`bound` 与 `unbound` 构造形式；serving 仍由既�
 
 scaffold 暴露一个名为 `project` 的稳定 template；`availableTemplates()` 返回该 inventory，未知 template
 会被拒绝并列出可用选择。生成的 project 不包含未解析 template variable。
+programmatic consumer 从 `@contexture/mcp/cli` 导入 `main`、`CLI_VERSION`、`UsageError`、project discovery
+和 scaffold helper。`UsageError` 属于 `ContextureError`；executable 会把它写入 stderr 并返回 status 2。
 
 ## 4. 启动 Host 前先在本地工作
 

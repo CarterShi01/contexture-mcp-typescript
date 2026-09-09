@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { CLI_VERSION, main } from '../src/cli/index.js';
-import { PACKAGE_VERSION, REFERENCE_SEPARATOR } from '../src/index.js';
+import { CLI_VERSION, main, UsageError } from '../src/cli/index.js';
+import { ContextureError, PACKAGE_VERSION, REFERENCE_SEPARATOR } from '../src/index.js';
 
 function output() {
   const out: string[] = [];
@@ -35,6 +35,7 @@ test('CLI reports its version and creates a project through the real scaffold', 
 });
 
 test('CLI sends usage errors to stderr with status two', async () => {
+  assert.ok(new UsageError('bad usage') instanceof ContextureError);
   const invalid = output();
   assert.equal(await main(['new'], invalid.writer), 2);
   assert.match(invalid.error[0] ?? '', /^contexture: /);

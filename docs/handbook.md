@@ -352,6 +352,9 @@ constructing it from memory.
 The scaffold exposes one stable template named `project`; `availableTemplates()`
 returns that inventory, and an unknown template is rejected while naming the
 available choice. Generated projects contain no unresolved template variables.
+Programmatic consumers import `main`, `CLI_VERSION`, `UsageError`, project
+discovery, and scaffold helpers from `@contexture/mcp/cli`. `UsageError` is a
+`ContextureError`; the executable renders it on stderr with status two.
 
 ## 4. Work locally before starting a Host
 
