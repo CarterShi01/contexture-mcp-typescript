@@ -218,3 +218,26 @@ test('a Tool rejects Zod input behavior that JSON Schema cannot disclose faithfu
     );
   }
 });
+
+test('schema title keywords are stripped without deleting an input named title', async () => {
+  const index = compileApplication(
+    defineApplication({
+      name: 'title-field',
+      roots: [
+        () => ({
+          kind: 'tool',
+          name: 'publish',
+          description: 'Publish one title.',
+          readOnly: true,
+          input: z.strictObject({ title: z.string() }),
+          invoke: (input: { title: string }) => input.title,
+        }),
+      ],
+    }),
+  );
+  const tool = index.tool('publish');
+  const binding = tool.binding;
+  if (binding === undefined) throw new Error('Expected a binding.');
+  assert.deepEqual(binding.schema.properties, { title: { type: 'string' } });
+  assert.equal(await binding.call({ title: 'Kept' }, {}), 'Kept');
+});

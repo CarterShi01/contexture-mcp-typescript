@@ -84,7 +84,7 @@ function normalizeObject(value: Record<string, unknown>): JsonObject {
     // Zod-generated names are incidental. Validation constraints and object
     // unknown-key policy remain because this same schema enforces invocation.
     if (key === '$schema' || key === 'title') continue;
-    result[key] = normalizeValue(item);
+    result[key] = normalizeValue(item, isSchemaNameMap(key));
   }
   if (value.type === 'number') {
     if (result.minimum === undefined) result.minimum = -Number.MAX_VALUE;
@@ -109,7 +109,7 @@ function orderedEntries(value: Record<string, unknown>): readonly (readonly [str
   return entries.sort(([left], [right]) => rank(left) - rank(right));
 }
 
-function normalizeValue(value: unknown): JsonValue {
+function normalizeValue(value: unknown, nameMap = false): JsonValue {
   if (
     value === null ||
     typeof value === 'string' ||
@@ -118,7 +118,23 @@ function normalizeValue(value: unknown): JsonValue {
   ) {
     return value;
   }
-  if (Array.isArray(value)) return Object.freeze(value.map(normalizeValue));
-  if (typeof value === 'object') return normalizeObject(value as Record<string, unknown>);
+  if (Array.isArray(value)) return Object.freeze(value.map((item) => normalizeValue(item)));
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    if (nameMap) {
+      return Object.freeze(
+        Object.fromEntries(
+          Object.entries(record).map(([name, schema]) => [name, normalizeValue(schema)]),
+        ),
+      );
+    }
+    return normalizeObject(record);
+  }
   throw new ModelValidationError('A Tool input schema contains a non-JSON value.');
+}
+
+function isSchemaNameMap(key: string): boolean {
+  return (
+    key === 'properties' || key === '$defs' || key === 'definitions' || key === 'patternProperties'
+  );
 }

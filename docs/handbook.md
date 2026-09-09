@@ -77,6 +77,8 @@ the disclosed schema leaves `additionalProperties` unspecified. Contexture
 also preserves deliberate Zod policies: `z.strictObject(...)` discloses
 `additionalProperties: false` and rejects unknown keys, while
 `z.looseObject(...)` discloses and preserves them.
+Generated JSON Schema `title` keywords are removed as non-contract labels, but
+a real input property named `title` is preserved in disclosure and validation.
 
 `Contexture(declaration)` is the named public alias for `defineApplication`.
 Both preserve lazy factories and normalize the application name. Use a factory

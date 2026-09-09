@@ -71,6 +71,8 @@ Python-compatible 默认写法是 `z.object(...)`：unknown input key 会被接�
 披露的 schema 不指定 `additionalProperties`。Contexture 也会保留明确选择的 Zod policy：
 `z.strictObject(...)` 披露 `additionalProperties: false` 并拒绝 unknown key，而
 `z.looseObject(...)` 会披露并保留这些 key。
+自动生成的 JSON Schema `title` keyword 会作为非 contract label 移除，但名为 `title` 的真实输入
+property 会同时保留在 disclosure 与 validation 中。
 
 `Contexture(declaration)` 是 `defineApplication` 的具名公开别名。两者都会保留惰性
 factory 并规范化 application 名称。每个 Role、Skill、Tool 都应通过 factory 声明；编译会
