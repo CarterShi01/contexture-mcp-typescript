@@ -137,7 +137,7 @@ test('SelectedGraph matching uses projected Unicode code-point ordering and reta
     values: [privateUse, astral],
     total: 3,
   });
-  assert.deepEqual(graph.matchingRefs('', -1), { values: [], total: 3 });
+  assert.deepEqual(graph.matchingRefs('', -1), { values: [privateUse, astral], total: 3 });
   assert.equal(graph.matchingRefs('', 8).values.includes('alpha'), false);
   const walked = [...graph.walk()][0];
   assert.ok(walked !== undefined);

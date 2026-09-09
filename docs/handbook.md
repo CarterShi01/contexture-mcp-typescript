@@ -289,8 +289,9 @@ breadth-first. None follows `uses`, because that overlay may legally cycle.
 
 `matchingRefs(value, limit)` ranks the whole compiled address space by full
 prefix, final-segment prefix, any-segment prefix, then substring; ties use
-Unicode code-point length and order. Its `total` is pre-limit, and a negative
-limit deliberately yields no values rather than expanding a bounded response.
+Unicode code-point length and order. Its `total` is pre-limit. Limits retain
+Python slicing semantics, so a negative value omits that many results from the
+end (`-1` returns every match except the last).
 `signpost(ref)` returns only ancestor refs and direct sub-Role counts;
 `crossings()` lists declared `uses` edges that leave their root. Both are
 structural facts, not disclosure cards.

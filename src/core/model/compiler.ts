@@ -588,13 +588,10 @@ class ImmutableIndex implements Index {
   }
 
   parentOf(node: CompiledNode): CompiledRole | undefined {
-    if (!this.#parentByNode.has(node))
-      throw new ModelValidationError('Node is not registered in this Index.');
     return this.#parentByNode.get(node);
   }
 
   childrenOf(node: CompiledNode): readonly CompiledNode[] {
-    this.refOf(node);
     return node.kind === 'role'
       ? Object.freeze([...node.children, ...node.skills, ...node.tools])
       : EMPTY_NODES;

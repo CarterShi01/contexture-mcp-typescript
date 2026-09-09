@@ -139,7 +139,8 @@ test('Index binding, schema, signpost, and crossing facts remain guarded and imm
   }, TypeError);
   assert.throws(() => index.bindingOf('alpha'), NodeNotFoundError);
   assert.throws(() => index.schemaOf({ ...read }), ModelValidationError);
-  assert.throws(() => index.childrenOf({ ...read }), ModelValidationError);
+  assert.deepEqual(index.childrenOf({ ...read }), []);
+  assert.equal(index.parentOf({ ...read }), undefined);
   assert.deepEqual(index.signpost('/alpha//child//grand/'), [
     { ref: 'alpha', subRoleCount: 1 },
     { ref: 'alpha/child', subRoleCount: 1 },
@@ -165,7 +166,18 @@ test('Index ranks all refs by Python relevance and code-point rules without chan
     values: ['alpha/inspect'],
     total: 1,
   });
-  assert.deepEqual(index.matchingRefs('', -1), { values: [], total: 8 });
+  assert.deepEqual(index.matchingRefs('', -1), {
+    values: [
+      'beta',
+      'alpha',
+      'beta/read',
+      'alpha/child',
+      'alpha/write',
+      'alpha/inspect',
+      'alpha/diagnose',
+    ],
+    total: 8,
+  });
   assert.throws(() => index.matchingRefs('', 1.5), RangeError);
 
   const unicode = compileApplication(

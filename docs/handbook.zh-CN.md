@@ -229,7 +229,8 @@ containment；`rolesByLevel` 按 breadth-first 遍历 Role。它们都不会跟�
 
 `matchingRefs(value, limit)` 依次按完整 prefix、最后 segment prefix、任意 segment prefix 和
 substring 对完整编译地址空间排序；tie-breaker 为 Unicode code-point length 和 order。其 `total`
-是截断前数量；负 `limit` 会有意返回零个值，不会意外扩大受限 response。`signpost(ref)` 只返回
+是截断前数量。`limit` 保留 Python slicing 语义，因此负值会从末尾省略相应数量的结果（`-1`
+返回除最后一项外的全部匹配）。`signpost(ref)` 只返回
 ancestor ref 与直接 sub-Role count；`crossings()` 列出离开其 root 的声明 `uses` edge。两者都是
 结构事实，不是 disclosure card。
 

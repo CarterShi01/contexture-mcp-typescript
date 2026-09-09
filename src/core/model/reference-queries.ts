@@ -53,7 +53,7 @@ export function matchingRefs(
       leftRank - rightRank || leftLength - rightLength || compareCodePoints(left, right),
   );
   return Object.freeze({
-    values: Object.freeze(matches.slice(0, Math.max(0, limit)).map(([, , ref]) => ref)),
+    values: Object.freeze(matches.slice(0, limit).map(([, , ref]) => ref)),
     total: matches.length,
   });
 }
