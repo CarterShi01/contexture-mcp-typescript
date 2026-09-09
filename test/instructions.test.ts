@@ -8,6 +8,7 @@ import {
   INSTRUCTIONS_LIMIT,
   neutralInstructions,
   ROSTER_BUDGET,
+  SELF_CONTAINED_PREFIX,
 } from '../src/server/index.js';
 
 function disclosure(): Disclosure {
@@ -59,5 +60,42 @@ test('server instructions cut roots individually and deeper roles by sibling gro
   const text = buildInstructions(disclosure(), { budget: 1 });
   assert.match(text, /more root role\(s\); call contexture_discover/);
   assert.equal(ROSTER_BUDGET, 1200);
+  assert.equal(SELF_CONTAINED_PREFIX, 512);
   assert.match(neutralInstructions(), /request-specific set of complete root capabilities/);
+});
+
+test('server instructions measure Unicode in UTF-8 bytes and never split a child sibling group', () => {
+  const unicode = new Disclosure(
+    compileApplication(
+      defineApplication({
+        name: 'unicode-instructions',
+        roots: [
+          () => ({
+            kind: 'role',
+            name: 'root',
+            description: '根职责',
+            instructions: 'Route.',
+            children: [
+              () => ({
+                kind: 'role',
+                name: 'first',
+                description: '甲'.repeat(20),
+                instructions: 'A.',
+              }),
+              () => ({
+                kind: 'role',
+                name: 'second',
+                description: '乙'.repeat(20),
+                instructions: 'B.',
+              }),
+            ],
+          }),
+        ],
+      }),
+    ),
+  );
+  const text = buildInstructions(unicode, { budget: 100 });
+  assert.match(text, /- root: 根职责/);
+  assert.doesNotMatch(text, /root\/first|root\/second/);
+  assert.match(text, /and 2 more role\(s\) below/);
 });

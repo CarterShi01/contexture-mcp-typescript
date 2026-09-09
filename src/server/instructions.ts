@@ -34,15 +34,15 @@ export function buildInstructions(
 
   for (const [index, group] of [...siblingGroups(disclosure)].entries()) {
     const entries = group.map(([ref, description]) => `- ${ref}: ${description}`);
-    const cost = entries.reduce((total, entry) => total + entry.length + 1, 0);
+    const cost = entries.reduce((total, entry) => total + byteLength(entry) + 1, 0);
     if (index === 0) {
       for (const entry of entries) {
-        if (spent + entry.length > budget) {
+        if (spent + byteLength(entry) > budget) {
           dropped += 1;
           continue;
         }
         roster.push(entry);
-        spent += entry.length + 1;
+        spent += byteLength(entry) + 1;
       }
       if (dropped > 0) {
         roster.push(
@@ -66,6 +66,10 @@ export function buildInstructions(
     );
   }
   return assemble(preamble, roster);
+}
+
+function byteLength(value: string): number {
+  return new TextEncoder().encode(value).length;
 }
 
 function assemble(preamble: string, roster: readonly string[]): string {
