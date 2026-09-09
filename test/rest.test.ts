@@ -221,6 +221,10 @@ test('REST surface turns explicit paths into real JSON HTTP behavior and authent
   assert.equal(authenticated?.path, '/v1/status');
   assert.equal(authenticated?.headers.authorization, 'Bearer alice');
   assert.deepEqual(authenticated?.query, { service: ['api'], tag: ['', 'blue'] });
+  assert.equal(Object.isFrozen(authenticated), true);
+  assert.equal(Object.isFrozen(authenticated?.headers), true);
+  assert.equal(Object.isFrozen(authenticated?.query), true);
+  assert.equal(Object.isFrozen(authenticated?.query.tag), true);
 
   const write = await rest.fetch(
     new Request('http://contexture.test/v1/restart', {

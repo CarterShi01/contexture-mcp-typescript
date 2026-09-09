@@ -408,6 +408,12 @@ const listener = await rest.listen({ host: '127.0.0.1', port: 8080 });
 array）；command 接受可选的 `application/json` object body，默认最大 1 MiB。HEAD 会
 fallback 到已声明的 GET route，保留 header 但永不发送 response body。
 
+这是 Python ASGI surface 的原生映射：`fetch()` 处理单个 HTTP request，`serve()` 包住
+外部拥有的 Fetch serving lifetime，`listen()` 则拥有内置 Node serving lifetime。Python
+还允许用零参数 `Route` subclass 作为 route 简写；TypeScript 没有对应的 declaration-class
+惯例，因此调用方改为提供 immutable `RestRoute` object value。两种形式都会在发布时完成
+规范化并生成 snapshot。
+
 可选 authenticator 会拿到规范化的小写 header 和全部 query value，随后必须返回一个
 `Principal`。没有 identity 时返回 401，未发布的 path 返回 404。无效 JSON、body shape、
 content type、body size、Binding argument 和授权失败都会返回 no-store 的结构化

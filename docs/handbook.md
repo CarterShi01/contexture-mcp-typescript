@@ -506,6 +506,13 @@ commands accept an optional `application/json` object body up to 1 MiB by
 default. HEAD falls back to a declared GET route and preserves its headers but
 never sends its response body.
 
+This is the native mapping of the Python ASGI surface: `fetch()` handles one
+HTTP request, `serve()` wraps an externally owned Fetch serving lifetime, and
+`listen()` owns the built-in Node serving lifetime. Python also accepts a
+zero-argument `Route` subclass as route shorthand; TypeScript has no equivalent
+declaration-class convention, so callers provide immutable `RestRoute` object
+values instead. Both forms are normalized and snapshotted at publication.
+
 The optional authenticator receives normalized lower-case headers and all query
 values, then must return a `Principal`. A missing identity receives 401; an
 unpublished path receives 404. Invalid JSON, body shape, content type, body
