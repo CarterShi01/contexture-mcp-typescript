@@ -158,6 +158,14 @@ When identity crosses the MCP authentication adapter, `claims.iss` is the
 authoritative issuer when present. A machine credential may therefore retain a
 `clientId`, issuer, scopes, and claims while having no `subject`.
 
+HTTP `Auth` defines only the business-owned verifier socket; Contexture never
+ships a verifier or issues tokens. Returning no Principal is an invalid token,
+while a verifier exception remains a server failure. The verifier must validate
+the token audience against `resource`; `requiredScopes` is only the server
+entrance, not per-capability authorization. Contexture publishes path-aware RFC
+9728 metadata at `/.well-known/oauth-protected-resource/<resource-path>`, naming
+the configured authorization-server `issuer` and protected `resource`.
+
 `currentGraph()` returns the exact immutable graph in the current asynchronous
 scope. Runtime binds the authoritative selected graph for every Tool call;
 framework-aware local scopes can use `withGraph(graph, operation)`. Nested and

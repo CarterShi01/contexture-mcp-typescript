@@ -52,3 +52,42 @@ test('Auth rejects malformed configuration and an unverifiable or unbounded toke
   );
   await assert.rejects(noExpiry.verify('token'));
 });
+
+test('Auth publishes path-aware protected-resource metadata and preserves verifier failures', async () => {
+  const failure = new Error('identity provider unavailable');
+  const auth = new Auth(
+    { verify: async () => Promise.reject(failure) },
+    {
+      issuer: 'https://issuer.example',
+      resource: 'https://mcp.example/mcp',
+      requiredScopes: ['mcp'],
+    },
+  );
+  assert.equal(
+    auth.resourceMetadataUrl,
+    'https://mcp.example/.well-known/oauth-protected-resource/mcp',
+  );
+  const response = auth.metadata(new Request(auth.resourceMetadataUrl));
+  assert.ok(response instanceof Response);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    resource: 'https://mcp.example/mcp',
+    authorization_servers: ['https://issuer.example/'],
+    scopes_supported: ['mcp'],
+  });
+  await assert.rejects(auth.verify('token'), (error: unknown) => error === failure);
+
+  const gate = auth.gate();
+  const missing = await gate(new Request('https://mcp.example/mcp'));
+  assert.ok(missing instanceof Response);
+  assert.equal(missing.status, 401);
+  assert.match(
+    missing.headers.get('www-authenticate') ?? '',
+    /resource_metadata="https:\/\/mcp\.example\/\.well-known\/oauth-protected-resource\/mcp"/,
+  );
+  const broken = await gate(
+    new Request('https://mcp.example/mcp', { headers: { authorization: 'Bearer token' } }),
+  );
+  assert.ok(broken instanceof Response);
+  assert.equal(broken.status, 500);
+});

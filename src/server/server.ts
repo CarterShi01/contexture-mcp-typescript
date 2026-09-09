@@ -150,11 +150,16 @@ export class ContextureServer {
         signal: AbortSignal,
       ): Promise<void> => {
         try {
+          const webRequest = await nodeRequest(request, options, signal);
+          const metadata = options.auth?.metadata(webRequest);
+          if (metadata !== undefined) {
+            await writeResponse(response, metadata);
+            return;
+          }
           if (new URL(request.url ?? '/', options.url).pathname !== options.resolvedPath) {
             response.writeHead(404).end('Not Found');
             return;
           }
-          const webRequest = await nodeRequest(request, options, signal);
           const rejected =
             (options.allowedHosts.length === 0
               ? undefined

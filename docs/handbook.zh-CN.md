@@ -130,6 +130,12 @@ decoded token。其 `toString()`、Node `inspect`/console representation 以及 
 identity 穿过 MCP authentication adapter 时，如存在 `claims.iss`，它是 authoritative issuer。
 因此 machine credential 可以保留 `clientId`、issuer、scopes 与 claims，但没有 `subject`。
 
+HTTP `Auth` 只定义 business-owned verifier socket；Contexture 不提供 verifier，也不签发 token。返回空
+Principal 表示 invalid token，verifier exception 则保持 server failure。verifier 必须按 `resource` 校验
+token audience；`requiredScopes` 只控制 server 入口，不是 capability authorization。Contexture 会在
+`/.well-known/oauth-protected-resource/<resource-path>` 发布 path-aware RFC 9728 metadata，其中声明
+authorization-server `issuer` 与受保护的 `resource`。
+
 `currentGraph()` 返回当前 asynchronous scope 中确切的 immutable graph。Runtime 会为每次 Tool call
 绑定 authoritative selected graph；framework-aware local scope 可以使用
 `withGraph(graph, operation)`。嵌套及重叠 scope 会跨 await 与 failure 恢复并隔离 graph identity；在

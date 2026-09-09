@@ -1,6 +1,7 @@
 import {
   OAuthError,
   OAuthErrorCode,
+  getOAuthProtectedResourceMetadataUrl,
   requireBearerAuth,
   type AuthInfo,
   type OAuthTokenVerifier,
@@ -42,7 +43,24 @@ export class Auth {
     return requireBearerAuth({
       verifier: this.sdkVerifier(),
       requiredScopes: [...this.requiredScopes],
-      resourceMetadataUrl: `${this.resource.origin}/.well-known/oauth-protected-resource${this.resource.pathname}`,
+      resourceMetadataUrl: this.resourceMetadataUrl,
+    });
+  }
+
+  get resourceMetadataUrl(): string {
+    return getOAuthProtectedResourceMetadataUrl(this.resource);
+  }
+
+  /** Serve RFC 9728/8414 discovery documents for this protected resource. */
+  metadata(request: Request): Response | undefined {
+    if (new URL(request.url).pathname !== new URL(this.resourceMetadataUrl).pathname)
+      return undefined;
+    if (request.method !== 'GET')
+      return new Response('Method Not Allowed', { status: 405, headers: { allow: 'GET' } });
+    return Response.json({
+      resource: this.resource.toString(),
+      authorization_servers: [this.issuer.toString()],
+      scopes_supported: [...this.requiredScopes],
     });
   }
 
