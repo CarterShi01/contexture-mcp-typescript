@@ -154,6 +154,43 @@ test('REST uses an explicit allowlist over the same Binding and no arbitrary ref
   );
 });
 
+test('REST route values normalize fixed grammar and remain immutable snapshots', () => {
+  const routes: RestRoute[] = [
+    { method: 'GET', path: ' / ', ref: ' operations/status ', status: 200 },
+  ];
+  const router = new RestRouter(runtime(), routes);
+  routes[0] = { method: 'POST', path: '/forged', ref: 'operations/restart' };
+  assert.deepEqual(router.routes, [
+    { method: 'GET', path: '/', ref: 'operations/status', status: 200 },
+  ]);
+  assert.equal(Object.isFrozen(router.routes), true);
+  assert.equal(Object.isFrozen(router.routes[0]), true);
+  assert.notEqual(router.routes, router.routes);
+  for (const method of ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'] as const) {
+    const ref = method === 'GET' || method === 'HEAD' ? 'operations/status' : 'operations/reset';
+    assert.doesNotThrow(
+      () => new RestRouter(runtime(), [{ method, path: `/${method.toLowerCase()}`, ref }]),
+    );
+  }
+  for (const status of [99, 600]) {
+    assert.throws(
+      () =>
+        new RestRouter(runtime(), [
+          { method: 'GET', path: '/status', ref: 'operations/status', status },
+        ]),
+      /status/,
+    );
+  }
+  assert.throws(
+    () =>
+      new RestRouter(runtime(), [
+        { method: 'GET', path: ' /duplicate ', ref: ' operations/status ' },
+        { method: 'GET', path: '/duplicate', ref: 'operations/status' },
+      ]),
+    /more than once/,
+  );
+});
+
 function surface(authenticate?: Authenticator) {
   return new RestSurface(
     runtime(),
