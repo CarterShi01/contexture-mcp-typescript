@@ -115,11 +115,12 @@ try {
   await writeFile(path.join(temporaryRoot, 'consumer.mjs'), consumer, 'utf8');
   run(process.execPath, ['consumer.mjs'], temporaryRoot);
   const typeConsumer = [
-    "import { Contexture, LookupFailure, type ContextNode, type Prompt, type Resource, type View } from '@contexture/mcp';",
+    "import { Contexture, LookupFailure, type CompiledContext, type ContextNode, type JsonObject, type JsonValue, type Prompt, type Resource, type View } from '@contexture/mcp';",
     "const prompt: Prompt = { opens: 'approval', description: 'Open approval.', modelMayOpen: false };",
     "const resource: Resource = { opens: 'runbook', uri: 'contexture://runbook', description: 'Read runbook.' };",
     'const reason: LookupFailure = LookupFailure.NO_SUCH_MEMBER;',
     'declare const node: ContextNode; declare const view: View; void node; void view;',
+    "const jsonValue: JsonValue = { values: [null, true, 1, 'text'] }; const jsonObject: JsonObject = { jsonValue }; const compiled: CompiledContext = { jsonObject }; void compiled;",
     "Contexture({ name: 'typed-consumer', roots: [() => ({}) as never], prompts: [prompt], resources: [resource] });",
     'void reason;',
   ].join('\n');

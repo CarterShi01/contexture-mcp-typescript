@@ -103,3 +103,10 @@ test('public server telemetry types remain directly importable', () => {
   assert.equal(usage.ref, 'public');
   assert.equal(event.ref, 'public');
 });
+
+test('public JSON and compiled context types retain native recursive shapes', () => {
+  const value: authoring.JsonValue = { nested: [null, true, 3, 'text'] };
+  const object: authoring.JsonObject = { value };
+  const context: authoring.CompiledContext = { object };
+  assert.deepEqual(context, { object: { value: { nested: [null, true, 3, 'text'] } } });
+});

@@ -207,6 +207,9 @@ foundation 拥有共享 declaration vocabulary：`PACKAGE_NAME` 是 framework �
 `GATEWAY_TOOL_NAMES` inventory）是 model、MCP primitive projection 与 server 共用的封闭名称。
 `Prompt` 与 `Resource` 同样是 foundation-owned、SDK-neutral 的 data shape；保留的
 `core/mcp-interface` type export 只是 compatibility spelling，并非重复的 declaration。
+递归 `JsonValue`/`JsonObject` 与 readonly `CompiledContext` 是 Python shared JSON/context alias 的
+原生 TypeScript 映射。Python 未使用的 `RequestId` annotation 不增加无约束 alias；request ID 仍留在
+实际消费它的 Host protocol facts 中。
 
 TypeScript 中的 `modelMayOpen` 有意使用 boolean：省略或 `true` 表示 Prompt 可由模型导航，
 `false` 则把这个已声明 capability 保留给人控制的 Prompt 或 `goto` 导航。它与 Python declaration

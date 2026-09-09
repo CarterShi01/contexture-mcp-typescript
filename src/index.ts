@@ -34,6 +34,7 @@ export {
   routeOf,
 } from './core/model/node.js';
 export type { CompiledContext, ContextNode, GroupedCards, View } from './core/model/node.js';
+export type { JsonObject, JsonValue } from './core/model/binding.js';
 export { ControllerManager } from './core/model/manager.js';
 export type { RoleFactory, SkillFactory, ToolFactory } from './core/model/manager.js';
 export type {

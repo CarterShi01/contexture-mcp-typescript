@@ -261,6 +261,10 @@ Resource URI. `DISCOVER_GATEWAY_NAME`, `OPEN_GATEWAY_NAME`,
 MCP primitive projection, and server. `Prompt` and `Resource` are likewise
 foundation-owned SDK-neutral data shapes; the retained `core/mcp-interface`
 type exports are compatibility spellings, not duplicate declarations.
+Recursive `JsonValue`/`JsonObject` and readonly `CompiledContext` are the native
+TypeScript mappings for Python's shared JSON/context aliases. Python's unused
+`RequestId` annotation has no no-op TypeScript alias; request IDs remain Host
+protocol facts where they are actually consumed.
 
 `modelMayOpen` is intentionally a boolean in TypeScript: omission or `true`
 keeps a Prompt model-navigable, while `false` reserves that declared capability
