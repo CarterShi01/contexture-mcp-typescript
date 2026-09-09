@@ -42,11 +42,14 @@ export {
   ExecutionAPI,
   Gateway,
   GATEWAY,
+  GATEWAY_TOOLS,
+  Refused,
+  SystemAPI,
   takenByPersonMessage,
   unresolvedMessage,
   wrongDoorMessage,
 } from '../core/model/system-api.js';
-export type { GatewayTool } from '../core/model/system-api.js';
+export type { GatewayTool, SystemTool } from '../core/model/system-api.js';
 export { WrongDoorError } from '../core/foundation/errors.js';
 export { Publications } from './surface/publications.js';
 export type { PromptCard, ResourceCard } from './surface/publications.js';

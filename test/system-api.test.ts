@@ -9,11 +9,13 @@ import {
   EXECUTION_GATEWAY,
   Gateway,
   GATEWAY,
+  GATEWAY_TOOLS,
   LookupFailure,
   NodeNotFoundError,
   RefusedError,
   RootOutsideSelectionError,
   RootSelection,
+  SystemAPI,
   WrongDoorError,
   compileApplication,
   Disclosure,
@@ -88,6 +90,18 @@ test('Gateway owns one fixed ordered inventory and its independently installable
     ['contexture_invoke_read_only', 'contexture_invoke'],
   );
   assert.deepEqual(disclosureOnlyGateway().tools, DISCLOSURE_GATEWAY);
+  assert.deepEqual(
+    GATEWAY_TOOLS,
+    GATEWAY.map((tool) => tool.name),
+  );
+  assert.deepEqual(
+    GATEWAY.filter((tool) => !tool.readOnly).map((tool) => tool.name),
+    ['contexture_invoke'],
+  );
+  for (const tool of GATEWAY) assert.ok(tool.description.length > 80);
+  assert.match(GATEWAY[1]?.description ?? '', /schema/);
+  assert.doesNotMatch(GATEWAY[0]?.description ?? '', /schema/);
+  assert.strictEqual(SystemAPI, Gateway);
 });
 
 test('DisclosureAPI exposes an independent, stateless navigation half', async () => {
@@ -232,7 +246,22 @@ test('Gateway renders wrong-kind and wrong-door errors before a business handler
       error.cause.ref === 'beta/read' &&
       error.cause.readOnly,
   );
+  await assert.rejects(
+    api.invokeReadOnly('beta/write', {}),
+    (error: unknown) =>
+      error instanceof RefusedError &&
+      error.message.includes('contexture_invoke') &&
+      error.cause instanceof WrongDoorError &&
+      error.cause.ref === 'beta/write' &&
+      !error.cause.readOnly,
+  );
   assert.equal(calls.value, 0);
+});
+
+test('SystemAPI compatibility facade proxies person and Host doors', async () => {
+  const api = gateway({ value: 0 });
+  assert.equal(((await api.openForAPerson('beta')) as { ref: string }).ref, 'beta');
+  assert.equal(await api.readForAHost('beta/read'), 'read');
 });
 
 test('Gateway preserves an excluded root as typed authorization without a recoverable leak', async () => {

@@ -74,6 +74,8 @@ export {
   SurfaceSelection,
   SurfaceSelectionError,
 } from './core/model/root-selection.js';
+export { GATEWAY_TOOLS, Refused, SystemAPI } from './core/model/system-api.js';
+export type { SystemTool } from './core/model/system-api.js';
 export {
   ContextureError,
   ContainmentCycleError,

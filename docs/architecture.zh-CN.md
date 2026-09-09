@@ -23,6 +23,13 @@ model；model 也不会导入这个 sibling package。core 不可导入 MCP、HT
 server 层将编译后的 API 映射到官方 MCP SDK 与 Host surface。业务 Tool 永远不会成为
 顶层 MCP Tool；Contexture 只暴露固定的导航与调用 gateway。
 
+`DisclosureAPI` 是该 gateway 可独立安装的导航半面。它接收已编译 `Disclosure`，不依赖 Runtime
+或 transport，并通过不可变 tool inventory 只公开 `discover` 与 `open`。`selectedGraph` 使用与导航
+相同的 request-local root ceiling。`openForPerson`（及兼容写法 `openForAPerson`）只绕过 model
+reservation 与 prompt-root visibility，绝不会扩大 selected roots。普通 lookup failure 在该 API
+边界转换为可执行恢复，而 `RootOutsideSelectionError` 保持 typed 且不泄漏。需要原始 lookup facts
+而非 agent-facing recovery prose 的 Host 仍可直接使用 `Disclosure`。
+
 ## 当前实现状态
 
 1. core 节点模型、注册、校验与不可变 Index；
@@ -35,5 +42,5 @@ server 层将编译后的 API 映射到官方 MCP SDK 与 Host surface。业务 
    Kubernetes 参考应用。
 
 内核区域拥有定向 conformance 证据；产品工作流拥有原生集成和已打包 npm 消费者证据。
-这仍不是完整产品等价：请求级 HTTP root 选择、完整文档和场景映射、以及干净检出环境
+这仍不是完整产品等价：完整文档和场景映射、以及干净检出环境
 发布审计仍未完成。

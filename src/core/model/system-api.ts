@@ -20,6 +20,9 @@ export interface GatewayTool {
   readonly readOnly: boolean;
 }
 
+/** Compatibility type name for one fixed framework-controlled entry point. */
+export type SystemTool = GatewayTool;
+
 /** The fixed system plane, ordered independently of all business declarations. */
 export const GATEWAY: readonly GatewayTool[] = Object.freeze([
   Object.freeze({
@@ -52,6 +55,10 @@ export const GATEWAY: readonly GatewayTool[] = Object.freeze([
 export const DISCLOSURE_GATEWAY: readonly GatewayTool[] = Object.freeze(GATEWAY.slice(0, 2));
 /** The fixed invocation half, present only on an executable application. */
 export const EXECUTION_GATEWAY: readonly GatewayTool[] = Object.freeze(GATEWAY.slice(2));
+/** Compatibility names-only inventory in the same fixed registration order. */
+export const GATEWAY_TOOLS: readonly GatewayName[] = Object.freeze(
+  GATEWAY.map((tool) => tool.name),
+);
 
 /** Turn structured Index lookup facts into the one next action an agent can take. */
 export function unresolvedMessage(failure: NodeNotFoundError): string {
@@ -318,6 +325,20 @@ export class Gateway {
     return this.navigation.open(ref, selection);
   }
 
+  async openForPerson(
+    ref: string,
+    selection: RootSelection = RootSelection.all(),
+  ): Promise<unknown> {
+    return this.navigation.openForPerson(ref, selection);
+  }
+
+  async openForAPerson(
+    ref: string,
+    selection: RootSelection = RootSelection.all(),
+  ): Promise<unknown> {
+    return this.openForPerson(ref, selection);
+  }
+
   async invokeReadOnly(
     ref: string,
     arguments_: unknown = undefined,
@@ -345,6 +366,27 @@ export class Gateway {
     }
     return this.execution.invoke(ref, arguments_, context, selection);
   }
+
+  async readForHost(
+    ref: string,
+    context: ToolCallContext = {},
+    selection: RootSelection = RootSelection.all(),
+  ): Promise<unknown> {
+    if (this.execution === undefined) {
+      throw new RefusedError(
+        `This Contexture server is disclosure-only. Call ${DISCOVER_GATEWAY_NAME} or ${OPEN_GATEWAY_NAME} instead.`,
+      );
+    }
+    return this.execution.readForHost(ref, context, selection);
+  }
+
+  async readForAHost(
+    ref: string,
+    context: ToolCallContext = {},
+    selection: RootSelection = RootSelection.all(),
+  ): Promise<unknown> {
+    return this.readForHost(ref, context, selection);
+  }
 }
 
 function canonicalRef(ref: string): string {
@@ -353,3 +395,8 @@ function canonicalRef(ref: string): string {
     .filter((segment) => segment.length > 0)
     .join(REFERENCE_SEPARATOR);
 }
+
+// Compatibility names share the native implementations rather than creating
+// parallel framework models.
+export { Gateway as SystemAPI };
+export { RefusedError as Refused };

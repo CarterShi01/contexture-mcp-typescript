@@ -52,5 +52,5 @@ facts instead of agent-facing recovery prose.
 
 The kernel areas have focused conformance evidence; the product workflows have
 native integration and packed npm-consumer evidence. This is still not full
-product parity: request-selected HTTP roots, complete documentation and
-scenario mapping, and the clean-checkout release audit remain open.
+product parity: complete documentation and scenario mapping, and the
+clean-checkout release audit remain open.

@@ -83,11 +83,14 @@ export {
   ExecutionAPI,
   Gateway,
   GATEWAY,
+  GATEWAY_TOOLS,
+  Refused,
+  SystemAPI,
   takenByPersonMessage,
   unresolvedMessage,
   wrongDoorMessage,
 } from './model/system-api.js';
-export type { GatewayTool } from './model/system-api.js';
+export type { GatewayTool, SystemTool } from './model/system-api.js';
 export type {
   Prompt,
   PromptDeclaration,
