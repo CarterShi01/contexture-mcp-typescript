@@ -3,13 +3,15 @@ import test from 'node:test';
 import { z } from 'zod';
 
 import { defineApplication, defineTool } from '../src/index.js';
-import { compileApplication, Disclosure } from '../src/core/index.js';
+import { ApplicationRuntime, compileApplication, Disclosure } from '../src/core/index.js';
 import {
   asJson,
   connectStep,
   Cost,
+  discoverStep,
   everyRef,
   openStep,
+  readStep,
   render,
   Step,
   trace,
@@ -81,10 +83,85 @@ test('inspection measures the exact discover/open payloads and keeps refusals re
 test('inspection uses UTF-8 bytes and wide characters in its approximate cost', () => {
   assert.deepEqual(Cost.of('a中').toJSON(), { characters: 2, bytes: 4, estimated_tokens: 1 });
   assert.deepEqual(Cost.of('😀').toJSON(), { characters: 1, bytes: 4, estimated_tokens: 0 });
+  assert.equal(Cost.of('ab').tokens, 0);
+  assert.equal(Cost.of('abcdef').tokens, 2);
   assert.deepEqual(
     [...everyRef(fixture())],
     ['operations', 'operations/diagnose', 'operations/runbook'],
   );
+});
+
+test('inspection reads content explicitly and describes binary without printing it', async () => {
+  const disclosure = fixture();
+  const runtime = new ApplicationRuntime(disclosure.index);
+  assert.equal((await readStep(runtime, 'operations/runbook')).body, 'RUNBOOK');
+
+  const binaryIndex = compileApplication(
+    defineApplication({
+      name: 'binary-inspection',
+      roots: [
+        () =>
+          defineTool({
+            kind: 'tool',
+            name: 'binary',
+            description: 'Read bytes.',
+            readOnly: true,
+            input: z.strictObject({}),
+            invoke: () => new Uint8Array([1, 2, 3]),
+          }),
+      ],
+    }),
+  );
+  const binary = await readStep(new ApplicationRuntime(binaryIndex), 'binary');
+  assert.equal(binary.body, '<3 bytes of binary>');
+});
+
+test('inspection nested role sweep is breadth-first and discover body is honest', () => {
+  const disclosure = new Disclosure(
+    compileApplication(
+      defineApplication({
+        name: 'nested-inspection',
+        roots: [
+          () => ({
+            kind: 'role',
+            name: 'root',
+            description: 'Root.',
+            instructions: 'Route.',
+            children: [
+              () => ({
+                kind: 'role',
+                name: 'child',
+                description: 'Child.',
+                instructions: 'Route.',
+                skills: [
+                  () => ({
+                    kind: 'skill',
+                    name: 'leaf',
+                    description: 'Leaf.',
+                    instructions: 'Read.',
+                  }),
+                ],
+              }),
+            ],
+            skills: [
+              () => ({
+                kind: 'skill',
+                name: 'root-leaf',
+                description: 'Root leaf.',
+                instructions: 'Read.',
+              }),
+            ],
+          }),
+        ],
+      }),
+    ),
+  );
+  assert.deepEqual(
+    [...everyRef(disclosure)],
+    ['root', 'root/root-leaf', 'root/child', 'root/child/leaf'],
+  );
+  const discovered = discoverStep(disclosure);
+  assert.deepEqual(discovered.payload, disclosure.discover());
 });
 
 test('inspection accounts for all visible roles, checks routing cards, and keeps JSON nullable', () => {

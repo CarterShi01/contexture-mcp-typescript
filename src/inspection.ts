@@ -55,7 +55,7 @@ export class Cost {
     return new Cost(
       characters.length,
       Buffer.byteLength(text, 'utf8'),
-      Math.round(wide + (characters.length - wide) / 4),
+      tokenEstimate(wide, characters.length - wide),
     );
   }
 
@@ -175,8 +175,15 @@ export function connectStep(
   return new Step(CONNECT, instructions, {
     payload: Object.freeze({ instructions, gateway: GATEWAY }),
     checks,
-    aside: `the ${GATEWAY.length} gateway tool descriptions arrive here too; they are fixed and are not counted in this trace`,
+    aside: `the ${GATEWAY.length} gateway tool descriptions arrive here too, costing ${Cost.of(GATEWAY.map((tool) => tool.name + tool.description).join('')).tokens} more estimated tokens; they are fixed, so they are not counted below`,
   });
+}
+
+function tokenEstimate(wide: number, ordinary: number): number {
+  let result = wide + Math.floor(ordinary / 4);
+  const remainder = ordinary % 4;
+  if (remainder > 2 || (remainder === 2 && result % 2 === 1)) result += 1;
+  return result;
 }
 
 /** Replay the model-controlled discovery response. */
