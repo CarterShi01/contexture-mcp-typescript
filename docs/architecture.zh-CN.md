@@ -23,6 +23,12 @@ model；model 也不会导入这个 sibling package。core 不可导入 MCP、HT
 server 层将编译后的 API 映射到官方 MCP SDK 与 Host surface。业务 Tool 永远不会成为
 顶层 MCP Tool；Contexture 只暴露固定的导航与调用 gateway。
 
+仅声明的 `@contexture/mcp` 入口把 Python 的公开 authoring 概念映射为原生 TypeScript value/type：
+`Contexture`、`Channels`、`Principal`、framework error、`Prompt`/`Resource`、Role/Skill/Tool declaration
+type、package version 与当前 request accessor；它不会加载 Host SDK。`@contexture/mcp/server` 入口负责
+`ApplicationRuntime`、compiled application container、`ContextureServer`、options/auth/selector、telemetry、
+launch config、logging 与 compile/build helper。
+
 `DisclosureAPI` 是该 gateway 可独立安装的导航半面。它接收已编译 `Disclosure`，不依赖 Runtime
 或 transport，并通过不可变 tool inventory 只公开 `discover` 与 `open`。`selectedGraph` 使用与导航
 相同的 request-local root ceiling。`openForPerson`（及兼容写法 `openForAPerson`）只绕过 model

@@ -26,6 +26,14 @@ export type {
   ReferenceCrossing,
   SignpostLevel,
 } from '../core/model/compiler.js';
+export {
+  ApplicationRuntime,
+  InMemoryTelemetry,
+  currentTelemetry,
+  reportTelemetry,
+  withTelemetry,
+} from '../core/model/runtime.js';
+export type { NodeUsage, Telemetry, TelemetryEvent } from '../core/model/runtime.js';
 export { RestRouter, RestSurface } from './rest.js';
 export type {
   Authenticator,

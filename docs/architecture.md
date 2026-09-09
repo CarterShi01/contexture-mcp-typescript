@@ -27,6 +27,14 @@ The server layer maps compiled APIs to the official MCP SDK and optional Host
 surfaces. Business Tools never become top-level MCP tools; Contexture exposes a
 fixed navigation and invocation gateway.
 
+The declaration-only `@contexture/mcp` entry maps Python's public authoring
+concepts to native TypeScript values and types: `Contexture`, `Channels`,
+`Principal`, framework errors, `Prompt`/`Resource`, Role/Skill/Tool declaration
+types, package version, and current request accessors. It does not load a Host
+SDK. The `@contexture/mcp/server` entry owns `ApplicationRuntime`, compiled
+application containers, `ContextureServer`, options/auth/selectors, telemetry,
+launch configuration, logging, and compile/build helpers.
+
 `DisclosureAPI` is the independently installable navigation half of that
 gateway. It accepts a compiled `Disclosure`, has no Runtime or transport
 dependency, and exposes only `discover` and `open` through its immutable tool
