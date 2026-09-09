@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
 import { CLI_VERSION, main, UsageError } from '../src/cli/index.js';
+import { findProject, loadApplication } from '../src/cli/project.js';
 import { ContextureError, PACKAGE_VERSION, REFERENCE_SEPARATOR } from '../src/index.js';
 
 function output() {
@@ -54,6 +55,58 @@ test('inspect uses the bundled demo when no project configuration exists', async
     assert.match(inspected.error[0] ?? '', /bundled demo/);
   } finally {
     await rm(temporary, { recursive: true, force: true });
+  }
+});
+
+test('project discovery stops at the nearest config and rejects target escape or malformed exports', async () => {
+  const outer = await mkdtemp(path.join(tmpdir(), 'contexture-project-'));
+  try {
+    const inner = path.join(outer, 'inner');
+    const nested = path.join(inner, 'nested');
+    await mkdir(nested, { recursive: true });
+    await writeFile(
+      path.join(outer, 'package.json'),
+      JSON.stringify({ contexture: { app: './outer.js' } }),
+    );
+    await writeFile(
+      path.join(outer, 'outer.js'),
+      "export const app = { name: 'outer', roots: [] };\n",
+    );
+    await writeFile(
+      path.join(inner, 'package.json'),
+      JSON.stringify({ contexture: { app: './inner.js' } }),
+    );
+    await writeFile(
+      path.join(inner, 'inner.js'),
+      "export const app = { name: 'inner', roots: [() => ({})] };\n",
+    );
+    assert.equal((await findProject(nested))?.root, inner);
+    assert.equal((await loadApplication({ start: nested })).application.name, 'inner');
+    await assert.rejects(
+      loadApplication({ start: nested, target: '../outer.js' }),
+      /outside project/,
+    );
+
+    const outside = path.join(outer, 'outside.js');
+    await writeFile(outside, "export const app = { name: 'outside', roots: [() => ({})] };\n");
+    const link = path.join(inner, 'linked.js');
+    try {
+      await symlink(outside, link);
+      await assert.rejects(
+        loadApplication({ start: nested, target: './linked.js' }),
+        /resolves outside/,
+      );
+    } catch (error) {
+      if (!(error instanceof Error && 'code' in error && error.code === 'EPERM')) throw error;
+    }
+
+    await writeFile(path.join(inner, 'bad.js'), 'export const wrong = {};\n');
+    await assert.rejects(
+      loadApplication({ start: nested, target: './bad.js' }),
+      /must export `app`/,
+    );
+  } finally {
+    await rm(outer, { recursive: true, force: true });
   }
 });
 

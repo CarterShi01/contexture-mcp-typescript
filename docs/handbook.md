@@ -355,6 +355,11 @@ available choice. Generated projects contain no unresolved template variables.
 Programmatic consumers import `main`, `CLI_VERSION`, `UsageError`, project
 discovery, and scaffold helpers from `@contexture/mcp/cli`. `UsageError` is a
 `ContextureError`; the executable renders it on stderr with status two.
+`findProject()` stops at the nearest `package.json` with `contexture.app`;
+`loadApplication()` accepts only that app-only native declaration and rejects
+lexical or symlink targets that escape the project root. Legacy Python
+roots/publish/channels keys map into the exported Application declaration rather
+than a second project configuration shape.
 
 ## 4. Work locally before starting a Host
 

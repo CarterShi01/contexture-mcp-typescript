@@ -278,6 +278,9 @@ scaffold 暴露一个名为 `project` 的稳定 template；`availableTemplates()
 会被拒绝并列出可用选择。生成的 project 不包含未解析 template variable。
 programmatic consumer 从 `@contexture/mcp/cli` 导入 `main`、`CLI_VERSION`、`UsageError`、project discovery
 和 scaffold helper。`UsageError` 属于 `ContextureError`；executable 会把它写入 stderr 并返回 status 2。
+`findProject()` 会停在最近包含 `contexture.app` 的 `package.json`；`loadApplication()` 只接受该 app-only
+原生 declaration，并拒绝词法或 symlink target 逃逸 project root。Python legacy roots/publish/channels key
+映射到导出的 Application declaration，而不是第二套 project config shape。
 
 ## 4. 启动 Host 前先在本地工作
 

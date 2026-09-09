@@ -1,4 +1,4 @@
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -58,7 +58,13 @@ export async function loadApplication(
   }
   try {
     await stat(resolved);
+    if (project !== undefined && !inside(await realpath(project.root), await realpath(resolved))) {
+      throw new UsageError(
+        `Contexture application ${JSON.stringify(target)} resolves outside project ${project.root}.`,
+      );
+    }
   } catch (error) {
+    if (error instanceof UsageError) throw error;
     throw new UsageError(
       `Cannot load Contexture application ${JSON.stringify(target)}: ${message(error)}.`,
     );
