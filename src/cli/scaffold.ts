@@ -12,6 +12,11 @@ export interface ProjectNames {
   readonly resourceScheme: string;
 }
 
+/** Stable scaffold template inventory in lexical order. */
+export function availableTemplates(): readonly string[] {
+  return Object.freeze(['project']);
+}
+
 /** Derive native project, package, and root-role names without prompting. */
 export function deriveNames(raw: string): ProjectNames {
   const projectName = raw
@@ -94,8 +99,14 @@ export const app = defineApplication({
 /** Write a runnable project and refuse to overwrite an existing directory. */
 export async function newProject(
   rawName: string,
-  options: { readonly destination?: string } = {},
+  options: { readonly destination?: string; readonly template?: string } = {},
 ): Promise<string> {
+  const template = options.template ?? 'project';
+  if (!availableTemplates().includes(template)) {
+    throw new UsageError(
+      `Unknown template ${JSON.stringify(template)}. Available: ${availableTemplates().join(', ') || 'none found'}.`,
+    );
+  }
   const names = deriveNames(rawName);
   const destination = path.resolve(options.destination ?? process.cwd());
   const root = path.join(destination, names.projectName);

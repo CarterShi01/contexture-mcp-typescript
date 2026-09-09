@@ -4,7 +4,13 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { deriveNames, newProject, projectTemplate, UsageError } from '../src/cli/index.js';
+import {
+  availableTemplates,
+  deriveNames,
+  newProject,
+  projectTemplate,
+  UsageError,
+} from '../src/cli/index.js';
 
 test('scaffold derives one stable native name set', () => {
   assert.deepEqual(deriveNames('My Context'), {
@@ -32,4 +38,15 @@ test('newProject writes the complete starter and refuses to overwrite it', async
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
+});
+
+test('scaffold exposes its stable template inventory and names it on rejection', async () => {
+  assert.deepEqual(availableTemplates(), ['project']);
+  await assert.rejects(
+    newProject('Example', {
+      destination: await mkdtemp(path.join(tmpdir(), 'contexture-template-')),
+      template: 'missing',
+    }),
+    /Unknown template "missing"\. Available: project/,
+  );
 });

@@ -349,6 +349,10 @@ usually belong under the same Role. A `uses` reference names the Tool a Skill
 needs; take the canonical ref from `list` or a disclosed card rather than
 constructing it from memory.
 
+The scaffold exposes one stable template named `project`; `availableTemplates()`
+returns that inventory, and an unknown template is rejected while naming the
+available choice. Generated projects contain no unresolved template variables.
+
 ## 4. Work locally before starting a Host
 
 | Question                             | Command                                |

@@ -274,6 +274,9 @@ Python 的 `Index.of`、`bound` 与 `unbound` 构造形式；serving 仍由既�
 职责所需的 Skill 与 Tool 通常应该留在同一个 Role 下。`uses` ref 用于声明 Skill 需要的 Tool；
 应从 `list` 或已披露的卡片取得规范 ref，而不是凭记忆拼接。
 
+scaffold 暴露一个名为 `project` 的稳定 template；`availableTemplates()` 返回该 inventory，未知 template
+会被拒绝并列出可用选择。生成的 project 不包含未解析 template variable。
+
 ## 4. 启动 Host 前先在本地工作
 
 | 问题                     | 命令                                   |
