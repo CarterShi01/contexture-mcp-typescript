@@ -361,6 +361,16 @@ lexical or symlink targets that escape the project root. Legacy Python
 roots/publish/channels keys map into the exported Application declaration rather
 than a second project configuration shape.
 
+### Maintained Kubernetes demo
+
+`@contexture/mcp/demo` is the deterministic, fixture-driven Kubernetes
+incident-response reference application. It exposes the lazy
+`kubernetesPlatform`, `incidentResponse`, and `deploymentOps` role factories;
+one rollback Prompt; and two Markdown Resources pointing at existing document
+Tools. `@contexture/mcp/demo/server` exports the same `app` used by the CLI and
+a non-starting `build()` helper. Importing either path starts no transport and
+opens no connection; the demo never contacts a real cluster.
+
 ## 4. Work locally before starting a Host
 
 | Question                             | Command                                |

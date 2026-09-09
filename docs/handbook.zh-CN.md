@@ -282,6 +282,14 @@ programmatic consumer 从 `@contexture/mcp/cli` 导入 `main`、`CLI_VERSION`、
 原生 declaration，并拒绝词法或 symlink target 逃逸 project root。Python legacy roots/publish/channels key
 映射到导出的 Application declaration，而不是第二套 project config shape。
 
+### 维护中的 Kubernetes demo
+
+`@contexture/mcp/demo` 是 deterministic、fixture-driven 的 Kubernetes incident-response reference
+application。它公开 lazy `kubernetesPlatform`、`incidentResponse`、`deploymentOps` role factory、一个
+rollback Prompt，以及指向现有 document Tool 的两个 Markdown Resource。`@contexture/mcp/demo/server`
+导出 CLI 使用的同一个 `app` 和不启动 transport 的 `build()` helper。导入任一路径都不会启动 transport
+或打开 connection；demo 不会连接真实 cluster。
+
 ## 4. 启动 Host 前先在本地工作
 
 | 问题                     | 命令                                   |

@@ -53,6 +53,14 @@
       "types": "./dist/inspection.d.ts",
       "import": "./dist/inspection.js"
     },
+    "./demo": {
+      "types": "./dist/demo/index.d.ts",
+      "import": "./dist/demo/index.js"
+    },
+    "./demo/server": {
+      "types": "./dist/demo/server.d.ts",
+      "import": "./dist/demo/server.js"
+    },
     "./cli": {
       "types": "./dist/cli/index.d.ts",
       "import": "./dist/cli/index.js"
