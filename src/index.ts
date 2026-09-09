@@ -61,6 +61,7 @@ export {
   currentTelemetry,
   InMemoryTelemetry,
   reportTelemetry,
+  withTelemetry,
 } from './core/model/runtime.js';
 export type { NodeUsage, Telemetry, TelemetryEvent } from './core/model/runtime.js';
 export { currentGraph, withGraph } from './core/model/graph-context.js';

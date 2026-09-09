@@ -7,9 +7,14 @@ import { RootSelection, SelectedGraph } from './root-selection.js';
 import { withGraph } from './graph-context.js';
 import type { ToolCallContext } from './declarations.js';
 import { withChannels } from './channels.js';
-import { InMemoryTelemetry, reportTelemetry, type Telemetry } from './telemetry.js';
+import { InMemoryTelemetry, reportTelemetry, withTelemetry, type Telemetry } from './telemetry.js';
 
-export { InMemoryTelemetry, reportTelemetry } from './telemetry.js';
+export {
+  currentTelemetry,
+  InMemoryTelemetry,
+  reportTelemetry,
+  withTelemetry,
+} from './telemetry.js';
 export type { NodeUsage, Telemetry, TelemetryEvent } from './telemetry.js';
 
 interface RuntimeScope {
@@ -23,13 +28,6 @@ interface RuntimeScope {
 
 const SCOPE = new AsyncLocalStorage<RuntimeScope>();
 
-function requireScope(): RuntimeScope {
-  const scope = SCOPE.getStore();
-  if (scope === undefined)
-    throw new ModelValidationError('No Contexture Tool invocation is active.');
-  return scope;
-}
-
 /**
  * The caller identity for this invocation, or `undefined` when none exists.
  *
@@ -39,10 +37,6 @@ function requireScope(): RuntimeScope {
  */
 export function currentPrincipal(): Principal | undefined {
   return SCOPE.getStore()?.principal;
-}
-
-export function currentTelemetry(): Telemetry {
-  return requireScope().telemetry;
 }
 
 export function currentRootSelection(): RootSelection {
@@ -163,7 +157,9 @@ export class ApplicationRuntime {
         throw new ModelValidationError('A disclosure-only Tool cannot be invoked.');
       }
       const value = await withGraph(scope.graph, () =>
-        SCOPE.run(scope, () => binding.call(arguments_, callContext)),
+        withTelemetry(scope.telemetry, () =>
+          SCOPE.run(scope, () => binding.call(arguments_, callContext)),
+        ),
       );
       await reportTelemetry(this.telemetry, ref);
       return value;

@@ -131,7 +131,7 @@ test('ApplicationRuntime refuses a disclosure-only Index before it can execute',
 
 test('currentGraph and currentTelemetry reject access without an active Tool invocation', () => {
   assert.throws(() => currentGraph(), /No compiled Contexture graph is active/);
-  assert.throws(() => currentTelemetry(), /No Contexture Tool invocation is active/);
+  assert.throws(() => currentTelemetry(), /No Contexture telemetry is active/);
 });
 
 test('runtime rebuilds framework ToolCallContext facts and preserves Host facts', async () => {

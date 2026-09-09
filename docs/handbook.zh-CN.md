@@ -179,7 +179,9 @@ Prompt root，会恢复 stale lookup，并保留意外的 `WrongDoorError`。
 Skill open，以及成功或失败的 Tool invocation 聚合成 `NodeUsage`（`callCount`、`errorCount` 和
 `lastUsedAt`）；不会观察 discover 或打开 Tool card。可使用自定义 `Telemetry` 做 export，exporter 的
 rejection 或同步 throw 不会影响 navigation 或 business outcome。`compileRuntimeApplication` 会让
-Disclosure、Runtime 和 gateway surface 共享同一个 collector。
+Disclosure、Runtime 和 gateway surface 共享同一个 collector。Tool 内的 `currentTelemetry()` 会返回
+该 collector；在 Tool 或显式 `withTelemetry(collector, operation)` scope 外会 fail fast。嵌套 async
+scope 会恢复外层 collector。
 
 声明门面保持 SDK-neutral。它公开 `Contexture`、`defineApplication`、
 `ApplicationDeclaration`、原生 `Prompt` 与 `Resource` 数据 interface、node declaration，

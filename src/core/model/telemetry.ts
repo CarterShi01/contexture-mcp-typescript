@@ -1,3 +1,7 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
+import { ModelValidationError } from '../foundation/errors.js';
+
 /** Framework-owned aggregate for one opened Role/Skill or invoked Tool. */
 export interface NodeUsage {
   readonly ref: string;
@@ -17,6 +21,22 @@ export interface TelemetryEvent {
 export interface Telemetry {
   record(event: TelemetryEvent): void | Promise<void>;
   usage(ref: string): NodeUsage;
+}
+
+const CURRENT_TELEMETRY = new AsyncLocalStorage<Telemetry>();
+
+/** Return the collector bound to the current Tool invocation or explicit scope. */
+export function currentTelemetry(): Telemetry {
+  const telemetry = CURRENT_TELEMETRY.getStore();
+  if (telemetry === undefined) {
+    throw new ModelValidationError('No Contexture telemetry is active.');
+  }
+  return telemetry;
+}
+
+/** Run one operation with a task-local telemetry collector, restoring any outer scope. */
+export function withTelemetry<Result>(telemetry: Telemetry, operation: () => Result): Result {
+  return CURRENT_TELEMETRY.run(telemetry, operation);
 }
 
 /** Process-local, lossless aggregate and event collector. */

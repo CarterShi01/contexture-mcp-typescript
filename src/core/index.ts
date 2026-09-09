@@ -56,6 +56,7 @@ export {
   currentTelemetry,
   InMemoryTelemetry,
   reportTelemetry,
+  withTelemetry,
   WrongDoorError,
 } from './model/runtime.js';
 export type { NodeUsage, Telemetry, TelemetryEvent } from './model/runtime.js';

@@ -225,7 +225,10 @@ invocations as `NodeUsage` (`callCount`, `errorCount`, and `lastUsedAt`). It
 does not observe discovery or opening a Tool card. A custom `Telemetry` can be
 used for export; exporter rejection or a synchronous throw is isolated from
 navigation and business outcomes. `compileRuntimeApplication` shares one
-collector with its Disclosure, Runtime, and gateway surfaces.
+collector with its Disclosure, Runtime, and gateway surfaces. Inside a Tool,
+`currentTelemetry()` returns that exact collector; outside a Tool or explicit
+`withTelemetry(collector, operation)` scope it fails fast. Nested asynchronous
+scopes restore their outer collector.
 
 The declaration facade is SDK-neutral: its public inventory is `Contexture`,
 `defineApplication`, `ApplicationDeclaration`, the native `Prompt` and

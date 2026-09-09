@@ -7,6 +7,7 @@ import {
   defineApplication,
   InMemoryTelemetry,
   reportTelemetry,
+  withTelemetry,
 } from '../src/index.js';
 import {
   ApplicationRuntime,
@@ -46,6 +47,14 @@ test('telemetry aggregates actual Role/Skill opens and Tool outcomes, never disc
           }),
           () => ({
             kind: 'tool',
+            name: 'usage',
+            description: 'Read usage.',
+            readOnly: true,
+            input: z.strictObject({ ref: z.string() }),
+            invoke: ({ ref }) => currentTelemetry().usage(ref),
+          }),
+          () => ({
+            kind: 'tool',
             name: 'fail',
             description: 'Fail.',
             readOnly: true,
@@ -64,9 +73,21 @@ test('telemetry aggregates actual Role/Skill opens and Tool outcomes, never disc
   assert.strictEqual(application.disclosure.telemetry, collector);
   application.disclosure.discover();
   application.disclosure.open('operations/status');
-  application.disclosure.open('operations');
-  application.disclosure.open('operations/diagnose');
+  const role = application.disclosure.open('operations');
+  const skill = application.disclosure.open('operations/diagnose');
+  for (const payload of [role, skill]) {
+    const serialized = JSON.stringify(payload);
+    assert.doesNotMatch(serialized, /telemetry|call_count|error_count|last_used_at/);
+  }
   assert.equal(await application.runtime.invokeReadOnly('operations/status'), 'ok');
+  assert.equal(
+    (
+      (await application.runtime.invokeReadOnly('operations/usage', {
+        ref: 'operations/status',
+      })) as { callCount: number }
+    ).callCount,
+    1,
+  );
   await assert.rejects(application.runtime.invokeReadOnly('operations/fail'), /business failure/);
   assert.deepEqual(collector.usage('operations'), {
     ref: 'operations',
@@ -121,10 +142,20 @@ test('telemetry is concurrent and exporter failures or throws cannot replace out
     },
     usage: (ref) => ({ ref, callCount: 0, errorCount: 0, lastUsedAt: undefined }),
   };
+  const asynchronouslyBroken: Telemetry = {
+    record: () => Promise.reject(new Error('async exporter failed')),
+    usage: (ref) => ({ ref, callCount: 0, errorCount: 0, lastUsedAt: undefined }),
+  };
   const disclosure = new Disclosure(index, { telemetry: broken });
   assert.equal(disclosure.open('status').ref, 'status');
   assert.equal(
     await new ApplicationRuntime(index, { telemetry: broken }).invokeReadOnly('status'),
+    'ok',
+  );
+  assert.equal(
+    await new ApplicationRuntime(index, { telemetry: asynchronouslyBroken }).invokeReadOnly(
+      'status',
+    ),
     'ok',
   );
   const failingIndex = compileApplication(
@@ -149,7 +180,21 @@ test('telemetry is concurrent and exporter failures or throws cannot replace out
     /original business failure/,
   );
   await reportTelemetry(broken, 'ignored', true);
-  assert.throws(() => currentTelemetry(), /No Contexture Tool invocation is active/);
+  assert.throws(() => currentTelemetry(), /No Contexture telemetry is active/);
+});
+
+test('withTelemetry nests, restores, and isolates asynchronous collector scopes', async () => {
+  const outer = new InMemoryTelemetry();
+  const inner = new InMemoryTelemetry();
+  await withTelemetry(outer, async () => {
+    assert.strictEqual(currentTelemetry(), outer);
+    await withTelemetry(inner, async () => {
+      await Promise.resolve();
+      assert.strictEqual(currentTelemetry(), inner);
+    });
+    assert.strictEqual(currentTelemetry(), outer);
+  });
+  assert.throws(() => currentTelemetry(), /No Contexture telemetry is active/);
 });
 
 test('disclosure-only compilation shares its declared collector for Role and Skill opens', () => {
