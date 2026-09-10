@@ -170,7 +170,8 @@ TypeScript 实现生成真实观察结果，再与这些资产比较。
 ## 仓库结构
 
 请阅读 [TypeScript 使用手册](docs/handbook.zh-CN.md)、其[英文原文](docs/handbook.md)和
-[架构文档](docs/architecture.zh-CN.md)。
+[架构文档](docs/architecture.zh-CN.md)。真实 Host 证据与复现步骤记录在
+[Host verification](docs/verification/hosts.md) 中。
 
 ```text
 src/application.ts        Contexture 应用声明与组合根

@@ -187,7 +187,8 @@ run the TypeScript implementation before comparing its observations with them.
 
 Read the [TypeScript handbook](docs/handbook.md), its
 [Simplified Chinese translation](docs/handbook.zh-CN.md), and the
-[architecture document](docs/architecture.md).
+[architecture document](docs/architecture.md). Real Host evidence and
+reproduction steps are recorded in [Host verification](docs/verification/hosts.md).
 
 ```text
 src/application.ts        Contexture application declaration and composition root

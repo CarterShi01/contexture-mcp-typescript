@@ -62,6 +62,6 @@ reservation 与 prompt-root visibility，绝不会扩大 selected roots。普通
 7. Streamable HTTP 与 stdio 启动、固定 root surface、HTTP bearer identity，以及维护中的
    Kubernetes 参考应用。
 
-所有适用的 0.12 源码与行为测试条目现在都具备定向原生证据；维护中的英文与简体中文产品文档
-也已完成映射。Host 验证记录、package metadata 与干净检出环境的发布审计完成前，发布仍会
-刻意保持关闭。
+所有适用的 0.12 源码与行为测试条目现在都具备定向原生证据；维护中的英文与简体中文产品文档以及
+真实 Claude Code Host 验证也已记录。package metadata 与干净检出环境的发布审计完成前，发布仍会
+刻意保持关闭；Codex 另因本机账号未登录而阻塞。
