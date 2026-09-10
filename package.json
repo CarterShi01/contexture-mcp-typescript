@@ -92,7 +92,7 @@
     "lint": "eslint .",
     "pack:check": "npm pack --dry-run",
     "prepack": "npm run build",
-    "test": "node --import tsx --test test/*.test.ts",
+    "test": "node -e \"const { readdirSync } = require('node:fs'); const { spawnSync } = require('node:child_process'); const tests = readdirSync('test').filter((file) => file.endsWith('.test.ts')).map((file) => 'test/' + file); if (!tests.length) throw new Error('No TypeScript test files were found.'); const result = spawnSync(process.execPath, ['--import', 'tsx', '--test', ...tests], { stdio: 'inherit' }); if (result.error) throw result.error; process.exit(result.status ?? 1);\"",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
