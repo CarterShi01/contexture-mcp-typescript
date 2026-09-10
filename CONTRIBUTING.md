@@ -11,6 +11,10 @@ npm ci
 npm run check
 ```
 
+`npm run check` runs conformance validation, formatting, lint, type checking,
+the complete test suite, build and pack checks, and both installed-package and
+generated-scaffold consumers.
+
 Create changes from `master`. Do not commit credentials, local environment
 files, `node_modules`, coverage output, or built distributions.
 
@@ -27,3 +31,6 @@ files, `node_modules`, coverage output, or built distributions.
 
 Public API changes require tests and a changelog entry. Wire-level changes also
 require a conformance-fixture review in the reference repository.
+Describe the user-visible problem, chosen boundary, tests, and compatibility
+effect in each pull request. Report vulnerabilities privately as described in
+[SECURITY.md](SECURITY.md), never in a public issue.
