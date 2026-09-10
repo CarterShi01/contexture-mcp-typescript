@@ -17,7 +17,7 @@ is `scaffold`. This is intentional.
    and every documented public subpath, with no credentials or stale build
    output. The check installs that tarball into an independent consumer and
    exercises a generated project.
-5. Commit, create the exact matching tag (`v0.1.0-rc.1`), and push it.
+5. Commit, create the exact matching tag (`v0.12.0-rc.1`), and push it.
 6. For the first npm upload, authenticate interactively with 2FA if the package
    does not yet exist. After ownership exists, configure npm Trusted Publishing:
    - GitHub user: `CarterShi01`
