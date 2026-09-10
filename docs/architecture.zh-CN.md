@@ -20,6 +20,11 @@ reference segment、固定 gateway name，以及 `Prompt`/`Resource` data shape 
 MCP-interface 会 re-export 这些 publication shape 并声明其 MCP-plane projection，不能反向依赖
 model；model 也不会导入这个 sibling package。core 不可导入 MCP、HTTP、CLI 或框架相关模块。
 
+导出的 `@contexture/mcp/core` 入口是 Python lazy `contexture.core` facade 的原生等价物。ESM
+使用静态声明的 export graph，而不是在首次访问时解析 Python attribute，但边界相同：调用方无需
+加载 Host adapter，即可使用 SDK-neutral 的 model、binding、lifecycle、identity、selection、
+telemetry 与 error 概念。
+
 server 层将编译后的 API 映射到官方 MCP SDK 与 Host surface。业务 Tool 永远不会成为
 顶层 MCP Tool；Contexture 只暴露固定的导航与调用 gateway。
 

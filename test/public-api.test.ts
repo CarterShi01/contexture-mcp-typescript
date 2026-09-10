@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import * as authoring from '../src/index.js';
+import * as core from '../src/core/index.js';
 import * as server from '../src/server/index.js';
 
 const authoringConcepts = {
@@ -47,6 +48,27 @@ const serverConcepts = {
   cursorConfig: server.cursorConfig,
 } as const;
 
+const coreConcepts = {
+  ApplicationRuntime: core.ApplicationRuntime,
+  Channels: core.Channels,
+  CompileLevel: core.CompileLevel,
+  ContextureError: core.ContextureError,
+  ControllerManager: core.ControllerManager,
+  DeclarationError: core.DeclarationError,
+  DuplicateNameError: core.DuplicateNameError,
+  InMemoryTelemetry: core.InMemoryTelemetry,
+  ModelValidationError: core.ModelValidationError,
+  NodeNotFoundError: core.NodeNotFoundError,
+  Principal: core.Principal,
+  RootSelection: core.RootSelection,
+  SurfaceSelection: core.SurfaceSelection,
+  WrongDoorError: core.WrongDoorError,
+  bindTool: core.bindTool,
+  currentGraph: core.currentGraph,
+  currentPrincipal: core.currentPrincipal,
+  currentTelemetry: core.currentTelemetry,
+} as const;
+
 test('public authoring concepts resolve through the SDK-neutral package entry point', () => {
   for (const [name, value] of Object.entries(authoringConcepts)) {
     assert.notEqual(value, undefined, name);
@@ -55,6 +77,12 @@ test('public authoring concepts resolve through the SDK-neutral package entry po
 
 test('public server concepts resolve through the Host package entry point', () => {
   for (const [name, value] of Object.entries(serverConcepts)) {
+    assert.notEqual(value, undefined, name);
+  }
+});
+
+test('public core facade resolves SDK-neutral Python kernel concepts', () => {
+  for (const [name, value] of Object.entries(coreConcepts)) {
     assert.notEqual(value, undefined, name);
   }
 });

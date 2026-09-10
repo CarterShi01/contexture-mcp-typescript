@@ -23,6 +23,12 @@ projection without reaching into the model. Model code does not import that
 sibling package. Core cannot import MCP, HTTP, CLI, or framework-specific
 packages.
 
+The exported `@contexture/mcp/core` entry is the native equivalent of Python's
+lazy `contexture.core` facade. ESM resolves a statically declared export graph
+rather than Python attributes on first access, but the boundary is the same:
+SDK-neutral model, binding, lifecycle, identity, selection, telemetry, and
+error concepts are available without loading a Host adapter.
+
 The server layer maps compiled APIs to the official MCP SDK and optional Host
 surfaces. Business Tools never become top-level MCP tools; Contexture exposes a
 fixed navigation and invocation gateway.

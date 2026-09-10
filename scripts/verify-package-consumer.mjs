@@ -53,6 +53,7 @@ try {
 
   const consumer = [
     "import { z } from 'zod';",
+    "import { Channels as CoreChannels, ControllerManager as CoreControllerManager, Principal as CorePrincipal, RootSelection as CoreRootSelection, bindTool as coreBindTool, currentGraph as coreCurrentGraph } from '@contexture/mcp/core';",
     "import { inspect } from 'node:util';",
     "import { Channels, CompileLevel, Contexture, ContextureError, ControllerManager, DeclarationError, DISCOVER_GATEWAY_NAME, DuplicateNameError, GATEWAY_TOOL_NAMES, InMemoryTelemetry, INVOKE_GATEWAY_NAME, INVOKE_READ_ONLY_GATEWAY_NAME, LookupFailure, ModelValidationError, NodeNotFoundError, OPEN_GATEWAY_NAME, OutsideSelectionError, PACKAGE_NAME, PACKAGE_VERSION, Principal, REFERENCE_SEPARATOR, RootOutsideSelectionError, RootSelection, SelectedGraph, SurfaceSelection, WrongDoorError, branchesOf, compileNode, currentGraph, currentPrincipal, currentTelemetry, defineApplication, defineTool, groupCards, membersOf, reportTelemetry, withGraph, withTelemetry } from '@contexture/mcp';",
     "import { asJson as inspectionJson, trace } from '@contexture/mcp/inspection';",
@@ -66,6 +67,7 @@ try {
     "const localLookup = new NodeNotFoundError({ reason: LookupFailure.NO_SUCH_MEMBER, segment: 'missing', known: ['known'] }); const attachedLookup = localLookup.within('consumer/missing'); if (!(attachedLookup instanceof ContextureError) || attachedLookup.ref !== 'consumer/missing' || !attachedLookup.message.startsWith('no_such_member:') || localLookup.ref !== undefined || attachedLookup.within('other') !== attachedLookup) throw new Error('missing immutable NodeNotFound developer facts'); const wrongDoor = new WrongDoorError('consumer/write', false); if (!(wrongDoor instanceof ContextureError) || wrongDoor.message !== '\"consumer/write\" is a writing Tool' || !(new DeclarationError('invalid') instanceof ContextureError)) throw new Error('missing Contexture error categories');",
     "if (PACKAGE_NAME !== 'contexture' || PACKAGE_VERSION !== '0.12.0rc1' || REFERENCE_SEPARATOR !== '/' || GATEWAY_TOOL_NAMES.join(',') !== [DISCOVER_GATEWAY_NAME, OPEN_GATEWAY_NAME, INVOKE_READ_ONLY_GATEWAY_NAME, INVOKE_GATEWAY_NAME].join(',')) throw new Error('missing shared foundation vocabulary');",
     "if (typeof Contexture !== 'function') throw new Error('missing Contexture facade');",
+    "if (CoreChannels !== Channels || CoreControllerManager !== ControllerManager || CorePrincipal !== Principal || CoreRootSelection !== RootSelection || typeof coreBindTool !== 'function' || coreCurrentGraph !== currentGraph) throw new Error('missing SDK-neutral core facade');",
     "if (typeof Channels !== 'function') throw new Error('missing nominal Channels facade');",
     "if (typeof ControllerManager !== 'function') throw new Error('missing manager facade');",
     "if (typeof DuplicateNameError !== 'function' || typeof ModelValidationError !== 'function' || typeof ApplicationRuntime !== 'function') throw new Error('missing public parity facade concepts');",
