@@ -11,13 +11,18 @@ Implementations:
 [Go](https://github.com/CarterShi01/contexture-mcp-go) ·
 [Specification](https://github.com/CarterShi01/contexture-mcp/tree/master/spec)
 
-> **Status: active 0.12 product port; not yet a release-ready Python
-> replacement.** The kernel has focused evidence and this repository ships a
-> native CLI, scaffold, inspection, maintained demo, MCP transports, fixed and
-> request-selected HTTP surfaces, and HTTP bearer identity. Remaining parity
-> work includes complete documentation/scenario mapping and a
-> clean-checkout release audit. The npm package remains private until those
-> release gates pass.
+> **Status: all applicable 0.12 source and behavioral-test rows are verified;
+> release remains guarded.** This repository ships a native CLI, scaffold,
+> inspection, maintained demo, MCP transports, fixed and request-selected HTTP
+> surfaces, REST, and bearer identity. Remaining parity work is documentation
+> and release-asset review plus a clean-checkout release audit. The npm package
+> remains private until those release gates pass.
+
+Public entry points are `@contexture/mcp`, `@contexture/mcp/core`,
+`@contexture/mcp/server`, `@contexture/mcp/server/surface`,
+`@contexture/mcp/web`, `@contexture/mcp/demo`, `@contexture/mcp/inspection`,
+and `@contexture/mcp/cli`. The release check installs the packed tarball into a
+separate project and imports each entry point.
 
 ## Node model
 
