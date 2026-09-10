@@ -62,6 +62,6 @@ reservation 与 prompt-root visibility，绝不会扩大 selected roots。普通
 7. Streamable HTTP 与 stdio 启动、固定 root surface、HTTP bearer identity，以及维护中的
    Kubernetes 参考应用。
 
-内核区域拥有定向 conformance 证据；产品工作流拥有原生集成和已打包 npm 消费者证据。
-这仍不是完整产品等价：完整文档和场景映射、以及干净检出环境
-发布审计仍未完成。
+所有适用的 0.12 源码与行为测试条目现在都具备定向原生证据；维护中的英文与简体中文产品文档
+也已完成映射。Host 验证记录、package metadata 与干净检出环境的发布审计完成前，发布仍会
+刻意保持关闭。

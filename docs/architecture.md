@@ -78,7 +78,7 @@ facts instead of agent-facing recovery prose.
 7. Streamable HTTP and stdio launch, fixed root surfaces, HTTP bearer identity,
    and the maintained Kubernetes reference application.
 
-The kernel areas have focused conformance evidence; the product workflows have
-native integration and packed npm-consumer evidence. This is still not full
-product parity: complete documentation and scenario mapping, and the
-clean-checkout release audit remain open.
+Every applicable 0.12 source and behavioral-test row now has focused native
+evidence; maintained English and Simplified Chinese product documentation is
+also mapped. Release remains intentionally closed until the Host verification
+records, package metadata, and clean-checkout release audit are complete.
