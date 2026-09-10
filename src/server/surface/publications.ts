@@ -62,7 +62,7 @@ export class Publications {
       ...this.prompts
         .filter((entry) => effective.containsRef(entry.opens))
         .map((entry) => ({
-          name: publicationName(entry),
+          name: publishedName(entry),
           description: commandDescription(entry.opens, entry.description),
           arguments: Object.freeze([]),
         })),
@@ -83,7 +83,7 @@ export class Publications {
         .filter((entry) => effective.containsRef(entry.opens))
         .map((entry) =>
           Object.freeze({
-            name: publicationName(entry),
+            name: publishedName(entry),
             uri: entry.uri,
             description: entry.description,
             mimeType: entry.mimeType,
@@ -93,7 +93,7 @@ export class Publications {
   }
 
   async command(name: string, selection: RootSelection = RootSelection.all()): Promise<string> {
-    const entry = this.prompts.find((candidate) => publicationName(candidate) === name);
+    const entry = this.prompts.find((candidate) => publishedName(candidate) === name);
     if (entry === undefined)
       throw new ModelValidationError(`No Contexture Prompt named ${JSON.stringify(name)}.`);
     return this.openForPerson(entry.opens, selection);
@@ -168,7 +168,7 @@ function validatePrompts(disclosure: Disclosure, entries: readonly PromptDeclara
       `Prompt ${JSON.stringify(entry.opens)} must have a description.`,
     );
     disclosure.index.find(entry.opens);
-    const name = publicationName(entry);
+    const name = publishedName(entry);
     if (names.has(name))
       throw new ModelValidationError(
         `Contexture Prompt ${JSON.stringify(name)} is declared more than once.`,
@@ -205,7 +205,7 @@ function validateResources(
         `Resource ${JSON.stringify(entry.uri)} must target an argument-free Tool.`,
       );
     }
-    const name = publicationName(entry);
+    const name = publishedName(entry);
     if (names.has(name))
       throw new ModelValidationError(
         `Contexture Resource ${JSON.stringify(name)} is declared more than once.`,
@@ -231,7 +231,8 @@ function personSignpost(disclosure: Disclosure, ref: string, selection: RootSele
   return signpost(levels);
 }
 
-function publicationName(entry: PromptDeclaration | ResourceDeclaration): string {
+/** Return the Host-visible name, defaulting to the final canonical ref segment. */
+export function publishedName(entry: PromptDeclaration | ResourceDeclaration): string {
   return entry.name ?? entry.opens.slice(entry.opens.lastIndexOf(REFERENCE_SEPARATOR) + 1);
 }
 

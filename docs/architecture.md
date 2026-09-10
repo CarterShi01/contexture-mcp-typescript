@@ -51,6 +51,9 @@ declaration compilers, and `serve(app)` maps to `buildServer(app).start()`.
 serving; it has no capability-registration API, and repeated `build()` calls
 return the same default official-SDK adapter. Transport options remain a
 separate startup concern.
+The installable `@contexture/mcp/server/surface` subpath exposes the validated
+`Publications` composite and `publishedName()` mapping used by Prompt and
+Resource doors; declarations are fully checked before an SDK server is built.
 
 `DisclosureAPI` is the independently installable navigation half of that
 gateway. It accepts a compiled `Disclosure`, has no Runtime or transport

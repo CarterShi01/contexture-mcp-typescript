@@ -41,6 +41,8 @@ discover/open 与 Prompts；它没有 Runtime、invoke door 或 Resource。Pytho
 `buildServer()` 会在 serving 前封存 identity 与一个 compiled runtime container；它不提供 capability
 registration API，重复调用 `build()` 会返回同一个默认 official-SDK adapter。transport option 仍是独立的
 startup concern。
+可安装的 `@contexture/mcp/server/surface` 子路径公开经过校验的 `Publications` composite 与 Prompt、
+Resource door 共用的 `publishedName()` 映射；所有 declaration 都会在 SDK server 构建前完成校验。
 
 `DisclosureAPI` 是该 gateway 可独立安装的导航半面。它接收已编译 `Disclosure`，不依赖 Runtime
 或 transport，并通过不可变 tool inventory 只公开 `discover` 与 `open`。`selectedGraph` 使用与导航

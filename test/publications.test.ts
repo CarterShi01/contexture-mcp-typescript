@@ -11,6 +11,10 @@ import {
   RootSelection,
 } from '../src/core/index.js';
 import { compileRuntimeApplication, Publications } from '../src/server/index.js';
+import {
+  Publications as SurfacePublications,
+  publishedName,
+} from '../src/server/surface/publications.js';
 
 function publications() {
   const declaration = defineApplication({
@@ -74,6 +78,16 @@ function publications() {
 
 test('Prompt navigation, completion, instructions, and Resources project one compiled surface', async () => {
   const { publications: surface } = publications();
+  assert.equal(SurfacePublications, Publications);
+  assert.equal(publishedName({ opens: 'operations/runbook', description: 'Read.' }), 'runbook');
+  assert.equal(
+    publishedName({
+      name: 'named',
+      opens: 'operations/runbook',
+      description: 'Read.',
+    }),
+    'named',
+  );
   assert.deepEqual(surface.promptCards(), [
     {
       name: 'show-command',

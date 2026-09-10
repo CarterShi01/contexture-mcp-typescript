@@ -49,6 +49,10 @@
       "types": "./dist/server/index.d.ts",
       "import": "./dist/server/index.js"
     },
+    "./server/surface": {
+      "types": "./dist/server/surface/publications.d.ts",
+      "import": "./dist/server/surface/publications.js"
+    },
     "./web": {
       "types": "./dist/web/index.d.ts",
       "import": "./dist/web/index.js"
