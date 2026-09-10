@@ -4,6 +4,8 @@ import test from 'node:test';
 import { defineApplication, Principal, SurfaceSelection } from '../src/index.js';
 import { compileApplication, RootSelection, RootSelectionError } from '../src/core/index.js';
 import {
+  FixedRootSelector,
+  FixedSurfaceSelector,
   HeaderRootSelector,
   HeaderSurfaceSelector,
   ROOTS_HEADER,
@@ -65,6 +67,14 @@ test('a selector without a header or identity ceiling retains the compatibility 
   assert.equal(selected.containsRef('release/tool'), true);
 });
 
+test('fixed selectors resolve one immutable transport-independent surface', () => {
+  assert.equal(FixedRootSelector, FixedSurfaceSelector);
+  const selected = new FixedRootSelector(SurfaceSelection.only('diagnose')).select(index());
+  assert.deepEqual(selected.names, ['diagnose']);
+  assert.equal(selected.containsRef('diagnose/service'), true);
+  assert.equal(selected.containsRef('release'), false);
+});
+
 test('header root selection validates size, count, and named roots', () => {
   const compiled = index();
   const selector = new HeaderRootSelector({ maxLength: 4, maxRoots: 1 });
@@ -121,4 +131,24 @@ test('surface ceiling can only narrow a path request', () => {
     ceiling: () => SurfaceSelection.only('diagnose'),
   }).select(index(), { [SELECT_HEADER]: 'diagnose/service,release' });
   assert.deepEqual(selected.names, ['diagnose/service']);
+});
+
+test('custom surface headers retain or explicitly disable the legacy fallback', () => {
+  const compiled = index();
+  const custom = new HeaderSurfaceSelector({ header: 'X-Contexture-Select' });
+  assert.deepEqual(custom.select(compiled, { [ROOTS_HEADER]: 'diagnose' }).names, ['diagnose']);
+  const strict = new HeaderSurfaceSelector({
+    header: 'X-Contexture-Select',
+    legacyHeader: undefined,
+  });
+  assert.equal(strict.select(compiled, { [ROOTS_HEADER]: 'diagnose' }).names, undefined);
+});
+
+test('surface selector validates construction and application-owned ceilings', () => {
+  assert.throws(() => new HeaderSurfaceSelector({ maxLength: 0 }), /positive integer/);
+  assert.throws(() => new HeaderSurfaceSelector({ maxRoots: 0 }), /positive integer/);
+  const selector = new HeaderSurfaceSelector({
+    ceiling: (() => undefined) as never,
+  });
+  assert.throws(() => selector.select(index()), /must return SurfaceSelection/);
 });

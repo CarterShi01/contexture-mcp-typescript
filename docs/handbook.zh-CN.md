@@ -116,7 +116,8 @@ client 保留为同一语义的 alias。`SelectedGraph` 只公开选中范围内
 `find`、`refOf`、`parentOf`、`childrenOf`、`usesOf` 与 `dependentsOf`；cross-root uses 和
 dependents 会被过滤。request header 使用同一 projection，不能泄露 identity ceiling 之外的 capability。
 `Contexture-Select` 是 canonical header；`Contexture-Roots` 作为大小写不敏感的 legacy fallback 保留，
-同时发送两者会被拒绝。
+同时发送两者会被拒绝。`FixedSurfaceSelector`（也导出为 `FixedRootSelector`）为不从 HTTP request
+fact 派生 selection 的 Host 解析一个 transport-independent selection。
 `currentRootSelection()` 在 Tool 内返回 request-local projection，在 invocation 外返回兼容的
 all-roots 值。
 

@@ -141,7 +141,9 @@ selection. `RootSelection` remains an alias with the same semantics for
 uses and dependents are filtered. Request headers use the same projection and
 cannot disclose capabilities outside an identity ceiling. `Contexture-Select`
 is the canonical header; `Contexture-Roots` remains a case-insensitive legacy
-fallback, and sending both is rejected. `currentRootSelection()`
+fallback, and sending both is rejected. `FixedSurfaceSelector` (also exported
+as `FixedRootSelector`) resolves one transport-independent selection for hosts
+that do not derive it from HTTP request facts. `currentRootSelection()`
 returns the request-local projection inside a Tool and the compatibility
 all-roots value outside an invocation.
 

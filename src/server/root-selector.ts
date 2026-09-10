@@ -87,7 +87,11 @@ export class HeaderSurfaceSelector implements SurfaceSelector {
     }
     requested = requested.resolve(index);
     if (this.ceiling === undefined) return requested;
-    return requested.intersect(this.ceiling(principal).resolve(index)).resolve(index);
+    const ceiling = this.ceiling(principal);
+    if (!(ceiling instanceof SurfaceSelection)) {
+      throw new TypeError('A surface ceiling must return SurfaceSelection.');
+    }
+    return requested.intersect(ceiling.resolve(index)).resolve(index);
   }
 }
 
