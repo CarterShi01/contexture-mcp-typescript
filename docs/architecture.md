@@ -47,6 +47,10 @@ Disclosure, Runtime, Publications, and telemetry are shared. The independent
 installs only discover/open plus Prompts; it has no Runtime, invoke doors, or
 Resources. Python's temporary `compile_parts` helpers map to the same raw
 declaration compilers, and `serve(app)` maps to `buildServer(app).start()`.
+`buildServer()` seals identity and one compiled runtime container before
+serving; it has no capability-registration API, and repeated `build()` calls
+return the same default official-SDK adapter. Transport options remain a
+separate startup concern.
 
 `DisclosureAPI` is the independently installable navigation half of that
 gateway. It accepts a compiled `Disclosure`, has no Runtime or transport

@@ -42,6 +42,13 @@ test('a sealed Contexture server builds its default adapter exactly once', () =>
     ],
   });
   const server = buildServer(declaration);
+  assert.equal(server.name, 'stable-server');
+  assert.equal(server.version, '0.12.0rc1');
+  assert.equal(server.application.index.name, 'stable-server');
+  assert.ok(server.application.runtime instanceof ApplicationRuntime);
+  assert.ok(server.application.publications instanceof Publications);
+  assert.ok(Object.isFrozen(server));
+  assert.equal('registerTool' in server, false);
   assert.strictEqual(server.build(), server.build());
 });
 

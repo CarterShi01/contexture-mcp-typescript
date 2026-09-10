@@ -38,6 +38,9 @@ launch config、logging 与 compile/build helper。
 telemetry 共享。独立的 `compileStructuralApplication()` 返回 unbound container，其 `server()` 只安装
 discover/open 与 Prompts；它没有 Runtime、invoke door 或 Resource。Python 临时 `compile_parts` helper
 映射到同一 raw declaration compiler，`serve(app)` 映射为 `buildServer(app).start()`。
+`buildServer()` 会在 serving 前封存 identity 与一个 compiled runtime container；它不提供 capability
+registration API，重复调用 `build()` 会返回同一个默认 official-SDK adapter。transport option 仍是独立的
+startup concern。
 
 `DisclosureAPI` 是该 gateway 可独立安装的导航半面。它接收已编译 `Disclosure`，不依赖 Runtime
 或 transport，并通过不可变 tool inventory 只公开 `discover` 与 `open`。`selectedGraph` 使用与导航
