@@ -9,8 +9,9 @@ is `scaffold`. This is intentional.
    scope, move user-visible changes into a dated changelog section, and update
    both READMEs and handbooks.
 2. Set `conformance/specification.json` to the honestly achieved status.
-3. Change `private` to `false` and set a candidate version such as
-   `0.1.0-rc.1` in `package.json`; regenerate `package-lock.json`.
+3. Confirm the private candidate version in `package.json` and
+   `package-lock.json`, then change `private` to `false` only after package-name
+   review. The first guarded candidate is `0.12.0-rc.1`.
 4. Run `npm ci` and `npm run check`. Inspect `npm pack --dry-run` and confirm
    the tarball contains `LICENSE`, both READMEs, declarations, CLI, templates,
    and every documented public subpath, with no credentials or stale build
