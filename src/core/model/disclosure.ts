@@ -69,7 +69,7 @@ export class Disclosure implements View<CompiledNode> {
 
   select(selection: RootSelection): Disclosure {
     return new Disclosure(this.index, {
-      selection: this.selection.intersect(selection),
+      selection: this.selection.intersect(selection.resolve(this.index)),
       promptRoots: this.#promptRoots,
       reserved: this.#reserved,
       telemetry: this.telemetry,
@@ -86,7 +86,7 @@ export class Disclosure implements View<CompiledNode> {
   }
 
   effectiveSelection(requested: RootSelection = RootSelection.all()): RootSelection {
-    return this.selection.intersect(requested).resolve(this.index);
+    return this.selection.intersect(requested.resolve(this.index)).resolve(this.index);
   }
 
   modelCanSee(ref: string, requested: RootSelection = RootSelection.all()): boolean {

@@ -11,7 +11,8 @@ Contexture 的 TypeScript 实现。Contexture 是一个面向 MCP 应用的渐�
 [Go](https://github.com/CarterShi01/contexture-mcp-go) ·
 [跨语言规范](https://github.com/CarterShi01/contexture-mcp/tree/master/spec)
 
-> **当前状态：所有适用的 0.12 源码与行为测试条目均已验证，但发布仍受保护。** 本仓库已具备
+> **当前状态：Python 0.13 的 path-selected surface 及所有适用的 0.12 产品条目均已验证，
+> 但发布仍受保护。** 本仓库已具备
 > 原生 CLI、脚手架、inspection、维护中的 demo、MCP transport、固定及请求级 HTTP
 > path-selected surface、REST 与 bearer identity。剩余 parity 工作是文档、发布资产审查以及
 > 干净检出环境的发布审计；在全部发布门禁通过前，npm 包保持 private。
@@ -164,8 +165,13 @@ npm run check
 ```
 
 本实现锁定 `conformance/specification.json` 中记录的 Contexture Specification
-0.12 提交。固定 fixtures 和 golden 输出保存在 `conformance/`；测试会先通过
+0.13 提交。固定 fixtures 和 golden 输出保存在 `conformance/`；测试会先通过
 TypeScript 实现生成真实观察结果，再与这些资产比较。
+
+对于 streamable HTTP，`Contexture-Select: operations/diagnose` 会提升该完整 subtree，
+但不暴露其 ancestor 或 sibling；`Contexture-Select: operations/*` 只选择 direct member。
+application identity ceiling 只能进一步收窄 selection。`Contexture-Roots` 保留为 root-only
+兼容 header，同时发送两个 header 属于无效请求。
 
 ## 仓库结构
 

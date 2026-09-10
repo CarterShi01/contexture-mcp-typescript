@@ -13,8 +13,8 @@ export const SELF_CONTAINED_PREFIX = 512;
 /** Bootstrap text for a request-selected server without a global roster. */
 export function neutralInstructions(): string {
   return (
-    'This Contexture server exposes a request-specific set of complete root capabilities. ' +
-    `Call ${DISCOVER_GATEWAY_NAME} for the roots available to this request, open the one that fits ` +
+    'This Contexture server exposes a request-specific set of complete capability subtrees. ' +
+    `Call ${DISCOVER_GATEWAY_NAME} for the surface roots available to this request, open the one that fits ` +
     'the task, and continue one level at a time using refs exactly as returned. Run a disclosed ' +
     'tool through the read-only or writing Contexture invoke door named on its card.'
   );
@@ -79,9 +79,9 @@ function assemble(preamble: string, roster: readonly string[]): string {
 function* siblingGroups(
   disclosure: Disclosure,
 ): IterableIterator<readonly (readonly [string, string])[]> {
-  const visible = disclosure.index.modelRoots.filter((node) =>
-    disclosure.modelCanSee(disclosure.index.refOf(node)),
-  );
+  const visible = disclosure.selection
+    .rootsIn(disclosure.index)
+    .filter((node) => disclosure.modelCanSee(disclosure.index.refOf(node)));
   yield visible.map((node) => [disclosure.index.refOf(node), node.description] as const);
 
   const queue = visible.filter((node) => node.kind === 'role');

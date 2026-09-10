@@ -130,6 +130,16 @@ test('Disclosure discovers and opens a promoted descendant surface root', () => 
   assert.throws(() => disclosure.open('alpha'), RootOutsideSelectionError);
 });
 
+test('Disclosure resolves wildcard requests before applying its path ceiling', () => {
+  const compiled = index();
+  const disclosure = new Disclosure(compiled).select(SurfaceSelection.only('alpha'));
+
+  assert.deepEqual(
+    disclosure.discover(SurfaceSelection.only('alpha/*')).roles.map((card) => card.ref),
+    ['alpha/child'],
+  );
+});
+
 test('SelectedGraph matching uses projected Unicode code-point ordering and retains total before limit', () => {
   const graph = new SelectedGraph(index(), RootSelection.only([privateUse, astral, 'aa']));
 

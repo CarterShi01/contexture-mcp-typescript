@@ -11,8 +11,8 @@ Implementations:
 [Go](https://github.com/CarterShi01/contexture-mcp-go) ·
 [Specification](https://github.com/CarterShi01/contexture-mcp/tree/master/spec)
 
-> **Status: all applicable 0.12 source and behavioral-test rows are verified;
-> release remains guarded.** This repository ships a native CLI, scaffold,
+> **Status: Python 0.13 path-selected surface parity and all applicable 0.12
+> product rows are verified; release remains guarded.** This repository ships a native CLI, scaffold,
 > inspection, maintained demo, MCP transports, fixed and request-selected HTTP
 > surfaces, REST, and bearer identity. Remaining parity work is documentation
 > and release-asset review plus a clean-checkout release audit. The npm package
@@ -178,10 +178,16 @@ npm ci
 npm run check
 ```
 
-The binding targets Contexture Specification 0.12 at the immutable revision in
+The binding targets Contexture Specification 0.13 at the immutable revision in
 [`conformance/specification.json`](conformance/specification.json). Pinned
 fixtures and golden outputs are stored under `conformance/`; tests construct and
 run the TypeScript implementation before comparing its observations with them.
+
+For streamable HTTP, `Contexture-Select: operations/diagnose` promotes that
+complete subtree without exposing its ancestors or siblings;
+`Contexture-Select: operations/*` selects only direct members. Application
+identity ceilings can only narrow this selection. `Contexture-Roots` remains a
+root-only compatibility header, and sending both headers is invalid.
 
 ## Repository map
 

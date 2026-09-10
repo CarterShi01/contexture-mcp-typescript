@@ -413,6 +413,46 @@ test('requested selection can only attenuate an identity ceiling and governs the
   );
 });
 
+test('runtime resolves wildcard requests before applying a concrete path ceiling', async () => {
+  const compiled = compileApplication(
+    defineApplication({
+      name: 'wildcard-runtime',
+      roots: [
+        () => ({
+          kind: 'role',
+          name: 'operations',
+          description: 'Operations.',
+          instructions: 'Inspect.',
+          tools: [
+            () =>
+              defineTool({
+                kind: 'tool',
+                name: 'status',
+                description: 'Read status.',
+                readOnly: true,
+                input: z.strictObject({}),
+                invoke: () => currentRootSelection().names,
+              }),
+          ],
+        }),
+      ],
+    }),
+  );
+  const narrowed = new ApplicationRuntime(compiled, {
+    identityCeiling: RootSelection.only('operations'),
+  });
+
+  assert.deepEqual(
+    await narrowed.invokeReadOnly(
+      'operations/status',
+      undefined,
+      {},
+      RootSelection.only('operations/*'),
+    ),
+    ['operations/status'],
+  );
+});
+
 test('a telemetry exporter failure never replaces the observed business result or error', async () => {
   const brokenTelemetry: Telemetry = {
     record: () => Promise.reject(new Error('exporter offline')),

@@ -74,14 +74,14 @@ export class HeaderSurfaceSelector implements SurfaceSelector {
     const value = raw ?? legacy;
     let requested = SurfaceSelection.all();
     if (value !== undefined) {
-      if (value.length > this.maxLength)
+      if ([...value].length > this.maxLength)
         throw new SurfaceSelectionError(
           `${String(usedHeader)} exceeds the ${this.maxLength}-character limit.`,
         );
       const selectors = value.split(',').map((item) => item.trim());
       if (selectors.length > this.maxRoots)
         throw new SurfaceSelectionError(
-          `${String(usedHeader)} exceeds the ${this.maxRoots}-${usedHeader === ROOTS_HEADER ? 'root' : 'selector'} limit.`,
+          `${String(usedHeader)} exceeds the ${this.maxRoots}-selector limit.`,
         );
       requested = SurfaceSelection.only(selectors).resolve(index);
     }

@@ -82,7 +82,7 @@ test('header root selection validates size, count, and named roots', () => {
   const countLimited = new HeaderRootSelector({ maxRoots: 1 });
   assert.throws(
     () => countLimited.select(compiled, { [ROOTS_HEADER]: 'diagnose,release' }),
-    /root limit/,
+    /selector limit/,
   );
   let unknown: unknown;
   try {
@@ -93,6 +93,14 @@ test('header root selection validates size, count, and named roots', () => {
   assert.ok(unknown instanceof RootSelectionError);
   assert.match(unknown.message, /Unknown or empty Contexture selector: "missing"/);
   assert.doesNotMatch(unknown.message, /diagnose|release/);
+});
+
+test('surface header length counts Unicode code points like Python', () => {
+  const selector = new HeaderSurfaceSelector({ maxLength: 1 });
+  assert.throws(
+    () => selector.select(index(), { [SELECT_HEADER]: '\u{10000}' }),
+    /Unknown or empty Contexture selector/,
+  );
 });
 
 test('header root selection trims and deduplicates without leaking excluded roots', () => {

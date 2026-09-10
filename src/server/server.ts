@@ -17,7 +17,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
 import type { ApplicationCompilation } from '../core/model/compiler.js';
 import { Gateway } from '../core/model/system-api.js';
-import { RootSelection } from '../core/model/root-selection.js';
+import { RootSelection, SurfaceSelectionError } from '../core/model/root-selection.js';
 import { PACKAGE_VERSION } from '../core/foundation/vocabulary.js';
 
 import { compileRuntimeApplication, type RuntimeApplication } from './application.js';
@@ -39,6 +39,7 @@ export interface HttpServerHandle {
 /** One compiled application and its transport-specific MCP assembly. */
 export class ContextureServer {
   #built: ContextureMcpServer | undefined;
+  readonly #requestSelections = new WeakMap<Request, RootSelection>();
   readonly application: RuntimeApplication;
   readonly name: string;
   readonly version: string;
@@ -176,6 +177,24 @@ export class ContextureServer {
             await writeResponse(response, authInfo);
             return;
           }
+          if (this.surfaceSelector !== undefined) {
+            try {
+              this.#requestSelections.set(
+                webRequest,
+                this.surfaceSelector.select(
+                  this.application.index,
+                  Object.fromEntries(webRequest.headers.entries()),
+                  principalOf(authInfo),
+                ),
+              );
+            } catch (error) {
+              if (error instanceof SurfaceSelectionError) {
+                await writeResponse(response, await invalidParamsResponse(webRequest, error));
+                return;
+              }
+              throw error;
+            }
+          }
           await writeResponse(
             response,
             await handler.fetch(webRequest, authInfo === undefined ? {} : { authInfo }),
@@ -290,6 +309,11 @@ export class ContextureServer {
   private selectionForRequest(context: McpRequestContext): RootSelection {
     if (this.surfaceSelector === undefined || context.requestInfo === undefined)
       return this.selection;
+    const selected = this.#requestSelections.get(context.requestInfo);
+    if (selected !== undefined) {
+      this.#requestSelections.delete(context.requestInfo);
+      return selected;
+    }
     return this.surfaceSelector.select(
       this.application.index,
       Object.fromEntries(context.requestInfo.headers.entries()),
@@ -355,6 +379,26 @@ class RequestBodyTooLargeError extends Error {
   constructor(readonly limit: number) {
     super(`Request body exceeds the configured ${limit}-byte limit.`);
   }
+}
+
+async function invalidParamsResponse(
+  request: Request,
+  error: SurfaceSelectionError,
+): Promise<Response> {
+  let id: string | number | null = null;
+  try {
+    const body = (await request.clone().json()) as { readonly id?: unknown };
+    if (typeof body.id === 'string' || typeof body.id === 'number' || body.id === null) {
+      id = body.id;
+    }
+  } catch {
+    // Malformed JSON remains attributable only to the request as a whole.
+  }
+  return Response.json({
+    jsonrpc: '2.0',
+    id,
+    error: { code: -32602, message: error.message },
+  });
 }
 
 async function boundedBody(request: IncomingMessage, limit: number): Promise<Uint8Array> {

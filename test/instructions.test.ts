@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { defineApplication } from '../src/index.js';
-import { compileApplication, Disclosure } from '../src/core/index.js';
+import { compileApplication, Disclosure, RootSelection } from '../src/core/index.js';
 import {
   buildInstructions,
   INSTRUCTIONS_LIMIT,
@@ -61,7 +61,17 @@ test('server instructions cut roots individually and deeper roles by sibling gro
   assert.match(text, /more root role\(s\); call contexture_discover/);
   assert.equal(ROSTER_BUDGET, 1200);
   assert.equal(SELF_CONTAINED_PREFIX, 512);
-  assert.match(neutralInstructions(), /request-specific set of complete root capabilities/);
+  assert.match(neutralInstructions(), /request-specific set of complete capability subtrees/);
+  assert.match(neutralInstructions(), /surface roots available to this request/);
+});
+
+test('server instructions start their roster at promoted surface roots', () => {
+  const selected = disclosure().select(RootSelection.only('operations/incidents'));
+  const text = buildInstructions(selected);
+
+  assert.match(text, /- operations\/incidents: Diagnose incidents\./);
+  assert.doesNotMatch(text, /- operations: Operate services\./);
+  assert.doesNotMatch(text, /- security:/);
 });
 
 test('server instructions measure Unicode in UTF-8 bytes and never split a child sibling group', () => {

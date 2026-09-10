@@ -12,6 +12,7 @@ import {
   buildServer,
   ContextureOptions,
   HeaderRootSelector,
+  HeaderSurfaceSelector,
   ServeError,
 } from '../src/server/index.js';
 
@@ -560,6 +561,69 @@ test('the HTTP root selector constructs independent root surfaces per request', 
   }
 });
 
+test('the HTTP surface selector promotes deep instructions and reports invalid params', async () => {
+  const selected = defineApplication({
+    name: 'per-request-surfaces',
+    roots: [
+      () => ({
+        kind: 'role',
+        name: 'team',
+        description: 'Team root.',
+        instructions: 'Route work.',
+        children: [
+          () => ({
+            kind: 'role',
+            name: 'editor',
+            description: 'Edit documents.',
+            instructions: 'Edit carefully.',
+          }),
+          () => ({
+            kind: 'role',
+            name: 'reviewer',
+            description: 'Review documents.',
+            instructions: 'Review carefully.',
+          }),
+        ],
+      }),
+    ],
+  });
+  const handle = await buildServer(selected, {
+    surfaceSelector: new HeaderSurfaceSelector(),
+  }).start(new ContextureOptions({ transport: 'streamable-http', port: 0 }));
+  if (handle === undefined) throw new Error('HTTP startup unexpectedly returned no listener.');
+  const initialize = (surface: string, id: number) =>
+    fetch(handle.url, {
+      method: 'POST',
+      headers: {
+        accept: 'application/json, text/event-stream',
+        'content-type': 'application/json',
+        'contexture-select': surface,
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id,
+        method: 'initialize',
+        params: {
+          protocolVersion: LATEST_PROTOCOL_VERSION,
+          capabilities: {},
+          clientInfo: { name: 'surface-test', version: '0.0.0' },
+        },
+      }),
+    });
+  try {
+    const promoted = await sseResponse(await initialize('team/editor', 201));
+    assert.match(promoted.result?.instructions ?? '', /team\/editor: Edit documents\./);
+    assert.doesNotMatch(promoted.result?.instructions ?? '', /Team root|team\/reviewer/);
+
+    const invalid = await mcpResponse(await initialize('missing', 202));
+    assert.equal(invalid.error?.code, -32602);
+    assert.match(invalid.error?.message ?? '', /Unknown or empty Contexture selector/);
+    assert.doesNotMatch(invalid.error?.message ?? '', /team|editor|reviewer/);
+  } finally {
+    await handle.close();
+  }
+});
+
 async function sseResponse(
   response: Response,
 ): Promise<{ readonly result?: { readonly instructions?: string } }> {
@@ -567,6 +631,18 @@ async function sseResponse(
   const data = text.match(/^data: (.+)$/m)?.[1];
   if (data === undefined) throw new Error(`MCP streamable response carried no JSON event: ${text}`);
   return JSON.parse(data) as { readonly result?: { readonly instructions?: string } };
+}
+
+async function mcpResponse(response: Response): Promise<{
+  readonly result?: { readonly instructions?: string };
+  readonly error?: { readonly code?: number; readonly message?: string };
+}> {
+  const text = await response.text();
+  const data = text.match(/^data: (.+)$/m)?.[1] ?? text;
+  return JSON.parse(data) as {
+    readonly result?: { readonly instructions?: string };
+    readonly error?: { readonly code?: number; readonly message?: string };
+  };
 }
 
 async function mcpStructuredResult(response: Response): Promise<unknown> {

@@ -91,7 +91,10 @@ export class ApplicationRuntime {
 
   /** Resolve the request-local root surface under both runtime ceilings. */
   effectiveRootSelection(requested: RootSelection = RootSelection.all()): RootSelection {
-    return this.identityCeiling.intersect(this.selection).intersect(requested).resolve(this.index);
+    return this.identityCeiling
+      .intersect(this.selection)
+      .intersect(requested.resolve(this.index))
+      .resolve(this.index);
   }
 
   /** Open application Channels around a Host serving lifetime. */
