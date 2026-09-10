@@ -19,14 +19,16 @@ export type {
   Factory,
   NodeDeclaration,
   NodeKind,
-  PublicationDeclaration,
+  PostProcessDeclaration,
+  PreProcessDeclaration,
   RoleDeclaration,
   SkillDeclaration,
   ToolCallContext,
   ToolDeclaration,
   ToolDefinition,
 } from './model/declarations.js';
-export { definePublication, defineTool } from './model/declarations.js';
+export { bindingInstruction } from './emphasis.js';
+export { definePostProcess, definePreProcess, defineTool } from './model/declarations.js';
 export {
   branchesOf,
   cardOf,

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { z } from 'zod';
 
-import { defineApplication, definePublication } from '../src/index.js';
+import { defineApplication, definePostProcess } from '../src/index.js';
 import {
   ApplicationRuntime,
   DISCLOSURE_GATEWAY,
@@ -216,12 +216,12 @@ test('DisclosureAPI inspects an ordered shortlist without activating or executin
           name: 'owner',
           description: 'Own work.',
           instructions: 'Secret owner procedure.',
-          publication: () =>
-            definePublication({
+          postProcess: () =>
+            definePostProcess({
               kind: 'role',
-              name: 'publish',
+              name: 'finish',
               description: 'Preserve results.',
-              instructions: 'Secret publication procedure.',
+              instructions: 'Secret process procedure.',
             }),
           skills: [
             () => ({
@@ -265,9 +265,9 @@ test('DisclosureAPI inspects an ordered shortlist without activating or executin
     [
       {
         kind: 'role',
-        name: 'publish',
+        name: 'finish',
         description: 'Preserve results.',
-        ref: 'owner/publish',
+        ref: 'owner/finish',
       },
     ],
   );

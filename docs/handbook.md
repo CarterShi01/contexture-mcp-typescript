@@ -85,6 +85,28 @@ Both preserve lazy factories and normalize the application name. Use a factory
 for every Role, Skill, and Tool: compilation creates a fresh immutable graph
 snapshot from those factories.
 
+### Process members
+
+A Role may designate one branded `PreProcessDeclaration` and one branded
+`PostProcessDeclaration` through lazy `preProcess` and `postProcess` factories.
+Create them with `definePreProcess` and `definePostProcess`; an ordinary Role,
+the opposite brand, or a raw legacy `publication` value is rejected. Member
+order is pre-process, children, post-process, Skills, Tools, while `branches()`
+still returns children only. All process subtrees receive normal containment,
+selection, Channels, Binding, identity, `uses`, and disclosure-only behavior.
+
+ACTIVE disclosure composes a fixed pre-process framework block before unchanged
+business instructions and a fixed post-process block after them. It exposes
+`pre_process` and `post_process` as actual view refs only when their cards are
+available. ROUTE and INSPECT treat them as ordinary direct Roles and expose no
+designation or instruction. Opening never executes a process Tool. For an
+application-owned hard rule, `bindingInstruction(source, body, { action })`
+uses the same stable emphasis under the application's authority; sources that
+claim the `contexture` framework name are rejected.
+
+Migration from 0.14 is intentionally explicit: replace `definePublication`
+with `definePostProcess`, and `publication` with `postProcess`. No alias exists.
+
 Node `name` and `description`, Role and Skill `instructions`, and every `uses`
 ref are validated as non-blank when the lazy declaration compiles. A Skill may
 refer to another Skill, including a cycle: opening it returns its own
@@ -316,8 +338,8 @@ end (`-1` returns every match except the last).
 structural facts, not disclosure cards.
 
 Each compiled Role also has local structural queries. `branches()` returns its
-direct child Roles; `members()` returns direct child Roles, Skills, then Tools
-in declaration-group order; and `member(name)` resolves one direct member
+direct child Roles; `members()` returns pre-process, direct child Roles,
+post-process, Skills, then Tools in work order; and `member(name)` resolves one direct member
 across those groups. A missing name throws a typed `NodeNotFoundError` with
 the Role scope and canonically sorted known names. These methods return fresh,
 frozen arrays over the same immutable compilation snapshot and never evaluate

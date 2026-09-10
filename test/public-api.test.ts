@@ -14,6 +14,9 @@ const authoringConcepts = {
   ModelValidationError: authoring.ModelValidationError,
   NodeNotFoundError: authoring.NodeNotFoundError,
   Principal: authoring.Principal,
+  bindingInstruction: authoring.bindingInstruction,
+  definePostProcess: authoring.definePostProcess,
+  definePreProcess: authoring.definePreProcess,
   defineTool: authoring.defineTool,
   version: authoring.PACKAGE_VERSION,
   currentGraph: authoring.currentGraph,
@@ -94,6 +97,18 @@ test('public TypeScript declaration types map Python Role, Skill, Tool, Prompt a
     description: 'Role.',
     instructions: 'Route.',
   };
+  const preProcess: authoring.PreProcessDeclaration = authoring.definePreProcess({
+    kind: 'role',
+    name: 'prepare',
+    description: 'Prepare.',
+    instructions: 'Prepare.',
+  });
+  const postProcess: authoring.PostProcessDeclaration = authoring.definePostProcess({
+    kind: 'role',
+    name: 'finish',
+    description: 'Finish.',
+    instructions: 'Finish.',
+  });
   const skill: authoring.SkillDeclaration = {
     kind: 'skill',
     name: 'skill',
@@ -114,10 +129,17 @@ test('public TypeScript declaration types map Python Role, Skill, Tool, Prompt a
     description: 'Read tool.',
   };
   void role;
+  void preProcess;
+  void postProcess;
   void skill;
   void tool;
   void prompt;
   void resource;
+});
+
+test('removed Publication authoring API is absent at runtime', () => {
+  assert.equal('definePublication' in authoring, false);
+  assert.equal('Publication' in authoring, false);
 });
 
 test('public server telemetry types remain directly importable', () => {

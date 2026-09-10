@@ -15,7 +15,7 @@ import {
   CompileLevel,
   groupCards,
   groupRoutingCards,
-  publicationDetails,
+  processDetails,
   type CompiledContext,
   type GroupedCards,
   type View,
@@ -282,7 +282,7 @@ export class Disclosure implements View<CompiledNode> {
     const grouped = groupCards(role.members().filter(visible), this);
     return Object.freeze({
       ...this.cardOf(role),
-      ...publicationDetails(role, role.instructions, grouped, this),
+      ...processDetails(role, role.instructions, grouped, this),
       ...grouped,
       ...this.activeUses(role, selection),
     });

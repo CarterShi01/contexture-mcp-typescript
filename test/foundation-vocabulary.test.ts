@@ -36,7 +36,7 @@ async function sourceFiles(directory: string): Promise<string[]> {
 
 test('foundation owns one public spelling for package, reference, and gateway vocabulary', () => {
   assert.equal(PACKAGE_NAME, 'contexture');
-  assert.equal(PACKAGE_VERSION, '0.15.0rc1');
+  assert.equal(PACKAGE_VERSION, '0.16.0rc1');
   assert.equal(REFERENCE_SEPARATOR, '/');
   assert.deepEqual(GATEWAY_TOOL_NAMES, [
     DISCOVER_GATEWAY_NAME,

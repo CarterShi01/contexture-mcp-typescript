@@ -11,7 +11,7 @@ Contexture 的 TypeScript 实现。Contexture 是一个面向 MCP 应用的渐�
 [Go](https://github.com/CarterShi01/contexture-mcp-go) ·
 [跨语言规范](https://github.com/CarterShi01/contexture-mcp/tree/master/spec)
 
-> **当前状态：Python 0.15 的非激活 inspect、Python 0.14 的可选 Role Publication、Python 0.13 的 path-selected
+> **当前状态：Python 0.16 的对称 process member、Python 0.15 的非激活 inspect、Python 0.13 的 path-selected
 > surface 及所有适用的 0.12 产品条目均已验证，
 > 但发布仍受保护。** 本仓库已具备
 > 原生 CLI、脚手架、inspection、维护中的 demo、MCP transport、固定及请求级 HTTP
@@ -38,14 +38,15 @@ TypeScript 使用声明对象，而不是照搬 Python 的运行时类。封闭�
 `kind` 字段承担 Python 中 `Role`、`Skill`、`Tool` 类的区分作用。TypeScript
 接口在编译后的 JavaScript 中会被擦除，这是语言原生设计，并非缺少实现。
 
-### 可选 Publication
+### 可选 process member
 
-当 Role 的收尾工作需要单独披露的流程和设备时，使用 `definePublication`，并把其惰性
-factory 赋给 `publication`；省略该成员即关闭此义务。Publication 在线上仍是普通 Role，
-可包含 Role、Skill、Tool 以及显式嵌套的 Publication。它是收尾设备，不是可替代的 child
-branch，也不是自动 callback。打开 owner 会加入 Publication 卡片和框架收尾合约；打开
-Publication 本身只披露流程。只有显式 Tool 调用才会产生副作用；blocked、failed 或等待
-approval 的状态必须如实报告。
+当 Role 的准备或收尾工作需要单独披露的流程与设备时，分别使用 `definePreProcess` 与
+`definePostProcess`，并把惰性 factory 赋给 `preProcess` 与 `postProcess`。两者在线上仍是
+普通 Role，可包含 Role、Skill、Tool 及显式嵌套的 process member；它们不是替代性 child
+branch，也不是自动 callback。打开 owner 会在原样 business instructions 前后组合固定框架
+合约；打开 process Role 只披露其流程。只有显式 Tool 调用产生副作用。0.16 已删除
+`Publication`、`definePublication` 和 `publication` slot；迁移时将收尾声明改为
+`definePostProcess` 与 `postProcess`。没有兼容 alias，原始 legacy 输入会被拒绝。
 
 ## 示例
 
@@ -113,7 +114,7 @@ listener，并与 Tool Binding 复用同一验证路径。`RestRouter` 保留为
 模型控制的 `contexture_inspect` 网关接受 1 至 32 个来自现有卡片、去除首尾空白且互不
 重复的 ref。它先原子校验整个批次，再返回固定的候选评估提示，以及每个目标、其直接
 member 和声明的 `uses` 对应的纯路由卡片。它保持请求顺序与声明顺序，不递归，也不披露
-instructions、Tool schema 或读写分类、Publication 合约、内容或调用结果；它不会调用任何
+instructions、Tool schema 或读写分类、框架 process 合约、内容或调用结果；它不会调用任何
 Tool，并使用独立的 inspection telemetry。仅披露服务器提供 discover、inspect 和 open，
 不提供调用网关。
 
@@ -186,7 +187,7 @@ npm run check
 ```
 
 本实现锁定 `conformance/specification.json` 中记录的 Contexture Specification
-0.15 提交。固定 fixtures 和 golden 输出保存在 `conformance/`；测试会先通过
+0.16 提交。固定 fixtures 和 golden 输出保存在 `conformance/`；测试会先通过
 TypeScript 实现生成真实观察结果，再与这些资产比较。
 
 对于 streamable HTTP，`Contexture-Select: operations/diagnose` 会提升该完整 subtree，

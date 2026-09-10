@@ -11,8 +11,8 @@ Implementations:
 [Go](https://github.com/CarterShi01/contexture-mcp-go) ·
 [Specification](https://github.com/CarterShi01/contexture-mcp/tree/master/spec)
 
-> **Status: Python 0.15 non-activating inspect parity, Python 0.14 optional Role
-> Publication parity, Python 0.13 path-selected surface parity, and all applicable 0.12
+> **Status: Python 0.16 symmetric process-member parity, Python 0.15 non-activating
+> inspect parity, Python 0.13 path-selected surface parity, and all applicable 0.12
 > product rows are verified; release remains guarded.** This repository ships a native CLI, scaffold,
 > inspection, maintained demo, MCP transports, fixed and request-selected HTTP
 > surfaces, REST, and bearer identity. Remaining parity work is documentation
@@ -42,11 +42,12 @@ The `kind` field performs the same distinction that the Python `Role`, `Skill`,
 and `Tool` classes perform. Interfaces disappear from emitted JavaScript; this
 is intentional TypeScript-native syntax, not a missing implementation.
 
-### Optional Publication
+### Optional process members
 
-Use `definePublication` when finishing a Role requires a separately disclosed
-procedure and equipment. Assign its lazy factory to `publication`; omitting the
-member disables the obligation:
+Use `definePreProcess` and `definePostProcess` when preparing or finishing a
+Role requires a separately disclosed procedure and equipment. Assign lazy
+factories to `preProcess` and `postProcess`; omitting either slot adds no member
+or obligation:
 
 ```ts
 const owner = {
@@ -54,23 +55,31 @@ const owner = {
   name: 'task-worker',
   description: 'Complete one task.',
   instructions: 'Produce an evidence-backed result.',
-  publication: () =>
-    definePublication({
+  preProcess: () =>
+    definePreProcess({
       kind: 'role',
-      name: 'publish',
+      name: 'prepare',
+      description: 'Prepare the task workspace.',
+      instructions: 'Check prerequisites and prepare the workspace.',
+    }),
+  postProcess: () =>
+    definePostProcess({
+      kind: 'role',
+      name: 'finish',
       description: 'Preserve the result.',
       instructions: 'Review evidence, obtain approval, then save the result.',
     }),
 };
 ```
 
-A Publication remains a Role on the wire and can contain ordinary Roles,
-Skills, Tools, and an explicitly nested Publication. It is finishing equipment,
-not an alternative child branch or an automatic callback. Opening the owner
-adds the Publication card and a framework closing contract; opening the
-Publication only discloses its procedure. Only explicit Tool invocation has
-effects, and blocked, failed, or approval-pending publication must be reported
-honestly.
+Both declarations remain Roles on the wire and may contain ordinary Roles,
+Skills, Tools, and explicitly nested process members. They are equipment, not
+alternative child branches or automatic callbacks. Opening the owner composes
+fixed framework contracts around unchanged business instructions; opening a
+process Role only discloses its procedure. Only explicit Tool invocation has
+effects. `Publication`, `definePublication`, and the `publication` slot were
+removed in 0.16: migrate finishing declarations to `definePostProcess` and
+`postProcess`; there is no compatibility alias and raw legacy input is rejected.
 
 ## Example
 
@@ -142,7 +151,7 @@ trimmed refs from existing cards. It atomically validates the whole batch, then
 returns a fixed evaluation notice and pure routing cards for each target, its
 direct members, and declared uses. It preserves request and declaration order,
 does not recurse, and discloses no instructions, Tool schemas or classification,
-Publication contract, content, or invocation result. It invokes nothing and
+framework process contract, content, or invocation result. It invokes nothing and
 records separate inspection telemetry. Disclosure-only servers expose discover,
 inspect, and open, without invocation gateways.
 
@@ -223,7 +232,7 @@ npm ci
 npm run check
 ```
 
-The binding targets Contexture Specification 0.15 at the immutable revision in
+The binding targets Contexture Specification 0.16 at the immutable revision in
 [`conformance/specification.json`](conformance/specification.json). Pinned
 fixtures and golden outputs are stored under `conformance/`; tests construct and
 run the TypeScript implementation before comparing its observations with them.

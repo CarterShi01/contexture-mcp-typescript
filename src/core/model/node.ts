@@ -104,7 +104,7 @@ export function branchesOf(node: ContextNode): readonly ContextNode[] {
 export function membersOf(node: ContextNode): readonly ContextNode[] {
   if (node.kind !== 'role') return Object.freeze([]);
   if (hasContainment(node)) return Object.freeze([...node.members()]);
-  if (hasDeclaredMembers(node, ['children', 'publication', 'skills', 'tools']))
+  if (hasDeclaredMembers(node, ['preProcess', 'children', 'postProcess', 'skills', 'tools']))
     throw uncompiledNodeError();
   return Object.freeze([]);
 }
@@ -186,31 +186,85 @@ export function compileNode(
   const grouped = view.cardsOf(membersOf(node));
   return Object.freeze({
     ...card,
-    ...publicationDetails(node, instructions, grouped, view),
+    ...processDetails(node, instructions, grouped, view),
     ...grouped,
     ...uses,
   });
 }
 
-/** @internal Compose the framework-owned closing obligation for a designated Publication. */
-export function publicationDetails<Node extends ContextNode>(
+/** @internal Compose framework-owned process obligations around business instructions. */
+export function processDetails<Node extends ContextNode>(
   role: Node,
   instructions: string,
   grouped: GroupedCards,
   view: View<Node>,
-): Readonly<{ instructions: string; publication?: string }> {
-  const publication = Reflect.get(role, 'publication') as Node | undefined;
-  if (publication === undefined) return Object.freeze({ instructions });
-  const ref = view.refOf(publication);
-  if (!grouped.roles.some((card) => card.ref === ref)) {
-    throw new ModelValidationError(
-      'The declared Publication is unavailable in this view. Open the owning Role through a surface containing its complete publication subtree.',
-    );
+): Readonly<{ instructions: string; pre_process?: string; post_process?: string }> {
+  const preProcess = Reflect.get(role, 'preProcess') as Node | undefined;
+  const postProcess = Reflect.get(role, 'postProcess') as Node | undefined;
+  const preRef = disclosedProcessRef(preProcess, 'PreProcess', grouped, view);
+  const postRef = disclosedProcessRef(postProcess, 'PostProcess', grouped, view);
+  let composed = instructions;
+  if (preRef !== undefined) {
+    composed = `${frameworkInstruction(
+      'PreProcess',
+      "Opening it only discloses the preparation procedure; it does not execute it. Complete what it requires, then return to this role's own instructions below and carry on with its work. If the preparation is blocked or fails, report that state rather than continuing as though it had succeeded.",
+      {
+        action: `Call contexture_open with ref=${pythonString(preRef)} before starting this role's work.`,
+      },
+    )}\n\n${composed}`;
+  }
+  if (postRef !== undefined) {
+    composed = `${composed}\n\n${frameworkInstruction(
+      'PostProcess',
+      'Opening it only discloses the procedure; it does not execute it or establish success. Use its available capabilities as instructed, respect required approvals, and report the actual outcome. If it is blocked, fails, or awaits approval, report that state rather than claiming success or bypassing approval.',
+      {
+        action: `Call contexture_open with ref=${pythonString(postRef)} before finishing this role's work.`,
+      },
+    )}`;
   }
   return Object.freeze({
-    publication: ref,
-    instructions: `${instructions}\n\nPublication (framework contract):\nBefore finishing this role's work, call contexture_open with ref=${JSON.stringify(ref)} and follow that Publication's instructions using the work's results and evidence. Opening it only discloses the procedure; it does not execute it or establish success. Use its available capabilities as instructed, respect required approvals, and report the actual outcome. If publication is blocked, fails, or awaits approval, report that state rather than claiming success or bypassing approval.`,
+    instructions: composed,
+    ...(preRef === undefined ? {} : { pre_process: preRef }),
+    ...(postRef === undefined ? {} : { post_process: postRef }),
   });
+}
+
+import { frameworkInstruction } from '../emphasis.js';
+
+function disclosedProcessRef<Node extends ContextNode>(
+  member: Node | undefined,
+  kind: string,
+  grouped: GroupedCards,
+  view: View<Node>,
+): string | undefined {
+  if (member === undefined) return undefined;
+  const ref = view.refOf(member);
+  if (!grouped.roles.some((card) => card.ref === ref)) {
+    throw new ModelValidationError(
+      `The declared ${kind} is unavailable in this view. Open the owning Role through a surface containing its complete ${kind} subtree.`,
+    );
+  }
+  return ref;
+}
+
+function pythonString(value: string): string {
+  const quote = value.includes("'") && !value.includes('"') ? '"' : "'";
+  const escaped = [...value]
+    .map((character) => {
+      if (character === '\\') return '\\\\';
+      if (character === quote) return `\\${character}`;
+      if (character === '\n') return '\\n';
+      if (character === '\r') return '\\r';
+      if (character === '\t') return '\\t';
+      if (character === '\b') return '\\x08';
+      if (character === '\f') return '\\x0c';
+      const codePoint = character.codePointAt(0) ?? 0;
+      return codePoint < 0x20 || codePoint === 0x7f
+        ? `\\x${codePoint.toString(16).padStart(2, '0')}`
+        : character;
+    })
+    .join('');
+  return `${quote}${escaped}${quote}`;
 }
 
 function standaloneView<Node extends ContextNode>(): View<Node> {

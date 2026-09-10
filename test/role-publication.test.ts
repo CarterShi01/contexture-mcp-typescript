@@ -4,11 +4,11 @@ import { z } from 'zod';
 
 import {
   defineApplication,
-  definePublication,
+  definePostProcess,
   defineTool,
   ModelValidationError,
   type Factory,
-  type PublicationDeclaration,
+  type PostProcessDeclaration,
   type RoleDeclaration,
 } from '../src/index.js';
 import {
@@ -38,8 +38,8 @@ function application() {
             instructions: 'Do branch work.',
           }),
         ],
-        publication: () =>
-          definePublication({
+        postProcess: () =>
+          definePostProcess({
             kind: 'role',
             name: 'publish',
             description: 'Preserve the result.',
@@ -99,7 +99,7 @@ test('Publication is a Role member and finishing contract, not a work branch', (
   const disclosure = new Disclosure(index);
   assert.equal('publication' in disclosure.discover(), false);
   const opened = disclosure.open('worker');
-  assert.equal(opened.publication, 'worker/publish');
+  assert.equal(opened.post_process, 'worker/publish');
   assert.deepEqual(
     (opened.roles as readonly { ref: string }[]).map((card) => card.ref),
     ['worker/branch', 'worker/publish'],
@@ -108,7 +108,7 @@ test('Publication is a Role member and finishing contract, not a work branch', (
     (opened.instructions as string).startsWith('  Preserve business whitespace.  \n\n'),
     true,
   );
-  assert.match(opened.instructions as string, /call contexture_open/);
+  assert.match(opened.instructions as string, /Call contexture_open/);
   assert.match(opened.instructions as string, /blocked, fails, or awaits approval/);
   assert.doesNotMatch(JSON.stringify(opened), /Review evidence|input_schema/);
 
@@ -146,7 +146,7 @@ test('publication factories reject ordinary Roles', () => {
     name: 'ordinary',
     description: 'Not designated.',
     instructions: 'Do ordinary work.',
-  } as PublicationDeclaration;
+  } as PostProcessDeclaration;
   assert.throws(
     () =>
       compileApplication(
@@ -158,12 +158,12 @@ test('publication factories reject ordinary Roles', () => {
               name: 'owner',
               description: 'Owner.',
               instructions: 'Work.',
-              publication: () => ordinary,
+              postProcess: () => ordinary,
             }),
           ],
         }),
       ),
-    /definePublication/,
+    /definePostProcess/,
   );
 });
 
@@ -177,7 +177,7 @@ test('ControllerManager preserves Publication designation in fresh snapshots', (
   assert.equal(firstRole.kind, 'role');
   assert.equal(secondRole.kind, 'role');
   if (firstRole.kind !== 'role' || secondRole.kind !== 'role') throw new Error('expected Roles');
-  assert.equal(firstRole.publication?.name, 'publish');
-  assert.equal(secondRole.publication?.name, 'publish');
-  assert.notEqual(firstRole.publication, secondRole.publication);
+  assert.equal(firstRole.postProcess?.name, 'publish');
+  assert.equal(secondRole.postProcess?.name, 'publish');
+  assert.notEqual(firstRole.postProcess, secondRole.postProcess);
 });

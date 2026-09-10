@@ -17,7 +17,7 @@ import {
 } from '../src/index.js';
 
 test('the binding identifies its Contexture specification', () => {
-  assert.equal(CONTEXTURE_SPECIFICATION_VERSION, '0.15');
+  assert.equal(CONTEXTURE_SPECIFICATION_VERSION, '0.16');
 });
 
 test('the public specification identity matches the conformance lock', async () => {

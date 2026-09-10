@@ -1,8 +1,8 @@
 {
   "$schema": "./specification.schema.json",
   "repository": "https://github.com/CarterShi01/contexture-mcp",
-  "revision": "471d0f75c6be0e5cff104f0d0c61f10957da792a",
-  "specificationVersion": "0.15",
+  "revision": "cda2721c7c40128cd0b7eef990e5909edabd3b17",
+  "specificationVersion": "0.16",
   "status": "conformant",
   "implementedRules": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
   "rules": {
@@ -61,5 +61,5 @@
     "resources.json",
     "tools.json"
   ],
-  "notes": "All Contexture 0.15 rules and the applicable Python product deltas have repository execution evidence. OC Goal remains Python-only and excluded. The package remains private until a separately authorized release."
+  "notes": "All Contexture 0.16 rules and the applicable Python product deltas have repository execution evidence. OC Goal remains Python-only and excluded. The package remains private until a separately authorized release."
 }

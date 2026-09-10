@@ -5,12 +5,30 @@ Versioning once public releases begin.
 
 ## Unreleased
 
+## 0.16.0-rc.1
+
+- Replace the framework-level `Publication` declaration and `publication` slot
+  with distinct branded `PreProcess`/`PostProcess` declarations and
+  `preProcess`/`postProcess` slots; no compatibility alias is retained.
+- Order Role members as pre-process, children, post-process, Skills, and Tools,
+  while keeping only children in branch traversal and initialization rosters.
+- Compose exact fixed framework contracts around unchanged business
+  instructions, using actual visible refs and atomically refusing unavailable
+  process cards. Inspect remains non-activating and designation-free.
+- Export `bindingInstruction` for application-owned hard rules while keeping
+  framework instruction composition private.
+- Pin Contexture Specification 0.16 to immutable Python revision
+  `cda2721c7c40128cd0b7eef990e5909edabd3b17`; OC Goal remains excluded.
+- Migration: replace `definePublication(...)` with `definePostProcess(...)` and
+  `publication` with `postProcess`; add `definePreProcess(...)` only where an
+  explicit preparation procedure is required.
+
 ## 0.15.0-rc.1
 
 - Add the read-only `contexture_inspect(refs)` gateway for atomically comparing
   one through 32 unique candidate refs without activating them.
 - Return only pure routing cards for each target, its direct members, and its
-  declared uses; omit instructions, execution facets, Publication contracts,
+  declared uses; omit instructions, execution facets, framework process contracts,
   content, results, and recursive expansion.
 - Keep inspection evidence separate from ACTIVE Role/Skill and Tool telemetry,
   and expose discover, inspect, and open on disclosure-only applications.

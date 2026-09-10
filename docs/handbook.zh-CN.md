@@ -78,6 +78,25 @@ property 会同时保留在 disclosure 与 validation 中。
 factory 并规范化 application 名称。每个 Role、Skill、Tool 都应通过 factory 声明；编译会
 从这些 factory 创建新的不可变 graph snapshot。
 
+### Process member
+
+Role 可通过惰性的 `preProcess` 与 `postProcess` factory 分别指定一个带品牌的
+`PreProcessDeclaration` 和 `PostProcessDeclaration`。必须使用 `definePreProcess` 与
+`definePostProcess` 创建；普通 Role、相反品牌或原始 legacy `publication` 都会被拒绝。
+member 顺序是 pre-process、children、post-process、Skills、Tools，而 `branches()` 仍只返回
+children。process subtree 参与正常 containment、selection、Channels、Binding、identity、
+`uses` 与 disclosure-only 行为。
+
+ACTIVE disclosure 在原样 business instructions 之前组合固定 pre-process 框架块，并在之后
+组合固定 post-process 框架块；只有对应卡片可用时才公开实际 view ref 形式的 `pre_process`
+与 `post_process`。ROUTE 和 INSPECT 只把它们视为普通 direct Role，不公开 designation 或
+instruction。open 不会执行 process Tool。应用自己的硬规则可使用
+`bindingInstruction(source, body, { action })`，它会以应用自己的 authority 使用稳定强调格式；
+冒用 `contexture` framework 名称的 source 会被拒绝。
+
+从 0.14 迁移必须显式完成：将 `definePublication` 改为 `definePostProcess`，将
+`publication` 改为 `postProcess`；不存在兼容 alias。
+
 lazy declaration 在 compilation 时会校验 node 的 `name`、`description`、Role 与 Skill 的
 `instructions` 以及每个 `uses` ref 均非空。Skill 可以引用另一个 Skill，包括 cycle：打开它会返回
 自己的 instructions，并只为 `uses` 返回 routing card，绝不会返回被引用 Skill 的 instructions 或其
@@ -256,8 +275,8 @@ Python 的 `Index.of`、`bound` 与 `unbound` 构造形式；serving 仍由既�
 声明 root 则有意保持 SDK-neutral。`SelectedGraph` 在同一 matcher 上只处理 selected ref，因此不会泄露
 另一个 request root。
 
-每个已编译 Role 也有本地结构查询。`branches()` 返回直接 child Role；`members()` 按 declaration group
-顺序返回直接 child Role、Skill、Tool；`member(name)` 在这三组直接成员中按 name 查找。name 不存在时会抛出
+每个已编译 Role 也有本地结构查询。`branches()` 返回直接 child Role；`members()` 按工作顺序
+返回 pre-process、直接 child Role、post-process、Skill、Tool；`member(name)` 在这些直接成员中按 name 查找。name 不存在时会抛出
 带 Role scope 和按规范排序 known name 的 typed `NodeNotFoundError`。这些方法会返回新的 frozen array，
 其 node 仍属于同一个不可变 compilation snapshot，且绝不会执行 lazy declaration factory。每条 `uses` edge
 只会在完整 forest 存在后被检查：必须非空、唯一、可解析，且不得指向 node 自己的 canonical ref。不同 node

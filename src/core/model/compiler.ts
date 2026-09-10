@@ -7,7 +7,7 @@ import type {
   SkillDeclaration,
   ToolDeclaration,
 } from './declarations.js';
-import { isPublicationDeclaration } from './role.js';
+import { isPostProcessDeclaration, isPreProcessDeclaration } from './role.js';
 import {
   normalizeApplication,
   type ApplicationDeclaration,
@@ -38,13 +38,14 @@ interface CompiledNodeBase extends ContextNode {
 export interface CompiledRole extends CompiledNodeBase {
   readonly kind: 'role';
   readonly instructions: string;
+  readonly preProcess: CompiledRole | undefined;
   readonly children: readonly CompiledRole[];
-  readonly publication: CompiledRole | undefined;
+  readonly postProcess: CompiledRole | undefined;
   readonly skills: readonly CompiledSkill[];
   readonly tools: readonly CompiledTool[];
   /** Direct child Roles in declaration order. */
   branches(): readonly CompiledRole[];
-  /** Direct members in declaration-group order: children, Publication, Skills, Tools. */
+  /** Direct members in work order: PreProcess, children, PostProcess, Skills, Tools. */
   members(): readonly CompiledNode[];
   /** Resolve one direct member by its cross-kind-unique name. */
   member(name: string): CompiledNode;
@@ -203,14 +204,15 @@ function compileFactory(
   }
 }
 
-function compilePublicationFactory(
+function compileProcessFactory(
   factory: Factory<NodeDeclaration>,
+  slot: 'preProcess' | 'postProcess',
   parentPath: readonly string[],
   parent: CompiledRole,
   state: CompilationState,
 ): CompiledRole {
   if (typeof factory !== 'function') {
-    throw new ModelValidationError('Role publication must be declared by a lazy factory.');
+    throw new ModelValidationError(`Role ${slot} must be declared by a lazy factory.`);
   }
   if (state.activeFactories.has(factory)) {
     throw new ContainmentCycleError(
@@ -220,14 +222,19 @@ function compilePublicationFactory(
   state.activeFactories.add(factory);
   try {
     const declaration = factory();
-    if (!isPublicationDeclaration(declaration)) {
+    const valid =
+      slot === 'preProcess'
+        ? isPreProcessDeclaration(declaration)
+        : isPostProcessDeclaration(declaration);
+    if (!valid) {
+      const kind = slot === 'preProcess' ? 'PreProcess' : 'PostProcess';
       throw new ModelValidationError(
-        'Role publication factory must return a Publication created with definePublication.',
+        `Role ${slot} factory must return a ${kind} created with define${kind}.`,
       );
     }
     const compiled = compileDeclaration(declaration, parentPath, parent, state);
     if (compiled.kind !== 'role') {
-      throw new ModelValidationError('A Publication must remain a Role on the wire.');
+      throw new ModelValidationError('A process member must remain a Role on the wire.');
     }
     return compiled;
   } finally {
@@ -262,15 +269,17 @@ function compileDeclaration(
       ...baseOf(role),
       kind: 'role' as const,
       instructions: role.instructions,
+      preProcess: undefined,
       children: [] as CompiledRole[],
-      publication: undefined,
+      postProcess: undefined,
       skills: [] as CompiledSkill[],
       tools: [] as CompiledTool[],
       branches: () => Object.freeze([...node.children]),
       members: () =>
         Object.freeze([
+          ...(node.preProcess === undefined ? [] : [node.preProcess]),
           ...node.children,
-          ...(node.publication === undefined ? [] : [node.publication]),
+          ...(node.postProcess === undefined ? [] : [node.postProcess]),
           ...node.skills,
           ...node.tools,
         ]),
@@ -287,13 +296,17 @@ function compileDeclaration(
       },
     };
     registerNode(node, ref, parent, state);
+    const preProcess =
+      role.preProcess === undefined
+        ? undefined
+        : compileProcessFactory(role.preProcess, 'preProcess', path, node, state);
     const children = (role.children ?? []).map((factory) =>
       compileFactory(factory, path, node, state),
     );
-    const publication =
-      role.publication === undefined
+    const postProcess =
+      role.postProcess === undefined
         ? undefined
-        : compilePublicationFactory(role.publication, path, node, state);
+        : compileProcessFactory(role.postProcess, 'postProcess', path, node, state);
     const skills = (role.skills ?? []).map((factory) => compileFactory(factory, path, node, state));
     const tools = (role.tools ?? []).map((factory) => compileFactory(factory, path, node, state));
     if (children.some((child) => child.kind !== 'role')) {
@@ -308,15 +321,17 @@ function compileDeclaration(
       throw new ModelValidationError(`Role ${JSON.stringify(role.name)} tools must build Tools.`);
     }
     assertUniqueMemberNames(role.name, [
+      ...(preProcess === undefined ? [] : [preProcess]),
       ...children,
-      ...(publication === undefined ? [] : [publication]),
+      ...(postProcess === undefined ? [] : [postProcess]),
       ...skills,
       ...tools,
     ]);
+    (node as { preProcess: CompiledRole | undefined }).preProcess = preProcess;
     (node as { children: readonly CompiledRole[] }).children = Object.freeze(
       children as CompiledRole[],
     );
-    (node as { publication: CompiledRole | undefined }).publication = publication;
+    (node as { postProcess: CompiledRole | undefined }).postProcess = postProcess;
     (node as { skills: readonly CompiledSkill[] }).skills = Object.freeze(
       skills as CompiledSkill[],
     );
@@ -425,9 +440,19 @@ function validateDeclaration(declaration: NodeDeclaration, bindTools: boolean): 
         );
       }
     }
-    if (declaration.publication !== undefined && typeof declaration.publication !== 'function') {
+    for (const [slot, value] of [
+      ['preProcess', declaration.preProcess],
+      ['postProcess', declaration.postProcess],
+    ] as const) {
+      if (value !== undefined && typeof value !== 'function') {
+        throw new ModelValidationError(
+          `Role ${JSON.stringify(declaration.name)} ${slot} must be a lazy factory.`,
+        );
+      }
+    }
+    if ('publication' in declaration) {
       throw new ModelValidationError(
-        `Role ${JSON.stringify(declaration.name)} publication must be a lazy factory.`,
+        `Role ${JSON.stringify(declaration.name)} uses removed legacy publication. Replace it with postProcess and definePostProcess.`,
       );
     }
   }

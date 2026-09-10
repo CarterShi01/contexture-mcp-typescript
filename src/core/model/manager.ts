@@ -5,9 +5,12 @@ import { compileApplication, type CompiledApplication } from './compiler.js';
 import type { ChannelHandle } from './channels.js';
 import type { Factory, NodeDeclaration, NodeKind } from './node.js';
 import {
-  definePublication,
-  isPublicationDeclaration,
-  type PublicationDeclaration,
+  definePostProcess,
+  definePreProcess,
+  isPostProcessDeclaration,
+  isPreProcessDeclaration,
+  type PostProcessDeclaration,
+  type PreProcessDeclaration,
   type RoleDeclaration,
 } from './role.js';
 import type { SkillDeclaration } from './skill.js';
@@ -186,13 +189,22 @@ function captureNode(
   try {
     if (declaration.kind === 'role') {
       const role = declaration as RoleDeclaration;
+      const preProcess = captureProcess(role.preProcess, 'preProcess', path, seen, pending, active);
       const children = captureGroup(role.children, 'role', path, seen, pending, active);
-      const publication = capturePublication(role.publication, path, seen, pending, active);
+      const postProcess = captureProcess(
+        role.postProcess,
+        'postProcess',
+        path,
+        seen,
+        pending,
+        active,
+      );
       const skills = captureGroup(role.skills, 'skill', path, seen, pending, active);
       const tools = captureGroup(role.tools, 'tool', path, seen, pending, active);
       ensureUniqueMembers(path, [
+        ...(preProcess === undefined ? [] : [preProcess]),
         ...children,
-        ...(publication === undefined ? [] : [publication]),
+        ...(postProcess === undefined ? [] : [postProcess]),
         ...skills,
         ...tools,
       ]);
@@ -202,16 +214,21 @@ function captureNode(
         description: role.description,
         instructions: role.instructions,
         ...(role.uses === undefined ? {} : { uses: Object.freeze([...role.uses]) }),
-        ...(children.length === 0 ? {} : { children: factoriesFor(children as RoleDeclaration[]) }),
-        ...(publication === undefined
+        ...(preProcess === undefined
           ? {}
-          : { publication: frozenFactory(publication) as Factory<PublicationDeclaration> }),
+          : { preProcess: frozenFactory(preProcess) as Factory<PreProcessDeclaration> }),
+        ...(children.length === 0 ? {} : { children: factoriesFor(children as RoleDeclaration[]) }),
+        ...(postProcess === undefined
+          ? {}
+          : { postProcess: frozenFactory(postProcess) as Factory<PostProcessDeclaration> }),
         ...(skills.length === 0 ? {} : { skills: factoriesFor(skills as SkillDeclaration[]) }),
         ...(tools.length === 0 ? {} : { tools: factoriesFor(tools as ToolDeclaration[]) }),
       };
-      return isPublicationDeclaration(role)
-        ? definePublication(capturedRole as PublicationDeclaration)
-        : Object.freeze(capturedRole);
+      if (isPreProcessDeclaration(role))
+        return definePreProcess(capturedRole as PreProcessDeclaration);
+      if (isPostProcessDeclaration(role))
+        return definePostProcess(capturedRole as PostProcessDeclaration);
+      return Object.freeze(capturedRole);
     }
     if (declaration.kind === 'skill') {
       const skill = declaration as SkillDeclaration;
@@ -239,30 +256,34 @@ function captureNode(
   }
 }
 
-function capturePublication(
-  factory: Factory<PublicationDeclaration> | undefined,
+function captureProcess(
+  factory: Factory<PreProcessDeclaration | PostProcessDeclaration> | undefined,
+  slot: 'preProcess' | 'postProcess',
   parent: string,
   seen: WeakMap<object, string>,
   pending: Map<object, string>,
   active: Set<object>,
-): PublicationDeclaration | undefined {
+): PreProcessDeclaration | PostProcessDeclaration | undefined {
   if (factory === undefined) return undefined;
   if (typeof factory !== 'function') {
-    throw new ModelValidationError(`Role ${JSON.stringify(parent)} publication must be a factory.`);
+    throw new ModelValidationError(`Role ${JSON.stringify(parent)} ${slot} must be a factory.`);
   }
-  const publication = factory();
-  if (!isPublicationDeclaration(publication)) {
+  const process = factory();
+  const valid =
+    slot === 'preProcess' ? isPreProcessDeclaration(process) : isPostProcessDeclaration(process);
+  if (!valid) {
+    const kind = slot === 'preProcess' ? 'PreProcess' : 'PostProcess';
     throw new ModelValidationError(
-      `Role ${JSON.stringify(parent)} publication factory must return a Publication created with definePublication.`,
+      `Role ${JSON.stringify(parent)} ${slot} factory must return a ${kind} created with define${kind}.`,
     );
   }
   return captureNode(
-    publication,
-    `${parent}${REFERENCE_SEPARATOR}${publication.name.trim()}`,
+    process,
+    `${parent}${REFERENCE_SEPARATOR}${process.name.trim()}`,
     seen,
     pending,
     active,
-  ) as PublicationDeclaration;
+  ) as PreProcessDeclaration | PostProcessDeclaration;
 }
 
 function captureGroup(
@@ -337,6 +358,11 @@ function validateNode(declaration: NodeDeclaration): void {
     used.add(ref);
   }
   if (declaration.kind === 'role') {
+    if (Object.prototype.hasOwnProperty.call(declaration, 'publication')) {
+      throw new ModelValidationError(
+        'Role publication was removed in Contexture 0.16; use postProcess. No compatibility alias exists.',
+      );
+    }
     requireText(
       declaration.instructions,
       `Role ${JSON.stringify(declaration.name)} must have instructions.`,
@@ -385,18 +411,24 @@ function cloneNode(node: NodeDeclaration): NodeDeclaration {
       description: node.description,
       instructions: node.instructions,
       ...(node.uses === undefined ? {} : { uses: Object.freeze([...node.uses]) }),
-      ...(node.children === undefined ? {} : { children: cloneFactories(node.children) }),
-      ...(node.publication === undefined
+      ...(node.preProcess === undefined
         ? {}
         : {
-            publication: cloneFactories([node.publication])[0] as Factory<PublicationDeclaration>,
+            preProcess: cloneFactories([node.preProcess])[0] as Factory<PreProcessDeclaration>,
+          }),
+      ...(node.children === undefined ? {} : { children: cloneFactories(node.children) }),
+      ...(node.postProcess === undefined
+        ? {}
+        : {
+            postProcess: cloneFactories([node.postProcess])[0] as Factory<PostProcessDeclaration>,
           }),
       ...(node.skills === undefined ? {} : { skills: cloneFactories(node.skills) }),
       ...(node.tools === undefined ? {} : { tools: cloneFactories(node.tools) }),
     };
-    return isPublicationDeclaration(node)
-      ? definePublication(clonedRole as PublicationDeclaration)
-      : Object.freeze(clonedRole);
+    if (isPreProcessDeclaration(node)) return definePreProcess(clonedRole as PreProcessDeclaration);
+    if (isPostProcessDeclaration(node))
+      return definePostProcess(clonedRole as PostProcessDeclaration);
+    return Object.freeze(clonedRole);
   }
   if (node.kind === 'skill') {
     return Object.freeze({

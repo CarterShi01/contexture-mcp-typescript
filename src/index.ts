@@ -24,7 +24,8 @@ export { Contexture, defineApplication } from './application.js';
 export type { ApplicationDeclaration, ManagedApplicationDeclaration } from './application.js';
 export { Channels } from './core/model/channels.js';
 export type { ChannelHandle } from './core/model/channels.js';
-export { definePublication, defineTool } from './core/model/declarations.js';
+export { bindingInstruction } from './core/emphasis.js';
+export { definePostProcess, definePreProcess, defineTool } from './core/model/declarations.js';
 export {
   branchesOf,
   cardOf,
@@ -45,7 +46,8 @@ export type {
   Factory,
   NodeDeclaration,
   NodeKind,
-  PublicationDeclaration,
+  PostProcessDeclaration,
+  PreProcessDeclaration,
   RoleDeclaration,
   SkillDeclaration,
   ToolCallContext,

@@ -37,7 +37,7 @@ export const GATEWAY: readonly GatewayTool[] = Object.freeze([
     name: INSPECT_GATEWAY_NAME,
     readOnly: true,
     description:
-      "Inspect one or more refs without activating them. The response contains a fixed evaluation notice, each requested node's routing card, and one level of routing cards for direct members and declared uses. It never returns instructions, Tool execution facets, Publication contracts, or invocation results. Pass 1 through 32 unique refs from existing cards.",
+      "Inspect one or more refs without activating them. The response contains a fixed evaluation notice, each requested node's routing card, and one level of routing cards for direct members and declared uses. It never returns instructions, Tool execution facets, framework process contracts, or invocation results. Pass 1 through 32 unique refs from existing cards.",
   }),
   Object.freeze({
     name: OPEN_GATEWAY_NAME,
