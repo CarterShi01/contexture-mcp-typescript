@@ -18,13 +18,14 @@ export type {
   Factory,
   NodeDeclaration,
   NodeKind,
+  PublicationDeclaration,
   RoleDeclaration,
   SkillDeclaration,
   ToolCallContext,
   ToolDeclaration,
   ToolDefinition,
 } from './model/declarations.js';
-export { defineTool } from './model/declarations.js';
+export { definePublication, defineTool } from './model/declarations.js';
 export {
   branchesOf,
   cardOf,

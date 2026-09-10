@@ -4,7 +4,12 @@ import { REFERENCE_SEPARATOR } from '../foundation/vocabulary.js';
 import { compileApplication, type CompiledApplication } from './compiler.js';
 import type { ChannelHandle } from './channels.js';
 import type { Factory, NodeDeclaration, NodeKind } from './node.js';
-import type { RoleDeclaration } from './role.js';
+import {
+  definePublication,
+  isPublicationDeclaration,
+  type PublicationDeclaration,
+  type RoleDeclaration,
+} from './role.js';
 import type { SkillDeclaration } from './skill.js';
 import type { ToolDeclaration } from './tool.js';
 
@@ -182,19 +187,31 @@ function captureNode(
     if (declaration.kind === 'role') {
       const role = declaration as RoleDeclaration;
       const children = captureGroup(role.children, 'role', path, seen, pending, active);
+      const publication = capturePublication(role.publication, path, seen, pending, active);
       const skills = captureGroup(role.skills, 'skill', path, seen, pending, active);
       const tools = captureGroup(role.tools, 'tool', path, seen, pending, active);
-      ensureUniqueMembers(path, [...children, ...skills, ...tools]);
-      return Object.freeze({
+      ensureUniqueMembers(path, [
+        ...children,
+        ...(publication === undefined ? [] : [publication]),
+        ...skills,
+        ...tools,
+      ]);
+      const capturedRole = {
         kind: 'role' as const,
         name: role.name.trim(),
         description: role.description,
         instructions: role.instructions,
         ...(role.uses === undefined ? {} : { uses: Object.freeze([...role.uses]) }),
         ...(children.length === 0 ? {} : { children: factoriesFor(children as RoleDeclaration[]) }),
+        ...(publication === undefined
+          ? {}
+          : { publication: frozenFactory(publication) as Factory<PublicationDeclaration> }),
         ...(skills.length === 0 ? {} : { skills: factoriesFor(skills as SkillDeclaration[]) }),
         ...(tools.length === 0 ? {} : { tools: factoriesFor(tools as ToolDeclaration[]) }),
-      });
+      };
+      return isPublicationDeclaration(role)
+        ? definePublication(capturedRole as PublicationDeclaration)
+        : Object.freeze(capturedRole);
     }
     if (declaration.kind === 'skill') {
       const skill = declaration as SkillDeclaration;
@@ -220,6 +237,32 @@ function captureNode(
   } finally {
     active.delete(declaration);
   }
+}
+
+function capturePublication(
+  factory: Factory<PublicationDeclaration> | undefined,
+  parent: string,
+  seen: WeakMap<object, string>,
+  pending: Map<object, string>,
+  active: Set<object>,
+): PublicationDeclaration | undefined {
+  if (factory === undefined) return undefined;
+  if (typeof factory !== 'function') {
+    throw new ModelValidationError(`Role ${JSON.stringify(parent)} publication must be a factory.`);
+  }
+  const publication = factory();
+  if (!isPublicationDeclaration(publication)) {
+    throw new ModelValidationError(
+      `Role ${JSON.stringify(parent)} publication factory must return a Publication created with definePublication.`,
+    );
+  }
+  return captureNode(
+    publication,
+    `${parent}${REFERENCE_SEPARATOR}${publication.name.trim()}`,
+    seen,
+    pending,
+    active,
+  ) as PublicationDeclaration;
 }
 
 function captureGroup(
@@ -336,16 +379,24 @@ function ensureUniqueMembers(parent: string, members: readonly NodeDeclaration[]
 
 function cloneNode(node: NodeDeclaration): NodeDeclaration {
   if (node.kind === 'role') {
-    return Object.freeze({
+    const clonedRole = {
       kind: 'role' as const,
       name: node.name,
       description: node.description,
       instructions: node.instructions,
       ...(node.uses === undefined ? {} : { uses: Object.freeze([...node.uses]) }),
       ...(node.children === undefined ? {} : { children: cloneFactories(node.children) }),
+      ...(node.publication === undefined
+        ? {}
+        : {
+            publication: cloneFactories([node.publication])[0] as Factory<PublicationDeclaration>,
+          }),
       ...(node.skills === undefined ? {} : { skills: cloneFactories(node.skills) }),
       ...(node.tools === undefined ? {} : { tools: cloneFactories(node.tools) }),
-    });
+    };
+    return isPublicationDeclaration(node)
+      ? definePublication(clonedRole as PublicationDeclaration)
+      : Object.freeze(clonedRole);
   }
   if (node.kind === 'skill') {
     return Object.freeze({

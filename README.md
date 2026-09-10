@@ -11,7 +11,8 @@ Implementations:
 [Go](https://github.com/CarterShi01/contexture-mcp-go) ·
 [Specification](https://github.com/CarterShi01/contexture-mcp/tree/master/spec)
 
-> **Status: Python 0.13 path-selected surface parity and all applicable 0.12
+> **Status: Python 0.14 optional Role Publication parity, Python 0.13
+> path-selected surface parity, and all applicable 0.12
 > product rows are verified; release remains guarded.** This repository ships a native CLI, scaffold,
 > inspection, maintained demo, MCP transports, fixed and request-selected HTTP
 > surfaces, REST, and bearer identity. Remaining parity work is documentation
@@ -40,6 +41,36 @@ compatibility barrel. The application composition root lives in
 The `kind` field performs the same distinction that the Python `Role`, `Skill`,
 and `Tool` classes perform. Interfaces disappear from emitted JavaScript; this
 is intentional TypeScript-native syntax, not a missing implementation.
+
+### Optional Publication
+
+Use `definePublication` when finishing a Role requires a separately disclosed
+procedure and equipment. Assign its lazy factory to `publication`; omitting the
+member disables the obligation:
+
+```ts
+const owner = {
+  kind: 'role' as const,
+  name: 'task-worker',
+  description: 'Complete one task.',
+  instructions: 'Produce an evidence-backed result.',
+  publication: () =>
+    definePublication({
+      kind: 'role',
+      name: 'publish',
+      description: 'Preserve the result.',
+      instructions: 'Review evidence, obtain approval, then save the result.',
+    }),
+};
+```
+
+A Publication remains a Role on the wire and can contain ordinary Roles,
+Skills, Tools, and an explicitly nested Publication. It is finishing equipment,
+not an alternative child branch or an automatic callback. Opening the owner
+adds the Publication card and a framework closing contract; opening the
+Publication only discloses its procedure. Only explicit Tool invocation has
+effects, and blocked, failed, or approval-pending publication must be reported
+honestly.
 
 ## Example
 
@@ -178,7 +209,7 @@ npm ci
 npm run check
 ```
 
-The binding targets Contexture Specification 0.13 at the immutable revision in
+The binding targets Contexture Specification 0.14 at the immutable revision in
 [`conformance/specification.json`](conformance/specification.json). Pinned
 fixtures and golden outputs are stored under `conformance/`; tests construct and
 run the TypeScript implementation before comparing its observations with them.

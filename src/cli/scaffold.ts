@@ -56,7 +56,7 @@ export function projectTemplate(names: ProjectNames): Readonly<Record<string, st
           inspect: 'contexture inspect',
           serve: 'contexture serve',
         },
-        dependencies: { '@contexture/mcp': '^0.13.0', zod: '^3.24.0' },
+        dependencies: { '@contexture/mcp': '^0.14.0', zod: '^3.24.0' },
         contexture: { app: './assistant/app.js' },
       },
       null,

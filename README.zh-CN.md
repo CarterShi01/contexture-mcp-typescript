@@ -11,7 +11,8 @@ Contexture 的 TypeScript 实现。Contexture 是一个面向 MCP 应用的渐�
 [Go](https://github.com/CarterShi01/contexture-mcp-go) ·
 [跨语言规范](https://github.com/CarterShi01/contexture-mcp/tree/master/spec)
 
-> **当前状态：Python 0.13 的 path-selected surface 及所有适用的 0.12 产品条目均已验证，
+> **当前状态：Python 0.14 的可选 Role Publication、Python 0.13 的 path-selected
+> surface 及所有适用的 0.12 产品条目均已验证，
 > 但发布仍受保护。** 本仓库已具备
 > 原生 CLI、脚手架、inspection、维护中的 demo、MCP transport、固定及请求级 HTTP
 > path-selected surface、REST 与 bearer identity。剩余 parity 工作是文档、发布资产审查以及
@@ -36,6 +37,15 @@ TypeScript 使用声明对象，而不是照搬 Python 的运行时类。封闭�
 
 `kind` 字段承担 Python 中 `Role`、`Skill`、`Tool` 类的区分作用。TypeScript
 接口在编译后的 JavaScript 中会被擦除，这是语言原生设计，并非缺少实现。
+
+### 可选 Publication
+
+当 Role 的收尾工作需要单独披露的流程和设备时，使用 `definePublication`，并把其惰性
+factory 赋给 `publication`；省略该成员即关闭此义务。Publication 在线上仍是普通 Role，
+可包含 Role、Skill、Tool 以及显式嵌套的 Publication。它是收尾设备，不是可替代的 child
+branch，也不是自动 callback。打开 owner 会加入 Publication 卡片和框架收尾合约；打开
+Publication 本身只披露流程。只有显式 Tool 调用才会产生副作用；blocked、failed 或等待
+approval 的状态必须如实报告。
 
 ## 示例
 
@@ -165,7 +175,7 @@ npm run check
 ```
 
 本实现锁定 `conformance/specification.json` 中记录的 Contexture Specification
-0.13 提交。固定 fixtures 和 golden 输出保存在 `conformance/`；测试会先通过
+0.14 提交。固定 fixtures 和 golden 输出保存在 `conformance/`；测试会先通过
 TypeScript 实现生成真实观察结果，再与这些资产比较。
 
 对于 streamable HTTP，`Contexture-Select: operations/diagnose` 会提升该完整 subtree，

@@ -249,7 +249,7 @@ export function* everyRef(disclosure: Disclosure): IterableIterator<string> {
     const ref = disclosure.index.refOf(role);
     if (!disclosure.modelCanSee(ref)) continue;
     yield ref;
-    for (const child of [...role.children, ...role.skills, ...role.tools]) {
+    for (const child of role.members()) {
       if (!disclosure.modelCanSee(disclosure.index.refOf(child))) continue;
       if (child.kind === 'role') queue.push(child);
       else yield disclosure.index.refOf(child);

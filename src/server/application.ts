@@ -72,7 +72,7 @@ export function compileStructuralApplication(
     publications: new Publications(disclosure, undefined, normalized),
     server: (): ContextureMcpServer =>
       createContextureMcpServer(
-        { name: index.name, version: '0.13.0rc1' },
+        { name: index.name, version: '0.14.0rc1' },
         new Gateway(disclosure, undefined),
         application.publications,
       ),

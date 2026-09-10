@@ -12,6 +12,7 @@ import { InMemoryTelemetry, reportTelemetry, type Telemetry } from './telemetry.
 import {
   cardOf as nodeCard,
   groupCards,
+  publicationDetails,
   type CompiledContext,
   type GroupedCards,
   type View,
@@ -226,10 +227,11 @@ export class Disclosure implements View<CompiledNode> {
     const visible = (node: CompiledNode): boolean =>
       selection.containsRef(this.index.refOf(node)) &&
       this.modelCanSee(this.index.refOf(node), selection);
+    const grouped = groupCards(role.members().filter(visible), this);
     return Object.freeze({
       ...this.cardOf(role),
-      instructions: role.instructions,
-      ...groupCards(role.members().filter(visible), this),
+      ...publicationDetails(role, role.instructions, grouped, this),
+      ...grouped,
       ...this.activeUses(role, selection),
     });
   }

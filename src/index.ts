@@ -23,7 +23,7 @@ export { Contexture, defineApplication } from './application.js';
 export type { ApplicationDeclaration, ManagedApplicationDeclaration } from './application.js';
 export { Channels } from './core/model/channels.js';
 export type { ChannelHandle } from './core/model/channels.js';
-export { defineTool } from './core/model/declarations.js';
+export { definePublication, defineTool } from './core/model/declarations.js';
 export {
   branchesOf,
   cardOf,
@@ -42,6 +42,7 @@ export type {
   Factory,
   NodeDeclaration,
   NodeKind,
+  PublicationDeclaration,
   RoleDeclaration,
   SkillDeclaration,
   ToolCallContext,

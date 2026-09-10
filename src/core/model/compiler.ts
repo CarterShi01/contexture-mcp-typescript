@@ -7,6 +7,7 @@ import type {
   SkillDeclaration,
   ToolDeclaration,
 } from './declarations.js';
+import { isPublicationDeclaration } from './role.js';
 import {
   normalizeApplication,
   type ApplicationDeclaration,
@@ -38,11 +39,12 @@ export interface CompiledRole extends CompiledNodeBase {
   readonly kind: 'role';
   readonly instructions: string;
   readonly children: readonly CompiledRole[];
+  readonly publication: CompiledRole | undefined;
   readonly skills: readonly CompiledSkill[];
   readonly tools: readonly CompiledTool[];
   /** Direct child Roles in declaration order. */
   branches(): readonly CompiledRole[];
-  /** Direct members in declaration-group order: Roles, Skills, then Tools. */
+  /** Direct members in declaration-group order: children, Publication, Skills, Tools. */
   members(): readonly CompiledNode[];
   /** Resolve one direct member by its cross-kind-unique name. */
   member(name: string): CompiledNode;
@@ -201,6 +203,38 @@ function compileFactory(
   }
 }
 
+function compilePublicationFactory(
+  factory: Factory<NodeDeclaration>,
+  parentPath: readonly string[],
+  parent: CompiledRole,
+  state: CompilationState,
+): CompiledRole {
+  if (typeof factory !== 'function') {
+    throw new ModelValidationError('Role publication must be declared by a lazy factory.');
+  }
+  if (state.activeFactories.has(factory)) {
+    throw new ContainmentCycleError(
+      'A Contexture factory contains itself through an active ancestor.',
+    );
+  }
+  state.activeFactories.add(factory);
+  try {
+    const declaration = factory();
+    if (!isPublicationDeclaration(declaration)) {
+      throw new ModelValidationError(
+        'Role publication factory must return a Publication created with definePublication.',
+      );
+    }
+    const compiled = compileDeclaration(declaration, parentPath, parent, state);
+    if (compiled.kind !== 'role') {
+      throw new ModelValidationError('A Publication must remain a Role on the wire.');
+    }
+    return compiled;
+  } finally {
+    state.activeFactories.delete(factory);
+  }
+}
+
 function compileDeclaration(
   declaration: NodeDeclaration,
   parentPath: readonly string[],
@@ -229,10 +263,17 @@ function compileDeclaration(
       kind: 'role' as const,
       instructions: role.instructions,
       children: [] as CompiledRole[],
+      publication: undefined,
       skills: [] as CompiledSkill[],
       tools: [] as CompiledTool[],
       branches: () => Object.freeze([...node.children]),
-      members: () => Object.freeze([...node.children, ...node.skills, ...node.tools]),
+      members: () =>
+        Object.freeze([
+          ...node.children,
+          ...(node.publication === undefined ? [] : [node.publication]),
+          ...node.skills,
+          ...node.tools,
+        ]),
       member: (name: string) => {
         const members = node.members();
         const found = members.find((candidate) => candidate.name === name);
@@ -249,6 +290,10 @@ function compileDeclaration(
     const children = (role.children ?? []).map((factory) =>
       compileFactory(factory, path, node, state),
     );
+    const publication =
+      role.publication === undefined
+        ? undefined
+        : compilePublicationFactory(role.publication, path, node, state);
     const skills = (role.skills ?? []).map((factory) => compileFactory(factory, path, node, state));
     const tools = (role.tools ?? []).map((factory) => compileFactory(factory, path, node, state));
     if (children.some((child) => child.kind !== 'role')) {
@@ -262,10 +307,16 @@ function compileDeclaration(
     if (tools.some((tool) => tool.kind !== 'tool')) {
       throw new ModelValidationError(`Role ${JSON.stringify(role.name)} tools must build Tools.`);
     }
-    assertUniqueMemberNames(role.name, [...children, ...skills, ...tools]);
+    assertUniqueMemberNames(role.name, [
+      ...children,
+      ...(publication === undefined ? [] : [publication]),
+      ...skills,
+      ...tools,
+    ]);
     (node as { children: readonly CompiledRole[] }).children = Object.freeze(
       children as CompiledRole[],
     );
+    (node as { publication: CompiledRole | undefined }).publication = publication;
     (node as { skills: readonly CompiledSkill[] }).skills = Object.freeze(
       skills as CompiledSkill[],
     );
@@ -373,6 +424,11 @@ function validateDeclaration(declaration: NodeDeclaration, bindTools: boolean): 
           `Role ${JSON.stringify(declaration.name)} ${label} must be an array.`,
         );
       }
+    }
+    if (declaration.publication !== undefined && typeof declaration.publication !== 'function') {
+      throw new ModelValidationError(
+        `Role ${JSON.stringify(declaration.name)} publication must be a lazy factory.`,
+      );
     }
   }
   if (declaration.kind === 'skill') {
@@ -592,9 +648,7 @@ class ImmutableIndex implements Index {
   }
 
   childrenOf(node: CompiledNode): readonly CompiledNode[] {
-    return node.kind === 'role'
-      ? Object.freeze([...node.children, ...node.skills, ...node.tools])
-      : EMPTY_NODES;
+    return node.kind === 'role' ? node.members() : EMPTY_NODES;
   }
 
   usesOf(ref: string): readonly string[] {
@@ -640,9 +694,7 @@ class ImmutableIndex implements Index {
       if (entry === undefined) continue;
       const [ref, role] = entry;
       yield Object.freeze([ref, role]);
-      for (const child of this.childrenOf(role)) {
-        if (child.kind === 'role') queue.push([this.refOf(child), child]);
-      }
+      for (const child of role.branches()) queue.push([this.refOf(child), child]);
     }
   }
 
@@ -656,9 +708,8 @@ class ImmutableIndex implements Index {
     const levels: SignpostLevel[] = [];
     for (let depth = 1; depth < parts.length; depth += 1) {
       const ancestor = parts.slice(0, depth).join(REFERENCE_SEPARATOR);
-      const subRoleCount = this.childrenOf(this.find(ancestor)).filter(
-        (node) => node.kind === 'role',
-      ).length;
+      const held = this.find(ancestor);
+      const subRoleCount = held.kind === 'role' ? held.branches().length : 0;
       levels.push(Object.freeze({ ref: ancestor, subRoleCount }));
     }
     return Object.freeze(levels);

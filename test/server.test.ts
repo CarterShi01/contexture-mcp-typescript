@@ -43,7 +43,7 @@ test('a sealed Contexture server builds its default adapter exactly once', () =>
   });
   const server = buildServer(declaration);
   assert.equal(server.name, 'stable-server');
-  assert.equal(server.version, '0.13.0rc1');
+  assert.equal(server.version, '0.14.0rc1');
   assert.equal(server.application.index.name, 'stable-server');
   assert.ok(server.application.runtime instanceof ApplicationRuntime);
   assert.ok(server.application.publications instanceof Publications);

@@ -5,8 +5,8 @@ const manifest = JSON.parse(readFileSync('conformance/specification.json', 'utf8
 const schema = JSON.parse(readFileSync('conformance/specification.schema.json', 'utf8'));
 const specificationSource = readFileSync('src/core/foundation/specification.ts', 'utf8');
 
-const expectedRevision = '1deeb6b87be905edf1ba9b83d8d431def0af702c';
-const expectedVersion = '0.13';
+const expectedRevision = 'a108b314bb3f37622fb082759f726468bbb09163';
+const expectedVersion = '0.14';
 const expectedFixtures = [
   'disclosure-only-application.json',
   'prompt-roots-application.json',

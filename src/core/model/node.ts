@@ -92,7 +92,8 @@ export function branchesOf(node: ContextNode): readonly ContextNode[] {
 export function membersOf(node: ContextNode): readonly ContextNode[] {
   if (node.kind !== 'role') return Object.freeze([]);
   if (hasContainment(node)) return Object.freeze([...node.members()]);
-  if (hasDeclaredMembers(node, ['children', 'skills', 'tools'])) throw uncompiledNodeError();
+  if (hasDeclaredMembers(node, ['children', 'publication', 'skills', 'tools']))
+    throw uncompiledNodeError();
   return Object.freeze([]);
 }
 
@@ -142,11 +143,33 @@ export function compileNode(
   if (node.kind === 'tool') return Object.freeze({ ...card, ...uses });
   const instructions = activeInstructions(node);
   if (node.kind === 'skill') return Object.freeze({ ...card, instructions, ...uses });
+  const grouped = view.cardsOf(membersOf(node));
   return Object.freeze({
     ...card,
-    instructions,
-    ...view.cardsOf(membersOf(node)),
+    ...publicationDetails(node, instructions, grouped, view),
+    ...grouped,
     ...uses,
+  });
+}
+
+/** @internal Compose the framework-owned closing obligation for a designated Publication. */
+export function publicationDetails<Node extends ContextNode>(
+  role: Node,
+  instructions: string,
+  grouped: GroupedCards,
+  view: View<Node>,
+): Readonly<{ instructions: string; publication?: string }> {
+  const publication = Reflect.get(role, 'publication') as Node | undefined;
+  if (publication === undefined) return Object.freeze({ instructions });
+  const ref = view.refOf(publication);
+  if (!grouped.roles.some((card) => card.ref === ref)) {
+    throw new ModelValidationError(
+      'The declared Publication is unavailable in this view. Open the owning Role through a surface containing its complete publication subtree.',
+    );
+  }
+  return Object.freeze({
+    publication: ref,
+    instructions: `${instructions}\n\nPublication (framework contract):\nBefore finishing this role's work, call contexture_open with ref=${JSON.stringify(ref)} and follow that Publication's instructions using the work's results and evidence. Opening it only discloses the procedure; it does not execute it or establish success. Use its available capabilities as instructed, respect required approvals, and report the actual outcome. If publication is blocked, fails, or awaits approval, report that state rather than claiming success or bypassing approval.`,
   });
 }
 

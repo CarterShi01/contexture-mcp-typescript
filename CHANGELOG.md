@@ -5,6 +5,16 @@ Versioning once public releases begin.
 
 ## Unreleased
 
+## 0.14.0-rc.1
+
+- Add runtime-branded optional Role Publications with complete containment,
+  selection, inspection, disclosure-only, and ControllerManager support.
+- Keep Publications as ordinary Roles on the wire while excluding them from
+  alternative-work branch traversal and initialization rosters.
+- Compose a framework-owned closing contract only on an owning Role's ACTIVE
+  disclosure; opening never executes Publication equipment or claims success.
+- Keep the npm package private pending separate release authorization.
+
 ## 0.13.0-rc.1
 
 - Add path-aware `SurfaceSelection`, exact descendant promotion, and terminal
