@@ -43,7 +43,7 @@ test('a sealed Contexture server builds its default adapter exactly once', () =>
   });
   const server = buildServer(declaration);
   assert.equal(server.name, 'stable-server');
-  assert.equal(server.version, '0.14.0rc1');
+  assert.equal(server.version, '0.15.0rc1');
   assert.equal(server.application.index.name, 'stable-server');
   assert.ok(server.application.runtime instanceof ApplicationRuntime);
   assert.ok(server.application.publications instanceof Publications);
@@ -93,7 +93,7 @@ test('the official initialization response carries generated or explicit Context
   assert.equal(explicit, 'Use the owner-provided introduction.');
 });
 
-test('the SDK receives exactly the four Contexture gateway tools, never a business Tool', () => {
+test('the SDK receives exactly the five Contexture gateway tools, never a business Tool', () => {
   const index = compileApplication(
     defineApplication({
       name: 'server-test',
@@ -113,6 +113,7 @@ test('the SDK receives exactly the four Contexture gateway tools, never a busine
   const adapter = createContextureMcpServer({ name: 'contexture-test', version: '0.0.0' }, gateway);
   assert.deepEqual(adapter.gatewayNames, [
     'contexture_discover',
+    'contexture_inspect',
     'contexture_open',
     'contexture_invoke_read_only',
     'contexture_invoke',

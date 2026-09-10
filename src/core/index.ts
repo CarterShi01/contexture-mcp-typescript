@@ -5,6 +5,7 @@ export {
 export {
   DISCOVER_GATEWAY_NAME,
   GATEWAY_TOOL_NAMES,
+  INSPECT_GATEWAY_NAME,
   INVOKE_GATEWAY_NAME,
   INVOKE_READ_ONLY_GATEWAY_NAME,
   OPEN_GATEWAY_NAME,
@@ -32,8 +33,10 @@ export {
   compileNode,
   CompileLevel,
   groupCards,
+  groupRoutingCards,
   membersOf,
   routeOf,
+  routingCardOf,
 } from './model/node.js';
 export type { CompiledContext, ContextNode, GroupedCards, View } from './model/node.js';
 export { compileApplication, compileDisclosureApplication } from './model/compiler.js';
@@ -49,18 +52,19 @@ export type {
   SignpostLevel,
 } from './model/compiler.js';
 export { Disclosure, RefusedError } from './model/disclosure.js';
-export type { Discovery, RoutingCard } from './model/disclosure.js';
+export type { Discovery, Inspection, RoutingCard } from './model/disclosure.js';
 export {
   ApplicationRuntime,
   currentPrincipal,
   currentRootSelection,
   currentTelemetry,
   InMemoryTelemetry,
+  reportInspection,
   reportTelemetry,
   withTelemetry,
   WrongDoorError,
 } from './model/runtime.js';
-export type { NodeUsage, Telemetry, TelemetryEvent } from './model/runtime.js';
+export type { InspectionUsage, NodeUsage, Telemetry, TelemetryEvent } from './model/runtime.js';
 export { currentGraph, withGraph } from './model/graph-context.js';
 export {
   OutsideSelectionError,

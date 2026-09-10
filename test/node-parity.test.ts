@@ -66,7 +66,7 @@ function nodeFixture() {
 }
 
 test('Node facade preserves fixed compile levels and immutable route facts', () => {
-  assert.deepEqual(CompileLevel, { ROUTE: 'route', ACTIVE: 'active' });
+  assert.deepEqual(CompileLevel, { ROUTE: 'route', INSPECT: 'inspect', ACTIVE: 'active' });
   assert.equal(Object.isFrozen(CompileLevel), true);
   const declaration = {
     kind: 'role' as const,

@@ -10,6 +10,13 @@ export interface NodeUsage {
   readonly lastUsedAt: string | undefined;
 }
 
+/** Aggregate candidate-inspection evidence kept apart from activation. */
+export interface InspectionUsage {
+  readonly ref: string;
+  readonly callCount: number;
+  readonly lastInspectedAt: string | undefined;
+}
+
 /** One immutable observation retained by collectors that support diagnostics. */
 export interface TelemetryEvent {
   readonly ref: string;
@@ -21,6 +28,8 @@ export interface TelemetryEvent {
 export interface Telemetry {
   record(event: TelemetryEvent): void | Promise<void>;
   usage(ref: string): NodeUsage;
+  recordInspection?(ref: string): void | Promise<void>;
+  inspectionUsage?(ref: string): InspectionUsage;
 }
 
 const CURRENT_TELEMETRY = new AsyncLocalStorage<Telemetry>();
@@ -43,6 +52,7 @@ export function withTelemetry<Result>(telemetry: Telemetry, operation: () => Res
 export class InMemoryTelemetry implements Telemetry {
   readonly #usage = new Map<string, NodeUsage>();
   readonly #events: TelemetryEvent[] = [];
+  readonly #inspections = new Map<string, InspectionUsage>();
 
   record(event: TelemetryEvent): void {
     const occurredAt = event.occurredAt || new Date().toISOString();
@@ -64,6 +74,23 @@ export class InMemoryTelemetry implements Telemetry {
     return this.#usage.get(ref) ?? emptyUsage(ref);
   }
 
+  recordInspection(ref: string): void {
+    const occurredAt = new Date().toISOString();
+    const previous = this.#inspections.get(ref) ?? emptyInspectionUsage(ref);
+    this.#inspections.set(
+      ref,
+      Object.freeze({
+        ref,
+        callCount: previous.callCount + 1,
+        lastInspectedAt: occurredAt,
+      }),
+    );
+  }
+
+  inspectionUsage(ref: string): InspectionUsage {
+    return this.#inspections.get(ref) ?? emptyInspectionUsage(ref);
+  }
+
   get events(): readonly TelemetryEvent[] {
     return Object.freeze([...this.#events]);
   }
@@ -82,6 +109,19 @@ export async function reportTelemetry(
   }
 }
 
+/** Observe candidate evaluation separately when the collector supports it. */
+export async function reportInspection(telemetry: Telemetry, ref: string): Promise<void> {
+  try {
+    await telemetry.recordInspection?.(ref);
+  } catch {
+    // Inspection telemetry is evidence, never a disclosure dependency.
+  }
+}
+
 function emptyUsage(ref: string): NodeUsage {
   return Object.freeze({ ref, callCount: 0, errorCount: 0, lastUsedAt: undefined });
+}
+
+function emptyInspectionUsage(ref: string): InspectionUsage {
+  return Object.freeze({ ref, callCount: 0, lastInspectedAt: undefined });
 }

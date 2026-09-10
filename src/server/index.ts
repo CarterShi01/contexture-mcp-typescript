@@ -1,12 +1,13 @@
 import { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
-import { Gateway } from '../core/model/system-api.js';
+import { Gateway, normalizeInspectionRefs } from '../core/model/system-api.js';
 import { RootSelection } from '../core/model/root-selection.js';
 import { principalOf } from './identity.js';
 import { COMPLETION_LIMIT, GOTO_ARGUMENT, GOTO_PROMPT, truncatedCompletion } from './messages.js';
 import {
   DISCOVER_GATEWAY_NAME,
+  INSPECT_GATEWAY_NAME,
   INVOKE_GATEWAY_NAME,
   INVOKE_READ_ONLY_GATEWAY_NAME,
   OPEN_GATEWAY_NAME,
@@ -30,10 +31,16 @@ export {
   ApplicationRuntime,
   InMemoryTelemetry,
   currentTelemetry,
+  reportInspection,
   reportTelemetry,
   withTelemetry,
 } from '../core/model/runtime.js';
-export type { NodeUsage, Telemetry, TelemetryEvent } from '../core/model/runtime.js';
+export type {
+  InspectionUsage,
+  NodeUsage,
+  Telemetry,
+  TelemetryEvent,
+} from '../core/model/runtime.js';
 export { RestRouter, RestSurface } from './rest.js';
 export type {
   Authenticator,
@@ -163,6 +170,22 @@ export function createContextureMcpServer(
             annotations: { readOnlyHint: true },
           },
           async () => toolResult(() => gateway.discover(selection)),
+        );
+        break;
+      case INSPECT_GATEWAY_NAME:
+        server.registerTool(
+          tool.name,
+          {
+            description: tool.description,
+            inputSchema: z.strictObject({ refs: z.array(z.string()) }),
+            annotations: { readOnlyHint: true },
+          },
+          async ({ refs }) =>
+            toolResult(async () => {
+              const normalized = normalizeInspectionRefs(refs);
+              for (const ref of normalized) publications?.checkModelOpen(ref, selection);
+              return gateway.inspect(normalized, selection);
+            }),
         );
         break;
       case OPEN_GATEWAY_NAME:

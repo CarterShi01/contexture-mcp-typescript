@@ -11,8 +11,8 @@ Implementations:
 [Go](https://github.com/CarterShi01/contexture-mcp-go) ·
 [Specification](https://github.com/CarterShi01/contexture-mcp/tree/master/spec)
 
-> **Status: Python 0.14 optional Role Publication parity, Python 0.13
-> path-selected surface parity, and all applicable 0.12
+> **Status: Python 0.15 non-activating inspect parity, Python 0.14 optional Role
+> Publication parity, Python 0.13 path-selected surface parity, and all applicable 0.12
 > product rows are verified; release remains guarded.** This repository ships a native CLI, scaffold,
 > inspection, maintained demo, MCP transports, fixed and request-selected HTTP
 > surfaces, REST, and bearer identity. Remaining parity work is documentation
@@ -117,6 +117,7 @@ const application = defineApplication({
 const compiled = compileRuntimeApplication(application);
 const gateway = new Gateway(compiled.disclosure, compiled.runtime);
 
+await gateway.inspect(['operations', 'operations/diagnose']);
 await gateway.open('operations');
 await gateway.invokeReadOnly('operations/status', { service: 'api' });
 
@@ -124,7 +125,7 @@ const adapter = createContextureMcpServer({ name: 'operations', version: '0.1.0'
 // Connect adapter.server to an official MCP SDK transport chosen by the Host.
 ```
 
-Business Tools remain behind Contexture's four fixed gateway Tools. The core is
+Business Tools remain behind Contexture's five fixed gateway Tools. The core is
 SDK-neutral; `@contexture/mcp/server` is the official MCP SDK adapter boundary.
 An explicit REST allowlist is available through `RestSurface` from
 `@contexture/mcp/web`; it offers mountable Fetch handling and an optional Node
@@ -135,6 +136,19 @@ lower-level in-memory compatibility adapter.
 both create the same lazy application declaration.
 
 ## Inspect agent-visible context
+
+The model-controlled `contexture_inspect` gateway accepts one through 32 unique,
+trimmed refs from existing cards. It atomically validates the whole batch, then
+returns a fixed evaluation notice and pure routing cards for each target, its
+direct members, and declared uses. It preserves request and declaration order,
+does not recurse, and discloses no instructions, Tool schemas or classification,
+Publication contract, content, or invocation result. It invokes nothing and
+records separate inspection telemetry. Disclosure-only servers expose discover,
+inspect, and open, without invocation gateways.
+
+The similarly named local CLI command is intentionally unchanged: it remains a
+transport-free diagnostic trace of connection instructions, discovery, opens,
+and explicitly requested local reads.
 
 `contexture inspect` replays the exact instructions, discovery payload, and
 progressive-disclosure cards produced by the native implementation. It starts
@@ -209,7 +223,7 @@ npm ci
 npm run check
 ```
 
-The binding targets Contexture Specification 0.14 at the immutable revision in
+The binding targets Contexture Specification 0.15 at the immutable revision in
 [`conformance/specification.json`](conformance/specification.json). Pinned
 fixtures and golden outputs are stored under `conformance/`; tests construct and
 run the TypeScript implementation before comparing its observations with them.

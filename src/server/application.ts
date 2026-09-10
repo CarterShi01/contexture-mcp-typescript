@@ -7,6 +7,7 @@ import {
 import { Disclosure } from '../core/model/disclosure.js';
 import { ApplicationRuntime } from '../core/model/runtime.js';
 import { InMemoryTelemetry } from '../core/model/telemetry.js';
+import { PACKAGE_VERSION } from '../core/foundation/vocabulary.js';
 import type { Telemetry } from '../core/model/telemetry.js';
 import { ExecutionAPI } from '../core/model/system-api.js';
 import { Gateway } from '../core/model/system-api.js';
@@ -72,7 +73,7 @@ export function compileStructuralApplication(
     publications: new Publications(disclosure, undefined, normalized),
     server: (): ContextureMcpServer =>
       createContextureMcpServer(
-        { name: index.name, version: '0.14.0rc1' },
+        { name: index.name, version: PACKAGE_VERSION },
         new Gateway(disclosure, undefined),
         application.publications,
       ),

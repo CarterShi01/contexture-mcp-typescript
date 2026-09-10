@@ -83,7 +83,11 @@ test('structural compilation builds one unbound navigation-only MCP container', 
   assert.ok(card !== undefined);
   assert.equal('read_only' in card, false);
   assert.equal('input_schema' in card, false);
-  assert.deepEqual(structural.server().gatewayNames, ['contexture_discover', 'contexture_open']);
+  assert.deepEqual(structural.server().gatewayNames, [
+    'contexture_discover',
+    'contexture_inspect',
+    'contexture_open',
+  ]);
   assert.equal(structural.publications.resourceCards().length, 0);
 });
 

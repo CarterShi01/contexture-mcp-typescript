@@ -5,6 +5,19 @@ Versioning once public releases begin.
 
 ## Unreleased
 
+## 0.15.0-rc.1
+
+- Add the read-only `contexture_inspect(refs)` gateway for atomically comparing
+  one through 32 unique candidate refs without activating them.
+- Return only pure routing cards for each target, its direct members, and its
+  declared uses; omit instructions, execution facets, Publication contracts,
+  content, results, and recursive expansion.
+- Keep inspection evidence separate from ACTIVE Role/Skill and Tool telemetry,
+  and expose discover, inspect, and open on disclosure-only applications.
+- Preserve the existing local `contexture inspect` CLI trace command unchanged.
+- Pin Contexture Specification 0.15 and conformance rule 17 to immutable Python
+  revision `471d0f75c6be0e5cff104f0d0c61f10957da792a`.
+
 ## 0.14.0-rc.1
 
 - Add runtime-branded optional Role Publications with complete containment,

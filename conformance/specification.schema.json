@@ -18,11 +18,11 @@
     "$schema": { "type": "string" },
     "repository": { "type": "string", "format": "uri" },
     "revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-    "specificationVersion": { "const": "0.14" },
+    "specificationVersion": { "const": "0.15" },
     "status": { "enum": ["scaffold", "partial", "conformant"] },
     "implementedRules": {
       "type": "array",
-      "items": { "type": "integer", "minimum": 1, "maximum": 16 },
+      "items": { "type": "integer", "minimum": 1, "maximum": 17 },
       "uniqueItems": true
     },
     "rules": {
@@ -44,10 +44,11 @@
         "13",
         "14",
         "15",
-        "16"
+        "16",
+        "17"
       ],
       "patternProperties": {
-        "^(?:[1-9]|1[0-6])$": {
+        "^(?:[1-9]|1[0-7])$": {
           "type": "object",
           "additionalProperties": false,
           "required": ["status", "evidence"],

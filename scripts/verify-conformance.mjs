@@ -5,8 +5,8 @@ const manifest = JSON.parse(readFileSync('conformance/specification.json', 'utf8
 const schema = JSON.parse(readFileSync('conformance/specification.schema.json', 'utf8'));
 const specificationSource = readFileSync('src/core/foundation/specification.ts', 'utf8');
 
-const expectedRevision = 'a108b314bb3f37622fb082759f726468bbb09163';
-const expectedVersion = '0.14';
+const expectedRevision = '471d0f75c6be0e5cff104f0d0c61f10957da792a';
+const expectedVersion = '0.15';
 const expectedFixtures = [
   'disclosure-only-application.json',
   'prompt-roots-application.json',
@@ -26,7 +26,7 @@ const expectedGolden = [
   'resources.json',
   'tools.json',
 ];
-const ruleNumbers = Array.from({ length: 16 }, (_, index) => index + 1);
+const ruleNumbers = Array.from({ length: 17 }, (_, index) => index + 1);
 const ruleStatuses = new Set(['not-started', 'in-progress', 'implemented']);
 
 function fail(message) {
@@ -89,7 +89,7 @@ if (
   manifest.rules === null ||
   !equalArray(Object.keys(manifest.rules), expectedRuleKeys)
 )
-  fail('rules must contain exactly 1 through 16 in order');
+  fail('rules must contain exactly 1 through 17 in order');
 const implemented = [];
 for (const number of ruleNumbers) {
   const entry = manifest.rules[String(number)];
@@ -123,7 +123,7 @@ for (const golden of expectedGolden) {
 if (!equalArray(manifest.implementedRules, implemented))
   fail('implementedRules disagrees with rule statuses');
 const expectedStatus =
-  implemented.length === 16 ? 'conformant' : equalArray(implemented, [1]) ? 'scaffold' : 'partial';
+  implemented.length === 17 ? 'conformant' : equalArray(implemented, [1]) ? 'scaffold' : 'partial';
 if (manifest.status !== expectedStatus) fail(`status must be ${expectedStatus}`);
 if (
   !equalArray(schema.required, [

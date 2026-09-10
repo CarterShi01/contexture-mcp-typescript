@@ -11,7 +11,7 @@ Contexture 的 TypeScript 实现。Contexture 是一个面向 MCP 应用的渐�
 [Go](https://github.com/CarterShi01/contexture-mcp-go) ·
 [跨语言规范](https://github.com/CarterShi01/contexture-mcp/tree/master/spec)
 
-> **当前状态：Python 0.14 的可选 Role Publication、Python 0.13 的 path-selected
+> **当前状态：Python 0.15 的非激活 inspect、Python 0.14 的可选 Role Publication、Python 0.13 的 path-selected
 > surface 及所有适用的 0.12 产品条目均已验证，
 > 但发布仍受保护。** 本仓库已具备
 > 原生 CLI、脚手架、inspection、维护中的 demo、MCP transport、固定及请求级 HTTP
@@ -92,6 +92,7 @@ const application = defineApplication({
 const compiled = compileRuntimeApplication(application);
 const gateway = new Gateway(compiled.disclosure, compiled.runtime);
 
+await gateway.inspect(['operations', 'operations/diagnose']);
 await gateway.open('operations');
 await gateway.invokeReadOnly('operations/status', { service: 'api' });
 
@@ -99,7 +100,7 @@ const adapter = createContextureMcpServer({ name: 'operations', version: '0.1.0'
 // 由 Host 将 adapter.server 连接到官方 MCP SDK transport。
 ```
 
-业务 Tool 始终位于 Contexture 的四个固定网关 Tool 后面。核心层不依赖 MCP
+业务 Tool 始终位于 Contexture 的五个固定网关 Tool 后面。核心层不依赖 MCP
 SDK；`@contexture/mcp/server` 是官方 SDK 适配边界。`@contexture/mcp/web` 的
 `RestSurface` 提供显式 allowlist REST 适配器，可挂载 Fetch handler 或启动可选 Node
 listener，并与 Tool Binding 复用同一验证路径。`RestRouter` 保留为较低层的内存兼容适配器。
@@ -108,6 +109,16 @@ listener，并与 Tool Binding 复用同一验证路径。`RestRouter` 保留为
 惰性 application 声明。
 
 ## 检查 Agent 可见 context
+
+模型控制的 `contexture_inspect` 网关接受 1 至 32 个来自现有卡片、去除首尾空白且互不
+重复的 ref。它先原子校验整个批次，再返回固定的候选评估提示，以及每个目标、其直接
+member 和声明的 `uses` 对应的纯路由卡片。它保持请求顺序与声明顺序，不递归，也不披露
+instructions、Tool schema 或读写分类、Publication 合约、内容或调用结果；它不会调用任何
+Tool，并使用独立的 inspection telemetry。仅披露服务器提供 discover、inspect 和 open，
+不提供调用网关。
+
+同名的本地 CLI 命令保持原有行为：它仍是 transport-free 的诊断 trace，用于重放连接
+instructions、discovery、open，以及显式请求的本地 read。
 
 `contexture inspect` 会重放原生实现生成的准确 instructions、discovery payload 和
 渐进披露卡片，不会启动 MCP transport。修改声明后、连接 Host 前使用它：
@@ -175,7 +186,7 @@ npm run check
 ```
 
 本实现锁定 `conformance/specification.json` 中记录的 Contexture Specification
-0.14 提交。固定 fixtures 和 golden 输出保存在 `conformance/`；测试会先通过
+0.15 提交。固定 fixtures 和 golden 输出保存在 `conformance/`；测试会先通过
 TypeScript 实现生成真实观察结果，再与这些资产比较。
 
 对于 streamable HTTP，`Contexture-Select: operations/diagnose` 会提升该完整 subtree，

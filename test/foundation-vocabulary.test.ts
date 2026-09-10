@@ -6,6 +6,7 @@ import test from 'node:test';
 import {
   DISCOVER_GATEWAY_NAME,
   GATEWAY_TOOL_NAMES,
+  INSPECT_GATEWAY_NAME,
   INVOKE_GATEWAY_NAME,
   INVOKE_READ_ONLY_GATEWAY_NAME,
   OPEN_GATEWAY_NAME,
@@ -35,10 +36,11 @@ async function sourceFiles(directory: string): Promise<string[]> {
 
 test('foundation owns one public spelling for package, reference, and gateway vocabulary', () => {
   assert.equal(PACKAGE_NAME, 'contexture');
-  assert.equal(PACKAGE_VERSION, '0.14.0rc1');
+  assert.equal(PACKAGE_VERSION, '0.15.0rc1');
   assert.equal(REFERENCE_SEPARATOR, '/');
   assert.deepEqual(GATEWAY_TOOL_NAMES, [
     DISCOVER_GATEWAY_NAME,
+    INSPECT_GATEWAY_NAME,
     OPEN_GATEWAY_NAME,
     INVOKE_READ_ONLY_GATEWAY_NAME,
     INVOKE_GATEWAY_NAME,

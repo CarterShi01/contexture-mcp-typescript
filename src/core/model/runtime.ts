@@ -12,10 +12,11 @@ import { InMemoryTelemetry, reportTelemetry, withTelemetry, type Telemetry } fro
 export {
   currentTelemetry,
   InMemoryTelemetry,
+  reportInspection,
   reportTelemetry,
   withTelemetry,
 } from './telemetry.js';
-export type { NodeUsage, Telemetry, TelemetryEvent } from './telemetry.js';
+export type { InspectionUsage, NodeUsage, Telemetry, TelemetryEvent } from './telemetry.js';
 
 interface RuntimeScope {
   readonly principal: Principal | undefined;

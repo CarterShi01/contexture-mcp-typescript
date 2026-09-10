@@ -4,9 +4,10 @@ import type { RoleDeclaration } from './role.js';
 import type { SkillDeclaration } from './skill.js';
 import type { ToolDeclaration } from './tool.js';
 
-/** The only two progressive-disclosure states for a Contexture node. */
+/** The three progressive-disclosure states for a Contexture node. */
 export const CompileLevel = Object.freeze({
   ROUTE: 'route',
+  INSPECT: 'inspect',
   ACTIVE: 'active',
 } as const);
 
@@ -59,9 +60,12 @@ export interface GroupedCards {
 export interface View<Node extends ContextNode = ContextNode> {
   refOf(node: Node): string;
   cardOf(node: Node): CompiledContext;
+  routingCardOf(node: Node): CompiledContext;
   cardFor(ref: string): CompiledContext;
   cardsOf(nodes: Iterable<Node>): GroupedCards;
+  routingCardsOf(nodes: Iterable<Node>): GroupedCards;
   cardsFor(refs: Iterable<string>): readonly CompiledContext[];
+  routingCardsFor(refs: Iterable<string>): readonly CompiledContext[];
   executionOf(tool: Node): CompiledContext;
   schemaOf(tool: Node): JsonObject;
 }
@@ -78,6 +82,14 @@ export function cardOf<Node extends ContextNode>(node: Node, view: View<Node>): 
     ref: view.refOf(node),
     ...(node.kind === 'tool' ? view.executionOf(node) : {}),
   });
+}
+
+/** Render one openable card containing routing facts only. */
+export function routingCardOf<Node extends ContextNode>(
+  node: Node,
+  view: View<Node>,
+): CompiledContext {
+  return Object.freeze({ ...routeOf(node), ref: view.refOf(node) });
 }
 
 /** Return direct child Roles without evaluating declaration factories. */
@@ -118,6 +130,27 @@ export function groupCards<Node extends ContextNode>(
   });
 }
 
+/** Render one immutable sibling set without Tool execution facets. */
+export function groupRoutingCards<Node extends ContextNode>(
+  nodes: Iterable<Node>,
+  view: View<Node>,
+): GroupedCards {
+  const roles: CompiledContext[] = [];
+  const skills: CompiledContext[] = [];
+  const tools: CompiledContext[] = [];
+  for (const node of nodes) {
+    const card = view.routingCardOf(node);
+    if (node.kind === 'role') roles.push(card);
+    else if (node.kind === 'skill') skills.push(card);
+    else tools.push(card);
+  }
+  return Object.freeze({
+    roles: Object.freeze(roles),
+    skills: Object.freeze(skills),
+    tools: Object.freeze(tools),
+  });
+}
+
 /**
  * Compile one node at route or active level through an explicit owning view.
  *
@@ -131,6 +164,13 @@ export function compileNode(
   view: View<ContextNode> = standaloneView(),
 ): CompiledContext {
   if (level === CompileLevel.ROUTE) return routeOf(node);
+  if (level === CompileLevel.INSPECT) {
+    return Object.freeze({
+      node: view.routingCardOf(node),
+      members: view.routingCardsOf(membersOf(node)),
+      uses: Object.freeze([...view.routingCardsFor(node.uses ?? [])]),
+    });
+  }
   if (level !== CompileLevel.ACTIVE) {
     throw new ModelValidationError(`Unknown Contexture compile level ${JSON.stringify(level)}.`);
   }
@@ -181,6 +221,9 @@ function standaloneView<Node extends ContextNode>(): View<Node> {
     cardOf(node): CompiledContext {
       return cardOf(node, view);
     },
+    routingCardOf(node): CompiledContext {
+      return routingCardOf(node, view);
+    },
     cardFor(ref): CompiledContext {
       throw new ModelValidationError(
         `Nothing here can resolve ${JSON.stringify(ref)}: this node is being compiled on its own, outside any forest.`,
@@ -189,8 +232,14 @@ function standaloneView<Node extends ContextNode>(): View<Node> {
     cardsOf(nodes): GroupedCards {
       return groupCards(nodes, view);
     },
+    routingCardsOf(nodes): GroupedCards {
+      return groupRoutingCards(nodes, view);
+    },
     cardsFor(refs): readonly CompiledContext[] {
       return Object.freeze([...refs].map((ref) => view.cardFor(ref)));
+    },
+    routingCardsFor(refs): readonly CompiledContext[] {
+      return Object.freeze([...refs].map((ref) => view.routingCardOf(viewNodeForRef(ref))));
     },
     executionOf(tool): CompiledContext {
       if (tool.kind !== 'tool') {
@@ -207,6 +256,12 @@ function standaloneView<Node extends ContextNode>(): View<Node> {
     },
   };
   return Object.freeze(view);
+}
+
+function viewNodeForRef(ref: string): never {
+  throw new ModelValidationError(
+    `Nothing here can resolve ${JSON.stringify(ref)}: this node is being compiled on its own, outside any forest.`,
+  );
 }
 
 function activeInstructions(node: ContextNode): string {

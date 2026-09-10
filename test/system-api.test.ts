@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { z } from 'zod';
 
-import { defineApplication } from '../src/index.js';
+import { defineApplication, definePublication } from '../src/index.js';
 import {
   ApplicationRuntime,
   DISCLOSURE_GATEWAY,
@@ -79,11 +79,17 @@ function disclosureOnlyGateway(): Gateway {
 test('Gateway owns one fixed ordered inventory and its independently installable halves', () => {
   assert.deepEqual(
     GATEWAY.map((tool) => tool.name),
-    ['contexture_discover', 'contexture_open', 'contexture_invoke_read_only', 'contexture_invoke'],
+    [
+      'contexture_discover',
+      'contexture_inspect',
+      'contexture_open',
+      'contexture_invoke_read_only',
+      'contexture_invoke',
+    ],
   );
   assert.deepEqual(
     DISCLOSURE_GATEWAY.map((tool) => tool.name),
-    ['contexture_discover', 'contexture_open'],
+    ['contexture_discover', 'contexture_inspect', 'contexture_open'],
   );
   assert.deepEqual(
     EXECUTION_GATEWAY.map((tool) => tool.name),
@@ -99,8 +105,9 @@ test('Gateway owns one fixed ordered inventory and its independently installable
     ['contexture_invoke'],
   );
   for (const tool of GATEWAY) assert.ok(tool.description.length > 80);
-  assert.match(GATEWAY[1]?.description ?? '', /schema/);
+  assert.match(GATEWAY[2]?.description ?? '', /schema/);
   assert.doesNotMatch(GATEWAY[0]?.description ?? '', /schema/);
+  assert.doesNotMatch(GATEWAY[1]?.description ?? '', /schema/);
   assert.strictEqual(SystemAPI, Gateway);
 });
 
@@ -196,6 +203,131 @@ test('DisclosureAPI rejects an invalid runtime value at its public boundary', ()
     () => new DisclosureAPI(undefined as unknown as Disclosure),
     /requires a Disclosure/,
   );
+});
+
+test('DisclosureAPI inspects an ordered shortlist without activating or executing candidates', async () => {
+  let calls = 0;
+  const application = compileRuntimeApplication(
+    defineApplication({
+      name: 'inspect-api',
+      roots: [
+        () => ({
+          kind: 'role',
+          name: 'owner',
+          description: 'Own work.',
+          instructions: 'Secret owner procedure.',
+          publication: () =>
+            definePublication({
+              kind: 'role',
+              name: 'publish',
+              description: 'Preserve results.',
+              instructions: 'Secret publication procedure.',
+            }),
+          skills: [
+            () => ({
+              kind: 'skill',
+              name: 'plan',
+              description: 'Plan work.',
+              instructions: 'Secret skill procedure.',
+              uses: ['owner/status'],
+            }),
+          ],
+          tools: [
+            () => ({
+              kind: 'tool',
+              name: 'status',
+              description: 'Read status.',
+              readOnly: true,
+              input: z.strictObject({}),
+              invoke: () => {
+                calls += 1;
+                return 'ok';
+              },
+            }),
+          ],
+        }),
+      ],
+    }),
+  );
+  const inspected = await new DisclosureAPI(application.disclosure).inspect([
+    ' owner/plan ',
+    'owner',
+  ]);
+  assert.deepEqual(
+    inspected.items.map((item) => (item.node as { readonly ref: string }).ref),
+    ['owner/plan', 'owner'],
+  );
+  assert.deepEqual(inspected.items[0]?.uses, [
+    { kind: 'tool', name: 'status', description: 'Read status.', ref: 'owner/status' },
+  ]);
+  assert.deepEqual(
+    (inspected.items[1]?.members as { readonly roles: readonly { readonly ref: string }[] }).roles,
+    [
+      {
+        kind: 'role',
+        name: 'publish',
+        description: 'Preserve results.',
+        ref: 'owner/publish',
+      },
+    ],
+  );
+  const rendered = JSON.stringify(inspected);
+  assert.match(inspected.notice, /candidate evaluation/);
+  assert.doesNotMatch(
+    rendered,
+    /"instructions"|input_schema|read_only|framework contract|Secret .* procedure/,
+  );
+  assert.equal(calls, 0);
+  assert.equal(application.telemetry.usage('owner').callCount, 0);
+  assert.equal(application.telemetry.usage('owner/plan').callCount, 0);
+  assert.equal(application.telemetry.inspectionUsage?.('owner').callCount, 1);
+  assert.equal(application.telemetry.inspectionUsage?.('owner/plan').callCount, 1);
+});
+
+test('DisclosureAPI atomically prevalidates bounded unique refs and audience safety', async () => {
+  const application = compileRuntimeApplication(
+    defineApplication({
+      name: 'inspect-safety',
+      roots: [
+        () => ({
+          kind: 'skill',
+          name: 'visible',
+          description: 'Visible.',
+          instructions: 'Use.',
+        }),
+        () => ({
+          kind: 'skill',
+          name: 'other',
+          description: 'Other.',
+          instructions: 'Use.',
+          uses: ['visible'],
+        }),
+      ],
+      promptRoots: [
+        () => ({ kind: 'skill', name: 'person', description: 'Person.', instructions: 'Wait.' }),
+      ],
+      prompts: [
+        { name: 'visible-command', opens: 'visible', description: 'Visible.', modelMayOpen: false },
+      ],
+    }),
+  );
+  const api = new DisclosureAPI(application.disclosure, { reserved: ['visible'] });
+  for (const refs of [[], ['visible', 'visible'], Array(33).fill('visible'), [' ']] as const) {
+    await assert.rejects(api.inspect(refs), RefusedError);
+  }
+  await assert.rejects(api.inspect(['visible']), /opened by a person/);
+  await assert.rejects(api.inspect(['person']), /opened by a person/);
+  const selected = await new DisclosureAPI(application.disclosure).inspect(
+    ['other'],
+    RootSelection.only('other'),
+  );
+  assert.deepEqual(selected.items[0]?.uses, []);
+  await assert.rejects(
+    api.inspect(['other'], RootSelection.only('visible')),
+    RootOutsideSelectionError,
+  );
+  await assert.rejects(api.inspect(['other', 'missing']), /No root role named 'missing'/);
+  assert.equal(application.telemetry.inspectionUsage?.('other').callCount, 1);
 });
 
 test('Gateway makes every canonical lookup failure actionable without retaining traversal state', async () => {

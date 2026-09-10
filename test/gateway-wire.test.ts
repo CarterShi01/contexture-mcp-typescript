@@ -60,14 +60,31 @@ test('the official SDK exposes only the fixed gateway and preserves its two invo
   await client.send({ jsonrpc: '2.0', method: 'notifications/initialized' });
 
   const listed = response(await sendAndWait(client, replies, 2, 'tools/list', {}));
-  const tools = listed.tools as Array<{ readonly name: string; readonly annotations: unknown }>;
+  const tools = listed.tools as Array<{
+    readonly name: string;
+    readonly annotations: unknown;
+    readonly inputSchema: Record<string, unknown>;
+  }>;
   assert.deepEqual(
     tools.map((tool) => tool.name),
-    ['contexture_discover', 'contexture_open', 'contexture_invoke_read_only', 'contexture_invoke'],
+    [
+      'contexture_discover',
+      'contexture_inspect',
+      'contexture_open',
+      'contexture_invoke_read_only',
+      'contexture_invoke',
+    ],
   );
+  const inspectSchema = tools.find((tool) => tool.name === 'contexture_inspect')?.inputSchema;
+  assert.ok(inspectSchema !== undefined);
+  const refsSchema = (inspectSchema.properties as Record<string, Record<string, unknown>>).refs;
+  assert.equal(refsSchema?.type, 'array');
+  assert.equal(refsSchema?.minItems, undefined);
+  assert.equal(refsSchema?.maxItems, undefined);
   assert.deepEqual(
     tools.map((tool) => tool.annotations),
     [
+      { readOnlyHint: true },
       { readOnlyHint: true },
       { readOnlyHint: true },
       { readOnlyHint: true },
@@ -104,6 +121,39 @@ test('the official SDK exposes only the fixed gateway and preserves its two invo
           properties: { service: { type: 'string' } },
           required: ['service'],
         },
+      },
+    ],
+  });
+
+  const inspect = response(
+    await sendAndWait(client, replies, 7, 'tools/call', {
+      name: 'contexture_inspect',
+      arguments: { refs: ['read-status', 'restart'] },
+    }),
+  );
+  assert.deepEqual(inspect.structuredContent, {
+    notice:
+      'These are routing cards for candidate evaluation. No Role or Skill has been activated, no instructions or execution facets are disclosed, and no Tool has been invoked.',
+    items: [
+      {
+        node: {
+          kind: 'tool',
+          name: 'read-status',
+          description: 'Read status.',
+          ref: 'read-status',
+        },
+        members: { roles: [], skills: [], tools: [] },
+        uses: [],
+      },
+      {
+        node: {
+          kind: 'tool',
+          name: 'restart',
+          description: 'Restart a service.',
+          ref: 'restart',
+        },
+        members: { roles: [], skills: [], tools: [] },
+        uses: [],
       },
     ],
   });

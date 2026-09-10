@@ -6,12 +6,14 @@ import type { ToolCallContext } from './declarations.js';
 import { LookupFailure, ModelValidationError, NodeNotFoundError } from '../foundation/errors.js';
 import {
   DISCOVER_GATEWAY_NAME,
+  INSPECT_GATEWAY_NAME,
   INVOKE_GATEWAY_NAME,
   INVOKE_READ_ONLY_GATEWAY_NAME,
   OPEN_GATEWAY_NAME,
   REFERENCE_SEPARATOR,
   type GatewayName,
 } from '../foundation/vocabulary.js';
+import { reportInspection } from './telemetry.js';
 
 /** One immutable system-controlled tool in Contexture's MCP plane. */
 export interface GatewayTool {
@@ -30,6 +32,12 @@ export const GATEWAY: readonly GatewayTool[] = Object.freeze([
     readOnly: true,
     description:
       'List the top-level capabilities this server serves, as short routing cards. Most are roles: open the one that matches the task; its sub-roles arrive with it, one level at a time, so a large tree costs only the branch you enter. A role card is a name, a sentence, and the ref that opens it — instructions and what a role holds arrive on opening, never here.',
+  }),
+  Object.freeze({
+    name: INSPECT_GATEWAY_NAME,
+    readOnly: true,
+    description:
+      "Inspect one or more refs without activating them. The response contains a fixed evaluation notice, each requested node's routing card, and one level of routing cards for direct members and declared uses. It never returns instructions, Tool execution facets, Publication contracts, or invocation results. Pass 1 through 32 unique refs from existing cards.",
   }),
   Object.freeze({
     name: OPEN_GATEWAY_NAME,
@@ -52,9 +60,9 @@ export const GATEWAY: readonly GatewayTool[] = Object.freeze([
 ]);
 
 /** The fixed navigation half, usable without an execution runtime. */
-export const DISCLOSURE_GATEWAY: readonly GatewayTool[] = Object.freeze(GATEWAY.slice(0, 2));
+export const DISCLOSURE_GATEWAY: readonly GatewayTool[] = Object.freeze(GATEWAY.slice(0, 3));
 /** The fixed invocation half, present only on an executable application. */
-export const EXECUTION_GATEWAY: readonly GatewayTool[] = Object.freeze(GATEWAY.slice(2));
+export const EXECUTION_GATEWAY: readonly GatewayTool[] = Object.freeze(GATEWAY.slice(3));
 /** Compatibility names-only inventory in the same fixed registration order. */
 export const GATEWAY_TOOLS: readonly GatewayName[] = Object.freeze(
   GATEWAY.map((tool) => tool.name),
@@ -108,6 +116,29 @@ export function takenByPersonMessage(ref: string): string {
   );
 }
 
+/** Validate and normalize one atomic inspect shortlist before authorization. */
+export function normalizeInspectionRefs(refs: readonly string[]): readonly string[] {
+  if (!Array.isArray(refs) || refs.length < 1 || refs.length > 32) {
+    throw new RefusedError(
+      `${INSPECT_GATEWAY_NAME} requires from 1 through 32 unique non-empty refs.`,
+    );
+  }
+  const normalized: string[] = [];
+  for (const value of refs as readonly unknown[]) {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw new RefusedError(
+        `${INSPECT_GATEWAY_NAME} requires from 1 through 32 unique non-empty refs.`,
+      );
+    }
+    const ref = value.trim();
+    if (normalized.includes(ref)) {
+      throw new RefusedError(`${INSPECT_GATEWAY_NAME} names a ref more than once: '${ref}'.`);
+    }
+    normalized.push(ref);
+  }
+  return Object.freeze(normalized);
+}
+
 /**
  * SDK-neutral progressive-navigation half of Contexture's fixed gateway.
  *
@@ -148,6 +179,27 @@ export class DisclosureAPI {
   /** Return one routing-card level for each selected model-visible root. */
   async discover(selection: RootSelection = RootSelection.all()): Promise<Discovery> {
     return Promise.resolve(this.disclosure.discover(selection));
+  }
+
+  /** Inspect an atomic shortlist without activating any candidate. */
+  async inspect(
+    refs: readonly string[],
+    selection: RootSelection = RootSelection.all(),
+  ): Promise<import('./disclosure.js').Inspection> {
+    const normalized = normalizeInspectionRefs(refs);
+
+    const effective = this.disclosure.effectiveSelection(selection);
+    for (const ref of normalized) {
+      effective.requireRef(ref);
+      if (this.#reserved.has(canonicalRef(ref))) {
+        throw new RefusedError(takenByPersonMessage(ref));
+      }
+    }
+    const payload = await this.recover(() =>
+      Promise.resolve(this.disclosure.inspect(normalized, selection)),
+    );
+    for (const ref of normalized) void reportInspection(this.disclosure.telemetry, ref);
+    return payload;
   }
 
   /**
@@ -319,6 +371,13 @@ export class Gateway {
 
   async discover(selection: RootSelection = RootSelection.all()): Promise<unknown> {
     return this.navigation.discover(selection);
+  }
+
+  async inspect(
+    refs: readonly string[],
+    selection: RootSelection = RootSelection.all(),
+  ): Promise<unknown> {
+    return this.navigation.inspect(refs, selection);
   }
 
   async open(ref: string, selection: RootSelection = RootSelection.all()): Promise<unknown> {

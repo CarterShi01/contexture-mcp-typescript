@@ -11,7 +11,10 @@ import { RootOutsideSelectionError, RootSelection } from './root-selection.js';
 import { InMemoryTelemetry, reportTelemetry, type Telemetry } from './telemetry.js';
 import {
   cardOf as nodeCard,
+  compileNode,
+  CompileLevel,
   groupCards,
+  groupRoutingCards,
   publicationDetails,
   type CompiledContext,
   type GroupedCards,
@@ -23,6 +26,10 @@ export type Discovery = Readonly<{
   roles: readonly RoutingCard[];
   skills: readonly RoutingCard[];
   tools: readonly RoutingCard[];
+}>;
+export type Inspection = Readonly<{
+  notice: string;
+  items: readonly RoutingCard[];
 }>;
 
 /** A model-plane navigation request is deliberately refused with a recovery sentence. */
@@ -123,6 +130,27 @@ export class Disclosure implements View<CompiledNode> {
     return result;
   }
 
+  /** Compare known candidates through one non-activating structural level. */
+  inspect(refs: readonly string[], requested: RootSelection = RootSelection.all()): Inspection {
+    const selection = this.effectiveSelection(requested);
+    const view = this.select(selection);
+    const nodes = refs.map((ref) => {
+      selection.requireRef(ref);
+      if (!view.modelCanSee(ref) || this.#reserved.has(ref)) {
+        throw new RefusedError(
+          `${ref} is opened by a person, not by an agent. It is reachable only as a command in this host's menu. ` +
+            'Do not reproduce its steps another way; tell the user which command runs it and let them decide when.',
+        );
+      }
+      return resolveRef(view.index, ref, selection, view.index.roots);
+    });
+    return Object.freeze({
+      notice:
+        'These are routing cards for candidate evaluation. No Role or Skill has been activated, no instructions or execution facets are disclosed, and no Tool has been invoked.',
+      items: Object.freeze(nodes.map((node) => compileNode(node, CompileLevel.INSPECT, view))),
+    });
+  }
+
   openForPerson(ref: string, requested: RootSelection = RootSelection.all()): RoutingCard {
     // Person navigation removes only prompt-root model ownership. It retains
     // this view's root ceiling and still bypasses model-only reservations.
@@ -147,6 +175,15 @@ export class Disclosure implements View<CompiledNode> {
     return nodeCard(node, this);
   }
 
+  routingCardOf(node: CompiledNode): RoutingCard {
+    return Object.freeze({
+      kind: node.kind,
+      name: node.name,
+      description: node.description,
+      ref: this.index.refOf(node),
+    });
+  }
+
   cardFor(ref: string): RoutingCard {
     this.effectiveSelection().requireRef(ref);
     if (!this.modelCanSee(ref) || this.#reserved.has(ref)) {
@@ -164,11 +201,26 @@ export class Disclosure implements View<CompiledNode> {
     );
   }
 
+  routingCardsOf(nodes: Iterable<CompiledNode>): GroupedCards {
+    return groupRoutingCards(
+      [...nodes].filter((node) => this.modelCanSee(this.index.refOf(node))),
+      this,
+    );
+  }
+
   cardsFor(refs: Iterable<string>): readonly RoutingCard[] {
     return Object.freeze(
       [...refs]
         .filter((ref) => this.modelCanSee(ref) && !this.#reserved.has(ref))
         .map((ref) => this.cardFor(ref)),
+    );
+  }
+
+  routingCardsFor(refs: Iterable<string>): readonly RoutingCard[] {
+    return Object.freeze(
+      [...refs]
+        .filter((ref) => this.modelCanSee(ref) && !this.#reserved.has(ref))
+        .map((ref) => this.routingCardOf(this.index.find(ref))),
     );
   }
 

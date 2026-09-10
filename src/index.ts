@@ -11,6 +11,7 @@ export {
 export {
   DISCOVER_GATEWAY_NAME,
   GATEWAY_TOOL_NAMES,
+  INSPECT_GATEWAY_NAME,
   INVOKE_GATEWAY_NAME,
   INVOKE_READ_ONLY_GATEWAY_NAME,
   OPEN_GATEWAY_NAME,
@@ -30,8 +31,10 @@ export {
   compileNode,
   CompileLevel,
   groupCards,
+  groupRoutingCards,
   membersOf,
   routeOf,
+  routingCardOf,
 } from './core/model/node.js';
 export type { CompiledContext, ContextNode, GroupedCards, View } from './core/model/node.js';
 export type { JsonObject, JsonValue } from './core/model/binding.js';
@@ -62,10 +65,16 @@ export {
   currentPrincipal,
   currentTelemetry,
   InMemoryTelemetry,
+  reportInspection,
   reportTelemetry,
   withTelemetry,
 } from './core/model/runtime.js';
-export type { NodeUsage, Telemetry, TelemetryEvent } from './core/model/runtime.js';
+export type {
+  InspectionUsage,
+  NodeUsage,
+  Telemetry,
+  TelemetryEvent,
+} from './core/model/runtime.js';
 export { currentGraph, withGraph } from './core/model/graph-context.js';
 export {
   OutsideSelectionError,
