@@ -366,6 +366,9 @@ than a second project configuration shape.
 `@contexture/mcp/demo` is the deterministic, fixture-driven Kubernetes
 incident-response reference application. It exposes the lazy
 `kubernetesPlatform`, `incidentResponse`, and `deploymentOps` role factories;
+the five fixture-backed `getPodStatus`, `getPodLogs`, `getPodEvents`,
+`getRolloutStatus`, and `rollBackDeployment` Tool factories and their result
+types;
 one rollback Prompt; and two Markdown Resources pointing at existing document
 Tools. `@contexture/mcp/demo/server` exports the same `app` used by the CLI and
 a non-starting `build()` helper. Importing either path starts no transport and

@@ -5,6 +5,13 @@ import test from 'node:test';
 
 import { deploymentOps, incidentResponse, kubernetesPlatform } from '../src/demo/role.js';
 import {
+  getPodEvents,
+  getPodLogs,
+  getPodStatus,
+  getRolloutStatus,
+  rollBackDeployment,
+} from '../src/demo/tools.js';
+import {
   app,
   build,
   crashLoopRunbookDocument,
@@ -39,4 +46,26 @@ test('demo facade exposes one lazy topology, publications, and non-starting serv
   assert.deepEqual(app.resources, [crashLoopRunbookDocument, rollbackPolicyDocument]);
   assert.equal(build().name, 'contexture-demo');
   assert.equal(typeof main, 'function');
+});
+
+test('demo tool factories preserve fixed evidence, write classification, and domain failures', async () => {
+  const input = { namespace: 'prod', pod: 'payments-api-7d9c' };
+  assert.equal((await getPodStatus().invoke(input, {})).restart_count, 14);
+  assert.match(await getPodLogs().invoke({ ...input, previous: true }, {}), /DB_URL is missing/);
+  assert.equal((await getPodEvents().invoke(input, {}))[3]?.reason, 'Unhealthy');
+  assert.equal(
+    (await getRolloutStatus().invoke({ namespace: 'prod', deployment: 'payments-api' }, {}))
+      .previous_revision,
+    8,
+  );
+  const rollback = rollBackDeployment();
+  assert.equal(rollback.readOnly, false);
+  assert.match(
+    await rollback.invoke({ namespace: 'prod', deployment: 'payments-api' }, {}),
+    /revision 9 to 8/,
+  );
+  await assert.rejects(
+    async () => getPodStatus().invoke({ namespace: 'prod', pod: 'unknown' }, {}),
+    /single fixed incident/,
+  );
 });

@@ -286,7 +286,9 @@ programmatic consumer 从 `@contexture/mcp/cli` 导入 `main`、`CLI_VERSION`、
 
 `@contexture/mcp/demo` 是 deterministic、fixture-driven 的 Kubernetes incident-response reference
 application。它公开 lazy `kubernetesPlatform`、`incidentResponse`、`deploymentOps` role factory、一个
-rollback Prompt，以及指向现有 document Tool 的两个 Markdown Resource。`@contexture/mcp/demo/server`
+rollback Prompt、五个 fixture-backed Tool factory（`getPodStatus`、`getPodLogs`、`getPodEvents`、
+`getRolloutStatus`、`rollBackDeployment`）及其 result type，以及指向现有 document Tool 的两个
+Markdown Resource。`@contexture/mcp/demo/server`
 导出 CLI 使用的同一个 `app` 和不启动 transport 的 `build()` helper。导入任一路径都不会启动 transport
 或打开 connection；demo 不会连接真实 cluster。
 

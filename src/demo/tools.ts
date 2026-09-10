@@ -12,6 +12,38 @@ import {
   ROLLOUT_STATUS,
 } from './fixtures.js';
 
+/** The current state of one Pod in the maintained demo. */
+export interface PodStatus {
+  readonly namespace: string;
+  readonly pod: string;
+  readonly phase: string;
+  readonly container_state: string;
+  readonly restart_count: number;
+  readonly ready: boolean;
+  readonly image: string;
+}
+
+/** One event recorded against a Pod in the maintained demo. */
+export interface PodEvent {
+  readonly type: string;
+  readonly reason: string;
+  readonly message: string;
+  readonly count: number;
+}
+
+/** The current and previous revisions of the maintained demo Deployment. */
+export interface RolloutStatus {
+  readonly namespace: string;
+  readonly deployment: string;
+  readonly current_revision: number;
+  readonly previous_revision: number;
+  readonly current_image: string;
+  readonly previous_image: string;
+  readonly updated_replicas: number;
+  readonly available_replicas: number;
+  readonly rolled_out_at: string;
+}
+
 function requirePod(namespace: string, pod: string): void {
   if (namespace === NAMESPACE && pod === POD) return;
   throw new ContextureError(
@@ -35,7 +67,7 @@ export const getPodStatus = () =>
     input: z.object({ namespace: z.string(), pod: z.string() }),
     invoke: ({ namespace, pod }) => {
       requirePod(namespace, pod);
-      return POD_STATUS;
+      return POD_STATUS satisfies PodStatus;
     },
   });
 
@@ -65,7 +97,7 @@ export const getPodEvents = () =>
     input: z.object({ namespace: z.string(), pod: z.string() }),
     invoke: ({ namespace, pod }) => {
       requirePod(namespace, pod);
-      return POD_EVENTS;
+      return POD_EVENTS satisfies readonly PodEvent[];
     },
   });
 
@@ -78,7 +110,7 @@ export const getRolloutStatus = () =>
     input: z.object({ namespace: z.string(), deployment: z.string() }),
     invoke: ({ namespace, deployment }) => {
       requireDeployment(namespace, deployment);
-      return ROLLOUT_STATUS;
+      return ROLLOUT_STATUS satisfies RolloutStatus;
     },
   });
 
