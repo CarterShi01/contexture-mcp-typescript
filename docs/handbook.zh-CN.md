@@ -31,7 +31,7 @@ npx contexture call operations-assistant/ping --input '{"target":"local"}'
 Channels、启动 MCP server，也不会导入 Host SDK。
 
 ```js
-import { defineApplication, defineTool } from '@contexture/mcp';
+import { defineApplication, defineTool } from 'contexture-mcp';
 import { z } from 'zod';
 
 const status = defineTool({
@@ -269,7 +269,7 @@ ancestor ref 与直接 sub-Role count；`crossings()` 列出离开其 root 的�
 
 `bindingOf(ref)` 与 `schemaOf(tool)` 仅适用于 bound runtime Index。disclosure-only Index 仍支持
 结构查询，但会拒绝这些 execution fact。schema、node value、pair 与结果 collection 都不可变。
-`Index` 是从 `@contexture/mcp/server` 导出的 type-only export，不是 runtime constructor。TypeScript 的
+`Index` 是从 `contexture-mcp/server` 导出的 type-only export，不是 runtime constructor。TypeScript 的
 `compileApplication`、`compileDisclosureApplication` 以及 server 的 `compileRuntimeApplication` 取代了
 Python 的 `Index.of`、`bound` 与 `unbound` 构造形式；serving 仍由既有 runtime 与 Channels lifecycle 所有。
 声明 root 则有意保持 SDK-neutral。`SelectedGraph` 在同一 matcher 上只处理 selected ref，因此不会泄露
@@ -296,7 +296,7 @@ Python 的 `Index.of`、`bound` 与 `unbound` 构造形式；serving 仍由既�
 
 scaffold 暴露一个名为 `project` 的稳定 template；`availableTemplates()` 返回该 inventory，未知 template
 会被拒绝并列出可用选择。生成的 project 不包含未解析 template variable。
-programmatic consumer 从 `@contexture/mcp/cli` 导入 `main`、`CLI_VERSION`、`UsageError`、project discovery
+programmatic consumer 从 `contexture-mcp/cli` 导入 `main`、`CLI_VERSION`、`UsageError`、project discovery
 和 scaffold helper。`UsageError` 属于 `ContextureError`；executable 会把它写入 stderr 并返回 status 2。
 `findProject()` 会停在最近包含 `contexture.app` 的 `package.json`；`loadApplication()` 只接受该 app-only
 原生 declaration，并拒绝词法或 symlink target 逃逸 project root。Python legacy roots/publish/channels key
@@ -304,11 +304,11 @@ programmatic consumer 从 `@contexture/mcp/cli` 导入 `main`、`CLI_VERSION`、
 
 ### 维护中的 Kubernetes demo
 
-`@contexture/mcp/demo` 是 deterministic、fixture-driven 的 Kubernetes incident-response reference
+`contexture-mcp/demo` 是 deterministic、fixture-driven 的 Kubernetes incident-response reference
 application。它公开 lazy `kubernetesPlatform`、`incidentResponse`、`deploymentOps` role factory、一个
 rollback Prompt、五个 fixture-backed Tool factory（`getPodStatus`、`getPodLogs`、`getPodEvents`、
 `getRolloutStatus`、`rollBackDeployment`）及其 result type，以及指向现有 document Tool 的两个
-Markdown Resource。`@contexture/mcp/demo/server`
+Markdown Resource。`contexture-mcp/demo/server`
 导出 CLI 使用的同一个 `app` 和不启动 transport 的 `build()` helper。导入任一路径都不会启动 transport
 或打开 connection；demo 不会连接真实 cluster。
 
@@ -405,9 +405,9 @@ read-only Tool；POST、PUT、PATCH 与 DELETE 只能调用 writing Tool。REST 
 复用同一个 runtime Binding 来校验输入，因此不存在第二份业务实现。
 
 ```js
-import { PermissionError, Principal, RejectedError } from '@contexture/mcp';
-import { compileRuntimeApplication } from '@contexture/mcp/server';
-import { RestSurface } from '@contexture/mcp/web';
+import { PermissionError, Principal, RejectedError } from 'contexture-mcp';
+import { compileRuntimeApplication } from 'contexture-mcp/server';
+import { RestSurface } from 'contexture-mcp/web';
 
 const runtime = compileRuntimeApplication(app).runtime;
 const rest = new RestSurface(
@@ -495,7 +495,7 @@ host 并重新执行 public-bind policy；只有 `localhost`、`127.0.0.1` 和�
 能力清单及固定导航合同。HTTP root selection 时，该清单按每个请求的 selected root surface 生成，
 绝不会宣称被省略的 root。
 
-Claude Code、Cursor 和 Codex 配置请使用 `@contexture/mcp/server` 的 `Launch`。它从 server
+Claude Code、Cursor 和 Codex 配置请使用 `contexture-mcp/server` 的 `Launch`。它从 server
 command 渲染 Host configuration，而不是复制 application 已声明的 context。
 
 ## 10. 保持合同真实

@@ -2,7 +2,7 @@
  * Contexture's declaration-facing TypeScript API.
  *
  * Runtime compilation and Host adapters are deliberately imported from
- * @contexture/mcp/server so declaration-only consumers do not load an SDK.
+ * contexture-mcp/server so declaration-only consumers do not load an SDK.
  */
 export {
   CONTEXTURE_SPECIFICATION_REVISION,

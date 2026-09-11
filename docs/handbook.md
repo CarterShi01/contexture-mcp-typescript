@@ -35,7 +35,7 @@ does not construct nodes, open Channels, start an MCP server, or import a Host
 SDK.
 
 ```js
-import { defineApplication, defineTool } from '@contexture/mcp';
+import { defineApplication, defineTool } from 'contexture-mcp';
 import { z } from 'zod';
 
 const status = defineTool({
@@ -351,7 +351,7 @@ because disclosure renders only one routing-card layer.
 `bindingOf(ref)` and `schemaOf(tool)` are available only on a bound runtime
 Index. A disclosure-only Index still supports structural queries but rejects
 those execution facts. Schemas, node values, pairs, and result collections are
-immutable. `Index` is a type-only export from `@contexture/mcp/server`, not a
+immutable. `Index` is a type-only export from `contexture-mcp/server`, not a
 runtime constructor. TypeScript's `compileApplication`,
 `compileDisclosureApplication`, and server `compileRuntimeApplication` replace
 Python's `Index.of`, `bound`, and `unbound` construction forms; serving remains
@@ -377,7 +377,7 @@ The scaffold exposes one stable template named `project`; `availableTemplates()`
 returns that inventory, and an unknown template is rejected while naming the
 available choice. Generated projects contain no unresolved template variables.
 Programmatic consumers import `main`, `CLI_VERSION`, `UsageError`, project
-discovery, and scaffold helpers from `@contexture/mcp/cli`. `UsageError` is a
+discovery, and scaffold helpers from `contexture-mcp/cli`. `UsageError` is a
 `ContextureError`; the executable renders it on stderr with status two.
 `findProject()` stops at the nearest `package.json` with `contexture.app`;
 `loadApplication()` accepts only that app-only native declaration and rejects
@@ -387,14 +387,14 @@ than a second project configuration shape.
 
 ### Maintained Kubernetes demo
 
-`@contexture/mcp/demo` is the deterministic, fixture-driven Kubernetes
+`contexture-mcp/demo` is the deterministic, fixture-driven Kubernetes
 incident-response reference application. It exposes the lazy
 `kubernetesPlatform`, `incidentResponse`, and `deploymentOps` role factories;
 the five fixture-backed `getPodStatus`, `getPodLogs`, `getPodEvents`,
 `getRolloutStatus`, and `rollBackDeployment` Tool factories and their result
 types;
 one rollback Prompt; and two Markdown Resources pointing at existing document
-Tools. `@contexture/mcp/demo/server` exports the same `app` used by the CLI and
+Tools. `contexture-mcp/demo/server` exports the same `app` used by the CLI and
 a non-starting `build()` helper. Importing either path starts no transport and
 opens no connection; the demo never contacts a real cluster.
 
@@ -506,9 +506,9 @@ invoke only writing Tools. The same runtime Binding validates REST input and
 the MCP gateway input, so there is no second business implementation.
 
 ```js
-import { PermissionError, Principal, RejectedError } from '@contexture/mcp';
-import { compileRuntimeApplication } from '@contexture/mcp/server';
-import { RestSurface } from '@contexture/mcp/web';
+import { PermissionError, Principal, RejectedError } from 'contexture-mcp';
+import { compileRuntimeApplication } from 'contexture-mcp/server';
+import { RestSurface } from 'contexture-mcp/web';
 
 const runtime = compileRuntimeApplication(app).runtime;
 const rest = new RestSurface(
@@ -609,7 +609,7 @@ For HTTP root selection, that roster is generated for the selected root surface
 on each request; it never advertises an omitted root.
 
 For Claude Code, Cursor, or Codex configuration, use `Launch` from
-`@contexture/mcp/server`. It renders host configuration from the server command
+`contexture-mcp/server`. It renders host configuration from the server command
 instead of duplicating the application's declared context.
 
 ## 10. Keep the contract honest

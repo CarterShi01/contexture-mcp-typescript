@@ -20,10 +20,10 @@ Implementations:
 > Contexture 0.16 contract and all applicable product rows; the public
 > equivalence claim remains conditioned on current Host and release gates.
 
-Public entry points are `@contexture/mcp`, `@contexture/mcp/core`,
-`@contexture/mcp/server`, `@contexture/mcp/server/surface`,
-`@contexture/mcp/web`, `@contexture/mcp/demo`, `@contexture/mcp/inspection`,
-and `@contexture/mcp/cli`. The release check installs the packed tarball into a
+Public entry points are `contexture-mcp`, `contexture-mcp/core`,
+`contexture-mcp/server`, `contexture-mcp/server/surface`,
+`contexture-mcp/web`, `contexture-mcp/demo`, `contexture-mcp/inspection`,
+and `contexture-mcp/cli`. The release check installs the packed tarball into a
 separate project and imports each entry point.
 
 ## Node model
@@ -86,12 +86,12 @@ removed in 0.16: migrate finishing declarations to `definePostProcess` and
 
 ```ts
 import { z } from 'zod';
-import { defineApplication, defineTool } from '@contexture/mcp';
+import { defineApplication, defineTool } from 'contexture-mcp';
 import {
   compileRuntimeApplication,
   createContextureMcpServer,
   Gateway,
-} from '@contexture/mcp/server';
+} from 'contexture-mcp/server';
 
 const status = defineTool({
   kind: 'tool',
@@ -136,9 +136,9 @@ const adapter = createContextureMcpServer({ name: 'operations', version: '0.1.0'
 ```
 
 Business Tools remain behind Contexture's five fixed gateway Tools. The core is
-SDK-neutral; `@contexture/mcp/server` is the official MCP SDK adapter boundary.
+SDK-neutral; `contexture-mcp/server` is the official MCP SDK adapter boundary.
 An explicit REST allowlist is available through `RestSurface` from
-`@contexture/mcp/web`; it offers mountable Fetch handling and an optional Node
+`contexture-mcp/web`; it offers mountable Fetch handling and an optional Node
 listener over the same validated Tool Binding. `RestRouter` remains the
 lower-level in-memory compatibility adapter.
 
@@ -206,7 +206,7 @@ of an application's declared context. `Launch` produces the exact formats for
 Claude Code, Cursor, and Codex:
 
 ```ts
-import { Launch, claudeCodeConfig, codexConfig } from '@contexture/mcp/server';
+import { Launch, claudeCodeConfig, codexConfig } from 'contexture-mcp/server';
 
 const launch = new Launch({
   name: 'operations',

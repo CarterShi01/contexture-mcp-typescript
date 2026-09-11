@@ -53,16 +53,16 @@ try {
 
   const consumer = [
     "import { z } from 'zod';",
-    "import { Channels as CoreChannels, ControllerManager as CoreControllerManager, Principal as CorePrincipal, RootSelection as CoreRootSelection, bindTool as coreBindTool, currentGraph as coreCurrentGraph, definePostProcess as coreDefinePostProcess } from '@contexture/mcp/core';",
+    "import { Channels as CoreChannels, ControllerManager as CoreControllerManager, Principal as CorePrincipal, RootSelection as CoreRootSelection, bindTool as coreBindTool, currentGraph as coreCurrentGraph, definePostProcess as coreDefinePostProcess } from 'contexture-mcp/core';",
     "import { inspect } from 'node:util';",
-    "import { Channels, CompileLevel, Contexture, ContextureError, ControllerManager, DeclarationError, DISCOVER_GATEWAY_NAME, DuplicateNameError, GATEWAY_TOOL_NAMES, INSPECT_GATEWAY_NAME, InMemoryTelemetry, INVOKE_GATEWAY_NAME, INVOKE_READ_ONLY_GATEWAY_NAME, LookupFailure, ModelValidationError, NodeNotFoundError, OPEN_GATEWAY_NAME, OutsideSelectionError, PACKAGE_NAME, PACKAGE_VERSION, Principal, REFERENCE_SEPARATOR, RootOutsideSelectionError, RootSelection, SelectedGraph, SurfaceSelection, WrongDoorError, bindingInstruction, branchesOf, compileNode, currentGraph, currentPrincipal, currentTelemetry, defineApplication, definePostProcess, definePreProcess, defineTool, groupCards, membersOf, reportTelemetry, withGraph, withTelemetry } from '@contexture/mcp';",
-    "import { asJson as inspectionJson, trace } from '@contexture/mcp/inspection';",
-    "import { deploymentOps, getPodEvents, getPodLogs, getPodStatus, getRolloutStatus, incidentResponse, kubernetesPlatform, rollBackDeployment } from '@contexture/mcp/demo';",
-    "import { app as demoApp, build as buildDemo, crashLoopRunbookDocument, main as demoMain, rollBackARelease, rollbackPolicyDocument } from '@contexture/mcp/demo/server';",
-    "import { availableTemplates, CLI_VERSION, findProject, loadApplication, main as cliMain, newProject, UsageError } from '@contexture/mcp/cli';",
-    "import { ApplicationRuntime, Auth, buildInstructions, buildServer, claudeCodeConfig, cliCommands, codexConfig, COMMAND_CLOSING, commandDescription, compileRuntimeApplication, compileStructuralApplication, ContextureOptions, currentTelemetry as serverCurrentTelemetry, cursorConfig, DisclosureAPI, DISCLOSURE_GATEWAY, EXECUTION_GATEWAY, ExecutionAPI, FixedRootSelector, Gateway, GATEWAY, GATEWAY_TOOLS, GOTO_DESCRIPTION, HeaderRootSelector, HeaderSurfaceSelector, InMemoryTelemetry as ServerInMemoryTelemetry, INSTRUCTIONS_LIMIT, Launch, neutralInstructions, PREAMBLE, Refused, REF_RULE, reportTelemetry as serverReportTelemetry, ROOTS_HEADER, ROSTER_BUDGET, SELECT_HEADER, SELF_CONTAINED_PREFIX, ServeError, signpost, SystemAPI, truncatedCompletion, unresolvedMessage, withTelemetry as serverWithTelemetry } from '@contexture/mcp/server';",
-    "import { Publications as SurfacePublications, publishedName } from '@contexture/mcp/server/surface';",
-    "import { RestRouter, RestSurface } from '@contexture/mcp/web';",
+    "import { Channels, CompileLevel, Contexture, ContextureError, ControllerManager, DeclarationError, DISCOVER_GATEWAY_NAME, DuplicateNameError, GATEWAY_TOOL_NAMES, INSPECT_GATEWAY_NAME, InMemoryTelemetry, INVOKE_GATEWAY_NAME, INVOKE_READ_ONLY_GATEWAY_NAME, LookupFailure, ModelValidationError, NodeNotFoundError, OPEN_GATEWAY_NAME, OutsideSelectionError, PACKAGE_NAME, PACKAGE_VERSION, Principal, REFERENCE_SEPARATOR, RootOutsideSelectionError, RootSelection, SelectedGraph, SurfaceSelection, WrongDoorError, bindingInstruction, branchesOf, compileNode, currentGraph, currentPrincipal, currentTelemetry, defineApplication, definePostProcess, definePreProcess, defineTool, groupCards, membersOf, reportTelemetry, withGraph, withTelemetry } from 'contexture-mcp';",
+    "import { asJson as inspectionJson, trace } from 'contexture-mcp/inspection';",
+    "import { deploymentOps, getPodEvents, getPodLogs, getPodStatus, getRolloutStatus, incidentResponse, kubernetesPlatform, rollBackDeployment } from 'contexture-mcp/demo';",
+    "import { app as demoApp, build as buildDemo, crashLoopRunbookDocument, main as demoMain, rollBackARelease, rollbackPolicyDocument } from 'contexture-mcp/demo/server';",
+    "import { availableTemplates, CLI_VERSION, findProject, loadApplication, main as cliMain, newProject, UsageError } from 'contexture-mcp/cli';",
+    "import { ApplicationRuntime, Auth, buildInstructions, buildServer, claudeCodeConfig, cliCommands, codexConfig, COMMAND_CLOSING, commandDescription, compileRuntimeApplication, compileStructuralApplication, ContextureOptions, currentTelemetry as serverCurrentTelemetry, cursorConfig, DisclosureAPI, DISCLOSURE_GATEWAY, EXECUTION_GATEWAY, ExecutionAPI, FixedRootSelector, Gateway, GATEWAY, GATEWAY_TOOLS, GOTO_DESCRIPTION, HeaderRootSelector, HeaderSurfaceSelector, InMemoryTelemetry as ServerInMemoryTelemetry, INSTRUCTIONS_LIMIT, Launch, neutralInstructions, PREAMBLE, Refused, REF_RULE, reportTelemetry as serverReportTelemetry, ROOTS_HEADER, ROSTER_BUDGET, SELECT_HEADER, SELF_CONTAINED_PREFIX, ServeError, signpost, SystemAPI, truncatedCompletion, unresolvedMessage, withTelemetry as serverWithTelemetry } from 'contexture-mcp/server';",
+    "import { Publications as SurfacePublications, publishedName } from 'contexture-mcp/server/surface';",
+    "import { RestRouter, RestSurface } from 'contexture-mcp/web';",
     "if (typeof defineApplication !== 'function') throw new Error('missing declaration facade');",
     "let defaultWriteCalls = 0; const defaultWrite = defineTool({ kind: 'tool', name: 'default-write', description: 'Write by default.', input: z.strictObject({ value: z.string() }), invoke: ({ value }) => { defaultWriteCalls += 1; return value; }, uses: ['target'] }); if (defaultWrite.readOnly !== false || defaultWrite.uses?.[0] !== 'target' || !Object.isFrozen(defaultWrite.uses)) throw new Error('missing native Tool default or snapshot'); const defaultToolRuntime = compileRuntimeApplication(defineApplication({ name: 'consumer-default-tool', roots: [() => defaultWrite, () => defineTool({ kind: 'tool', name: 'target', description: 'Target.', readOnly: true, input: z.strictObject({}), invoke: () => 'target' })] })); if (await defaultToolRuntime.runtime.invoke('default-write', { value: 'written' }) !== 'written') throw new Error('missing native Tool writing execution'); let invalidDefaultWrite = false; try { await defaultToolRuntime.runtime.invoke('default-write', { value: 42 }); } catch { invalidDefaultWrite = true; } if (!invalidDefaultWrite || defaultWriteCalls !== 1) throw new Error('packed Binding accepted invalid input or called the handler');",
     "const localLookup = new NodeNotFoundError({ reason: LookupFailure.NO_SUCH_MEMBER, segment: 'missing', known: ['known'] }); const attachedLookup = localLookup.within('consumer/missing'); if (!(attachedLookup instanceof ContextureError) || attachedLookup.ref !== 'consumer/missing' || !attachedLookup.message.startsWith('no_such_member:') || localLookup.ref !== undefined || attachedLookup.within('other') !== attachedLookup) throw new Error('missing immutable NodeNotFound developer facts'); const wrongDoor = new WrongDoorError('consumer/write', false); if (!(wrongDoor instanceof ContextureError) || wrongDoor.message !== '\"consumer/write\" is a writing Tool' || !(new DeclarationError('invalid') instanceof ContextureError)) throw new Error('missing Contexture error categories');",
@@ -131,7 +131,7 @@ try {
   await writeFile(path.join(temporaryRoot, 'consumer.mjs'), consumer, 'utf8');
   run(process.execPath, ['consumer.mjs'], temporaryRoot);
   const typeConsumer = [
-    "import { Contexture, LookupFailure, definePostProcess, definePreProcess, type CompiledContext, type ContextNode, type JsonObject, type JsonValue, type PostProcessDeclaration, type PreProcessDeclaration, type Prompt, type Resource, type View } from '@contexture/mcp';",
+    "import { Contexture, LookupFailure, definePostProcess, definePreProcess, type CompiledContext, type ContextNode, type JsonObject, type JsonValue, type PostProcessDeclaration, type PreProcessDeclaration, type Prompt, type Resource, type View } from 'contexture-mcp';",
     "const prompt: Prompt = { opens: 'approval', description: 'Open approval.', modelMayOpen: false };",
     "const resource: Resource = { opens: 'runbook', uri: 'contexture://runbook', description: 'Read runbook.' };",
     "const pre: PreProcessDeclaration = definePreProcess({ kind: 'role', name: 'prepare', description: 'Prepare.', instructions: 'Prepare.' }); const post: PostProcessDeclaration = definePostProcess({ kind: 'role', name: 'finish', description: 'Finish.', instructions: 'Finish.' }); void pre; void post;",
@@ -168,11 +168,11 @@ try {
 
   const installedPackage = JSON.parse(
     await readFile(
-      path.join(temporaryRoot, 'node_modules', '@contexture', 'mcp', 'package.json'),
+      path.join(temporaryRoot, 'node_modules', 'contexture-mcp', 'package.json'),
       'utf8',
     ),
   );
-  assert.equal(installedPackage.name, '@contexture/mcp');
+  assert.equal(installedPackage.name, 'contexture-mcp');
   process.stdout.write('packed external consumer imports every public Contexture entry point\n');
 } finally {
   await rm(temporaryRoot, { force: true, recursive: true });

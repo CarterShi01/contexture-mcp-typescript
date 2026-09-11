@@ -1,6 +1,6 @@
 # Releasing
 
-`@contexture/mcp` is public from v1.0.0. Its documented exports and
+`contexture-mcp` is public from v1.0.0. Its documented exports and
 `contexture` CLI follow Semantic Versioning: breaking public API changes require
 a new major version.
 
@@ -23,8 +23,7 @@ a new major version.
 5. Record current real-Host verification from the exact packed release
    artifact. Historical candidate runs do not satisfy the v1.0.0 Host gate.
 6. Bootstrap v1.0.0 only after a maintainer confirms external ownership of the
-   `@contexture` npm scope. The registry's current 404/uncreated result is not
-   ownership proof. From a maintainer terminal, check out the audited v1.0.0
+   unscoped `contexture-mcp` name. From a maintainer terminal, check out the audited v1.0.0
    commit, verify it, create its local tag, and publish that exact source in
    this order:
 

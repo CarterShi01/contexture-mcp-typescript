@@ -54,7 +54,7 @@ try {
   await writeFile(
     path.join(temporaryRoot, 'create-project.mjs'),
     [
-      "import { newProject } from '@contexture/mcp/cli';",
+      "import { newProject } from 'contexture-mcp/cli';",
       "const root = await newProject('Generated Context', { destination: process.cwd() });",
       'process.stdout.write(root);',
     ].join('\n'),
@@ -66,8 +66,7 @@ try {
   const command = path.join(
     temporaryRoot,
     'node_modules',
-    '@contexture',
-    'mcp',
+    'contexture-mcp',
     'dist',
     'cli',
     'main.js',

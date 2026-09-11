@@ -56,14 +56,14 @@ export function projectTemplate(names: ProjectNames): Readonly<Record<string, st
           inspect: 'contexture inspect',
           serve: 'contexture serve',
         },
-        dependencies: { '@contexture/mcp': '^1.0.0', zod: '^3.24.0' },
+        dependencies: { 'contexture-mcp': '^1.0.0', zod: '^3.24.0' },
         contexture: { app: './assistant/app.js' },
       },
       null,
       2,
     )}\n`,
     'README.md': `# ${variables.projectName}\n\nA Contexture MCP application.\n\n\`npm install\`\n\n\`npm run check\`\n\`npm run list\`\n\`npm run inspect\`\n\`npm run serve\`\n`,
-    'assistant/app.js': `import { defineApplication, defineTool } from '@contexture/mcp';
+    'assistant/app.js': `import { defineApplication, defineTool } from 'contexture-mcp';
 import { z } from 'zod';
 
 const ping = defineTool({

@@ -7,7 +7,7 @@ Versioning for public releases.
 
 ## 1.0.0 - 2026-09-11
 
-- First public npm release of `@contexture/mcp`.
+- First public npm release of `contexture-mcp`.
 - Commit the documented public entry points and the `contexture` CLI to
   Semantic Versioning: compatible additions use minor releases; incompatible
   public API changes require a new major version.

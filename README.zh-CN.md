@@ -17,9 +17,9 @@ Contexture 的 TypeScript 实现。Contexture 是一个面向 MCP 应用的渐�
 > minor 版本，不兼容的公开 API 改动必须提升 major 版本。其已验证证据覆盖固定的
 > Contexture 0.16 合同及全部适用产品条目；公开的产品等价声明仍以当前 Host 和发布 gate 为条件。
 
-公开入口包括 `@contexture/mcp`、`@contexture/mcp/core`、`@contexture/mcp/server`、
-`@contexture/mcp/server/surface`、`@contexture/mcp/web`、`@contexture/mcp/demo`、
-`@contexture/mcp/inspection` 与 `@contexture/mcp/cli`。发布检查会把打包后的 tarball 安装到
+公开入口包括 `contexture-mcp`、`contexture-mcp/core`、`contexture-mcp/server`、
+`contexture-mcp/server/surface`、`contexture-mcp/web`、`contexture-mcp/demo`、
+`contexture-mcp/inspection` 与 `contexture-mcp/cli`。发布检查会把打包后的 tarball 安装到
 独立项目，并导入每个入口。
 
 ## 节点模型
@@ -51,12 +51,12 @@ branch，也不是自动 callback。打开 owner 会在原样 business instructi
 
 ```ts
 import { z } from 'zod';
-import { defineApplication, defineTool } from '@contexture/mcp';
+import { defineApplication, defineTool } from 'contexture-mcp';
 import {
   compileRuntimeApplication,
   createContextureMcpServer,
   Gateway,
-} from '@contexture/mcp/server';
+} from 'contexture-mcp/server';
 
 const status = defineTool({
   kind: 'tool',
@@ -101,7 +101,7 @@ const adapter = createContextureMcpServer({ name: 'operations', version: '0.1.0'
 ```
 
 业务 Tool 始终位于 Contexture 的五个固定网关 Tool 后面。核心层不依赖 MCP
-SDK；`@contexture/mcp/server` 是官方 SDK 适配边界。`@contexture/mcp/web` 的
+SDK；`contexture-mcp/server` 是官方 SDK 适配边界。`contexture-mcp/web` 的
 `RestSurface` 提供显式 allowlist REST 适配器，可挂载 Fetch handler 或启动可选 Node
 listener，并与 Tool Binding 复用同一验证路径。`RestRouter` 保留为较低层的内存兼容适配器。
 
@@ -159,7 +159,7 @@ Host 配置应当指向启动服务器的命令，而不是复制应用已经声
 可以生成 Claude Code、Cursor 和 Codex 所需的准确格式：
 
 ```ts
-import { Launch, claudeCodeConfig, codexConfig } from '@contexture/mcp/server';
+import { Launch, claudeCodeConfig, codexConfig } from 'contexture-mcp/server';
 
 const launch = new Launch({
   name: 'operations',

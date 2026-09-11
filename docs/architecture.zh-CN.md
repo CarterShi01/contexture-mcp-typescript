@@ -20,7 +20,7 @@ reference segment、固定 gateway name，以及 `Prompt`/`Resource` data shape 
 MCP-interface 会 re-export 这些 publication shape 并声明其 MCP-plane projection，不能反向依赖
 model；model 也不会导入这个 sibling package。core 不可导入 MCP、HTTP、CLI 或框架相关模块。
 
-导出的 `@contexture/mcp/core` 入口是 Python lazy `contexture.core` facade 的原生等价物。ESM
+导出的 `contexture-mcp/core` 入口是 Python lazy `contexture.core` facade 的原生等价物。ESM
 使用静态声明的 export graph，而不是在首次访问时解析 Python attribute，但边界相同：调用方无需
 加载 Host adapter，即可使用 SDK-neutral 的 model、binding、lifecycle、identity、selection、
 telemetry 与 error 概念。
@@ -28,9 +28,9 @@ telemetry 与 error 概念。
 server 层将编译后的 API 映射到官方 MCP SDK 与 Host surface。业务 Tool 永远不会成为
 顶层 MCP Tool；Contexture 只暴露固定的导航与调用 gateway。
 
-仅声明的 `@contexture/mcp` 入口把 Python 的公开 authoring 概念映射为原生 TypeScript value/type：
+仅声明的 `contexture-mcp` 入口把 Python 的公开 authoring 概念映射为原生 TypeScript value/type：
 `Contexture`、`Channels`、`Principal`、framework error、`Prompt`/`Resource`、Role/Skill/Tool declaration
-type、package version 与当前 request accessor；它不会加载 Host SDK。`@contexture/mcp/server` 入口负责
+type、package version 与当前 request accessor；它不会加载 Host SDK。`contexture-mcp/server` 入口负责
 `ApplicationRuntime`、compiled application container、`ContextureServer`、options/auth/selector、telemetry、
 launch config、logging 与 compile/build helper。
 
@@ -41,7 +41,7 @@ discover/open 与 Prompts；它没有 Runtime、invoke door 或 Resource。Pytho
 `buildServer()` 会在 serving 前封存 identity 与一个 compiled runtime container；它不提供 capability
 registration API，重复调用 `build()` 会返回同一个默认 official-SDK adapter。transport option 仍是独立的
 startup concern。
-可安装的 `@contexture/mcp/server/surface` 子路径公开经过校验的 `Publications` composite 与 Prompt、
+可安装的 `contexture-mcp/server/surface` 子路径公开经过校验的 `Publications` composite 与 Prompt、
 Resource door 共用的 `publishedName()` 映射；所有 declaration 都会在 SDK server 构建前完成校验。
 
 `DisclosureAPI` 是该 gateway 可独立安装的导航半面。它接收已编译 `Disclosure`，不依赖 Runtime

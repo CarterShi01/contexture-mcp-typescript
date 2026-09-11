@@ -1,5 +1,5 @@
 {
-  "name": "@contexture/mcp",
+  "name": "contexture-mcp",
   "version": "1.0.0",
   "private": false,
   "description": "TypeScript implementation of Contexture's progressive-disclosure framework for MCP",
