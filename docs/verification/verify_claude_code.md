@@ -1,6 +1,6 @@
 # Verify with Claude Code
 
-Build the candidate first:
+Build the release artifact first:
 
 ```bash
 npm ci

@@ -11,13 +11,14 @@ Implementations:
 [Go](https://github.com/CarterShi01/contexture-mcp-go) ·
 [Specification](https://github.com/CarterShi01/contexture-mcp/tree/master/spec)
 
-> **Status: Python 0.16 symmetric process-member parity, Python 0.15 non-activating
-> inspect parity, Python 0.13 path-selected surface parity, and all applicable 0.12
-> product rows are verified; release remains guarded.** This repository ships a native CLI, scaffold,
-> inspection, maintained demo, MCP transports, fixed and request-selected HTTP
-> surfaces, REST, and bearer identity. Remaining parity work is documentation
-> and release-asset review plus a clean-checkout release audit. The npm package
-> remains private until those release gates pass.
+> **Status: v1.0.0 is prepared as the first public stable npm release.** It includes the
+> native CLI, scaffold, inspection API, maintained demo, MCP transports, fixed
+> and request-selected HTTP surfaces, REST, and bearer identity. The documented
+> public entry points and `contexture` CLI now follow Semantic Versioning:
+> compatible additions use minor releases and incompatible public API changes
+> require a new major version. Its verified evidence covers the pinned
+> Contexture 0.16 contract and all applicable product rows; the public
+> equivalence claim remains conditioned on current Host and release gates.
 
 Public entry points are `@contexture/mcp`, `@contexture/mcp/core`,
 `@contexture/mcp/server`, `@contexture/mcp/server/surface`,

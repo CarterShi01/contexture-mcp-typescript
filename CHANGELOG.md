@@ -1,11 +1,23 @@
 # Changelog
 
 All notable changes will be documented here. This project follows Semantic
-Versioning once public releases begin.
+Versioning for public releases.
 
 ## Unreleased
 
-## 0.16.0-rc.1
+## 1.0.0 - 2026-09-11
+
+- First public npm release of `@contexture/mcp`.
+- Commit the documented public entry points and the `contexture` CLI to
+  Semantic Versioning: compatible additions use minor releases; incompatible
+  public API changes require a new major version.
+- Ship the native TypeScript core, MCP server adapter, HTTP and REST surfaces,
+  CLI/scaffold, inspection API, maintained demo, and packed-consumer checks as
+  one stable package.
+- Consolidate the previously private 0.13–0.16 development candidates into
+  this public stable release.
+
+## Private development: 0.16.0-rc.1
 
 - Replace the framework-level `Publication` declaration and `publication` slot
   with distinct branded `PreProcess`/`PostProcess` declarations and
@@ -18,12 +30,12 @@ Versioning once public releases begin.
 - Export `bindingInstruction` for application-owned hard rules while keeping
   framework instruction composition private.
 - Pin Contexture Specification 0.16 to immutable Python revision
-  `cda2721c7c40128cd0b7eef990e5909edabd3b17`; OC Goal remains excluded.
+  `cda2721c7c40128cd0b7eef990e5909edabd3b17`.
 - Migration: replace `definePublication(...)` with `definePostProcess(...)` and
   `publication` with `postProcess`; add `definePreProcess(...)` only where an
   explicit preparation procedure is required.
 
-## 0.15.0-rc.1
+## Private development: 0.15.0-rc.1
 
 - Add the read-only `contexture_inspect(refs)` gateway for atomically comparing
   one through 32 unique candidate refs without activating them.
@@ -36,7 +48,7 @@ Versioning once public releases begin.
 - Pin Contexture Specification 0.15 and conformance rule 17 to immutable Python
   revision `471d0f75c6be0e5cff104f0d0c61f10957da792a`.
 
-## 0.14.0-rc.1
+## Private development: 0.14.0-rc.1
 
 - Add runtime-branded optional Role Publications with complete containment,
   selection, inspection, disclosure-only, and ControllerManager support.
@@ -44,9 +56,8 @@ Versioning once public releases begin.
   alternative-work branch traversal and initialization rosters.
 - Compose a framework-owned closing contract only on an owning Role's ACTIVE
   disclosure; opening never executes Publication equipment or claims success.
-- Keep the npm package private pending separate release authorization.
 
-## 0.13.0-rc.1
+## Private development: 0.13.0-rc.1
 
 - Add path-aware `SurfaceSelection`, exact descendant promotion, and terminal
   `/*` direct-member expansion across disclosure, invocation, publications,
@@ -55,7 +66,6 @@ Versioning once public releases begin.
   ceilings; retain `RootSelection` and `Contexture-Roots` compatibility aliases.
 - Return safe JSON-RPC invalid-params responses for invalid HTTP selectors and
   count selector header limits by Unicode code point.
-- Keep the npm package private pending separate release authorization.
 
 - Implement all 16 Contexture 0.12 conformance rules across declarations,
   compilation, disclosure, execution, publications, lifecycle, MCP, and REST.
@@ -67,4 +77,3 @@ Versioning once public releases begin.
   subpaths with installed-package consumer verification.
 - Complete fixed/request-selected server assembly, Prompt/Resource projection,
   and exported Kubernetes demo Tool factories.
-- Keep the first npm release guarded pending package-name and release review.

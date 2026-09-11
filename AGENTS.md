@@ -5,16 +5,17 @@ These instructions apply to the entire TypeScript repository.
 - English is the first language for code, identifiers, comments, errors, API
   documentation, release notes, and authoritative documentation. Simplified
   Chinese documents are translations.
-- The normative contract is Contexture 0.12 at the revision pinned in
-  `conformance/specification.json`. The reference repository's
+- The normative contract is the manifest-pinned Contexture release, currently
+  0.16, at the revision recorded in `conformance/specification.json`. The reference repository's
   `spec/porting/FULL_PRODUCT_PARITY_PLAN.md` governs completion. The older
   kernel ledger is evidence, not the product-completion criterion;
   `spec/model.md`, `spec/conformance.md`, fixtures, and golden files outrank
   Python mechanisms.
-- This repository is an incomplete kernel prototype with focused 0.12
-  conformance evidence. Do not claim Python-product equivalence, publish an npm
-  package, or create a release tag until the product manifest and release gates
-  are verified.
+- This repository is a coordinated v1 release candidate. Claim Python-product
+  equivalence, publish an npm package, or create a release tag only after the
+  product and incremental manifests, ecosystem metadata and byte-identity gate,
+  current Host evidence, and all release gates are verified and the release is
+  separately authorized.
 - Never edit or replace expected golden bytes to make a test pass. Never weaken,
   skip, or delete a test to obtain green CI. A copied fixture or golden file is
   not execution evidence.

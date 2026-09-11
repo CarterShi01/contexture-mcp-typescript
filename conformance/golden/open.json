@@ -53,7 +53,10 @@
               "type": "string"
             }
           },
-          "required": ["namespace", "pod"],
+          "required": [
+            "namespace",
+            "pod"
+          ],
           "type": "object"
         }
       },
@@ -76,7 +79,10 @@
               "type": "boolean"
             }
           },
-          "required": ["namespace", "pod"],
+          "required": [
+            "namespace",
+            "pod"
+          ],
           "type": "object"
         }
       },
@@ -95,7 +101,10 @@
               "type": "string"
             }
           },
-          "required": ["namespace", "pod"],
+          "required": [
+            "namespace",
+            "pod"
+          ],
           "type": "object"
         }
       },
@@ -134,7 +143,10 @@
           "type": "string"
         }
       },
-      "required": ["namespace", "pod"],
+      "required": [
+        "namespace",
+        "pod"
+      ],
       "type": "object"
     }
   },
@@ -157,7 +169,10 @@
           "type": "boolean"
         }
       },
-      "required": ["namespace", "pod"],
+      "required": [
+        "namespace",
+        "pod"
+      ],
       "type": "object"
     }
   },
@@ -176,7 +191,10 @@
           "type": "string"
         }
       },
-      "required": ["namespace", "pod"],
+      "required": [
+        "namespace",
+        "pod"
+      ],
       "type": "object"
     }
   },
@@ -222,7 +240,10 @@
               "type": "string"
             }
           },
-          "required": ["namespace", "deployment"],
+          "required": [
+            "namespace",
+            "deployment"
+          ],
           "type": "object"
         }
       },
@@ -241,7 +262,10 @@
               "type": "string"
             }
           },
-          "required": ["namespace", "deployment"],
+          "required": [
+            "namespace",
+            "deployment"
+          ],
           "type": "object"
         }
       },
@@ -288,7 +312,10 @@
           "type": "string"
         }
       },
-      "required": ["namespace", "deployment"],
+      "required": [
+        "namespace",
+        "deployment"
+      ],
       "type": "object"
     }
   },
@@ -307,7 +334,10 @@
           "type": "string"
         }
       },
-      "required": ["namespace", "deployment"],
+      "required": [
+        "namespace",
+        "deployment"
+      ],
       "type": "object"
     }
   },

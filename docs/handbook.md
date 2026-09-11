@@ -627,6 +627,6 @@ files are a cross-language protocol contract.
 
 Read [architecture.md](architecture.md) for dependency boundaries,
 [CONTRIBUTING.md](../CONTRIBUTING.md) for contribution rules, and
-[RELEASING.md](../RELEASING.md) for the intentionally closed release process.
-The package remains private until all product-parity and release gates are
-actually satisfied.
+[RELEASING.md](../RELEASING.md) for the public release checklist. The v1 public
+API and CLI follow Semantic Versioning; do not make incompatible changes to a
+documented entry point outside a new major version.

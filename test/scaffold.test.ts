@@ -31,6 +31,7 @@ test('newProject writes the complete starter and refuses to overwrite it', async
     await stat(path.join(root, 'assistant', 'app.js'));
     const packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
     assert.equal(packageJson.contexture.app, './assistant/app.js');
+    assert.equal(packageJson.dependencies['@contexture/mcp'], '^1.0.0');
     for (const content of Object.values(projectTemplate(deriveNames('My Context')))) {
       assert.equal(content.includes('$'), false);
     }

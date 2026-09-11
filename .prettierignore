@@ -1,3 +1,7 @@
 dist/
 node_modules/
 package-lock.json
+
+# Byte-identical snapshots owned by the pinned cross-language specification.
+conformance/fixtures/
+conformance/golden/

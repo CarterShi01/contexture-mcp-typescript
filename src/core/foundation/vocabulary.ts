@@ -8,7 +8,7 @@
 export const PACKAGE_NAME = 'contexture' as const;
 
 /** This binding's release version, distinct from the specification version. */
-export const PACKAGE_VERSION = '0.16.0rc1' as const;
+export const PACKAGE_VERSION = '1.0.0' as const;
 
 /** Separates canonical Contexture reference segments. */
 export const REFERENCE_SEPARATOR = '/' as const;

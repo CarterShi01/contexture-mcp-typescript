@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   publish:
-    name: Verify and publish
+    name: Verify release and publish post-bootstrap
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: npm
@@ -27,4 +27,7 @@ jobs:
       - run: node scripts/verify-release.mjs "$GITHUB_REF_NAME"
       - run: npm ci
       - run: npm run check
-      - run: npm publish --access public
+      # v1.0.0 creates the scoped package through the documented, interactive
+      # bootstrap path. Later tags publish through npm Trusted Publishing.
+      - if: github.ref_name != 'v1.0.0'
+        run: npm publish --access public

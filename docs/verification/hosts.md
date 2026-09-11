@@ -1,6 +1,6 @@
 # Host verification
 
-## Contexture 0.12 TypeScript candidate
+## Historical TypeScript candidate verification
 
 Recorded 2026-09-10 with Claude Code 2.1.133 against commit `dec12f5`.
 
@@ -26,10 +26,13 @@ previous logs, events, and `crash_loop_runbook`, and reported:
 
 The successful result used seven model turns, returned no permission denial,
 and did not use repository, shell, filesystem, or web evidence. This verifies
-that a real Host can navigate and invoke the packed candidate's current
+that a real Host could navigate and invoke the packed candidate's then-current
 four-gateway surface. Request-selected HTTP surfaces and Prompt-only roots
 remain covered by official-client integration tests because this diagnosis is a
 stdio model-navigation scenario.
+
+This is historical Host evidence from the recorded candidate run, not a
+v1.0.0 Host-release verification.
 
 Codex CLI was available through the pinned ephemeral npm package, but
 `codex login status` returned `Not logged in`. No model request was made and no

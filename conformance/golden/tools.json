@@ -38,7 +38,9 @@
           "type": "array"
         }
       },
-      "required": ["refs"],
+      "required": [
+        "refs"
+      ],
       "title": "contexture_inspectArguments",
       "type": "object"
     },
@@ -69,7 +71,9 @@
           "type": "string"
         }
       },
-      "required": ["ref"],
+      "required": [
+        "ref"
+      ],
       "title": "contexture_openArguments",
       "type": "object"
     },
@@ -113,7 +117,9 @@
           "title": "Arguments"
         }
       },
-      "required": ["ref"],
+      "required": [
+        "ref"
+      ],
       "title": "contexture_invoke_read_onlyArguments",
       "type": "object"
     },
@@ -153,7 +159,9 @@
           "title": "Arguments"
         }
       },
-      "required": ["ref"],
+      "required": [
+        "ref"
+      ],
       "title": "contexture_invokeArguments",
       "type": "object"
     },

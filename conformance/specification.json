@@ -61,5 +61,5 @@
     "resources.json",
     "tools.json"
   ],
-  "notes": "All Contexture 0.16 rules and the applicable Python product deltas have repository execution evidence. OC Goal remains Python-only and excluded. The package remains private until a separately authorized release."
+  "notes": "All Contexture 0.16 rules and the applicable Python product deltas have repository execution evidence."
 }

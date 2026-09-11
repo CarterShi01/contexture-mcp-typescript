@@ -28,14 +28,14 @@
       "name": "status",
       "description": "Return the current service status.",
       "read_only": true,
-      "input": { "service": "string" }
+      "input": {"service": "string"}
     },
     {
       "ref": "operations/restart",
       "name": "restart",
       "description": "Restart one service.",
       "read_only": false,
-      "input": { "service": "string" }
+      "input": {"service": "string"}
     }
   ]
 }

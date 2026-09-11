@@ -27,14 +27,14 @@
       "name": "status",
       "description": "Return service status.",
       "read_only": true,
-      "input": { "service": "string" }
+      "input": {"service": "string"}
     },
     {
       "ref": "commands/restart",
       "name": "restart",
       "description": "Restart one service.",
       "read_only": false,
-      "input": { "service": "string" }
+      "input": {"service": "string"}
     }
   ],
   "prompts": [

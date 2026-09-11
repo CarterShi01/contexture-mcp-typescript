@@ -78,8 +78,10 @@ facts instead of agent-facing recovery prose.
 7. Streamable HTTP and stdio launch, fixed root surfaces, HTTP bearer identity,
    and the maintained Kubernetes reference application.
 
-Every applicable 0.12 source and behavioral-test row now has focused native
+The pinned 0.16 contract and applicable product rows have focused native
 evidence; maintained English and Simplified Chinese product documentation and
-real Claude Code Host verification are also recorded. Release remains
-intentionally closed until package metadata and the clean-checkout release
-audit are complete; Codex is separately blocked by local account login.
+real Claude Code Host verification are also recorded. v1.0.0 is the public
+stable release: documented public exports and the CLI are governed by Semantic
+Versioning. This evidence does not claim Python-product equivalence beyond the
+covered contract and product rows; Codex Host verification remains separately
+blocked by local account login.

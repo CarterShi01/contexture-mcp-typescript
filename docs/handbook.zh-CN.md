@@ -512,5 +512,5 @@ npm run check
 
 请阅读 [architecture.md](architecture.md) 了解依赖边界，阅读
 [CONTRIBUTING.md](../CONTRIBUTING.md) 了解贡献规则，阅读 [RELEASING.md](../RELEASING.md)
-了解刻意保持关闭的发布流程。只有全部 product-parity 和 release gate 确实满足后，包才会取消
-private 状态。
+了解公开发布清单。v1 的公开 API 与 CLI 遵循 Semantic Versioning；除非发布新的 major 版本，
+不得对已记录的入口作不兼容改动。
