@@ -25,7 +25,7 @@ test('public v1 release metadata, runtime vocabulary, and lockfile agree', async
     releaseMetadata('package-lock.json'),
   ]);
 
-  assert.equal(manifest.version, '1.0.0');
+  assert.equal(manifest.version, '1.0.1');
   assert.equal(manifest.private, false);
   assert.equal(manifest.publishConfig?.access, 'public');
   assert.equal(lockfile.version, manifest.version);
@@ -34,7 +34,7 @@ test('public v1 release metadata, runtime vocabulary, and lockfile agree', async
 });
 
 test('release guard accepts only the matching public version tag', () => {
-  const valid = spawnSync(process.execPath, ['scripts/verify-release.mjs', 'v1.0.0'], {
+  const valid = spawnSync(process.execPath, ['scripts/verify-release.mjs', 'v1.0.1'], {
     cwd: repositoryRoot,
     encoding: 'utf8',
   });
