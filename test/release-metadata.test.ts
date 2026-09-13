@@ -40,7 +40,7 @@ test('release guard accepts only the matching public version tag', () => {
   });
   assert.equal(valid.status, 0, valid.stderr);
 
-  const invalid = spawnSync(process.execPath, ['scripts/verify-release.mjs', 'v1.0.1'], {
+  const invalid = spawnSync(process.execPath, ['scripts/verify-release.mjs', 'v1.0.0'], {
     cwd: repositoryRoot,
     encoding: 'utf8',
   });
