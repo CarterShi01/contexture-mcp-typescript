@@ -63,6 +63,6 @@ reservation 与 prompt-root visibility，绝不会扩大 selected roots。普通
    Kubernetes 参考应用。
 
 已固定的 0.16 合同及适用的产品条目现在都具备定向原生证据；维护中的英文与简体中文产品文档以及
-真实 Claude Code Host 验证也已记录。v1.0.0 是公开稳定版本：文档中的公开 export 与 CLI 受
+真实 Claude Code Host 验证也已记录。v1.0.1 是当前公开稳定版本：文档中的公开 export 与 CLI 受
 Semantic Versioning 约束。这些证据并不宣称超出已覆盖合同和产品条目之外的 Python 产品完全等价；
 Codex Host 验证仍因本机账号未登录而阻塞。

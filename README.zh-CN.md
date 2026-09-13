@@ -1,9 +1,10 @@
-# Contexture TypeScript 实现
+# Contexture
 
 [English](README.md)
 
-Contexture 的 TypeScript 实现。Contexture 是一个面向 MCP 应用的渐进披露框架，
-用于在能力不断增长时保持上下文可导航。
+Contexture 是一个 TypeScript 实现的框架，用于把不断增长的应用能力图谱暴露给 agent，
+而不把所有工具和指令塞进模型上下文。你声明 Roles、Skills 和 Tools，Contexture 编译不可变图谱，
+并通过固定的 MCP gateway 分支逐步披露能力。
 
 语言实现：
 [Python](https://github.com/CarterShi01/contexture-mcp) ·
@@ -11,7 +12,7 @@ Contexture 的 TypeScript 实现。Contexture 是一个面向 MCP 应用的渐�
 [Go](https://github.com/CarterShi01/contexture-mcp-go) ·
 [跨语言规范](https://github.com/CarterShi01/contexture-mcp/tree/master/spec)
 
-> **当前状态：v1.0.0 已准备作为首个公开的稳定 npm 版本。** 它包含原生 CLI、脚手架、inspection API、
+> **当前状态：v1.0.1 是当前公开稳定的 TypeScript 版本。** 它包含原生 CLI、脚手架、inspection API、
 > 维护中的 demo、MCP transport、固定及请求级 HTTP surface、REST 与 bearer identity。
 > 文档中列出的公开入口和 `contexture` CLI 从此遵循 Semantic Versioning：兼容新增功能使用
 > minor 版本，不兼容的公开 API 改动必须提升 major 版本。其已验证证据覆盖固定的

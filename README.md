@@ -1,24 +1,30 @@
-# Contexture for TypeScript
+# Contexture
 
-[简体中文](README.zh-CN.md)
+[简体中文](README.zh-CN.md) · [Handbook](docs/handbook.md) · [Specification](https://github.com/CarterShi01/contexture-mcp/tree/master/spec) · [Changelog](CHANGELOG.md)
 
-TypeScript implementation of Contexture, a progressive-disclosure framework
-for building MCP applications whose capabilities remain navigable as they grow.
+Implementations: [Python](https://github.com/CarterShi01/contexture-mcp) · [TypeScript](https://github.com/CarterShi01/contexture-mcp-typescript) · [Go](https://github.com/CarterShi01/contexture-mcp-go)
 
-Implementations:
-[Python](https://github.com/CarterShi01/contexture-mcp) ·
-[TypeScript](https://github.com/CarterShi01/contexture-mcp-typescript) ·
-[Go](https://github.com/CarterShi01/contexture-mcp-go) ·
-[Specification](https://github.com/CarterShi01/contexture-mcp/tree/master/spec)
+Contexture is a TypeScript implementation of a framework for exposing a large
+application capability graph to agents without placing every tool and
+instruction in the model's context at once. You declare Roles, Skills, and
+Tools; Contexture compiles an immutable graph and serves a small, fixed MCP
+gateway that discloses only the branch an agent chooses.
 
-> **Status: v1.0.0 is prepared as the first public stable npm release.** It includes the
-> native CLI, scaffold, inspection API, maintained demo, MCP transports, fixed
-> and request-selected HTTP surfaces, REST, and bearer identity. The documented
-> public entry points and `contexture` CLI now follow Semantic Versioning:
-> compatible additions use minor releases and incompatible public API changes
-> require a new major version. Its verified evidence covers the pinned
-> Contexture 0.16 contract and all applicable product rows; the public
-> equivalence claim remains conditioned on current Host and release gates.
+The same application runtime can back explicit REST routes for human
+interfaces. Contexture is a Controller layer: it does not contain an agent
+loop, call a model, or replace your business services.
+
+- Node.js 20+
+- MCP stdio and Streamable HTTP
+- TypeScript declarations and typed Zod bindings
+- Apache-2.0
+- Stable 1.0 public API governed by Semantic Versioning
+
+> **Status: v1.0.1 is the current public stable TypeScript release.** The
+> documented public entry points and `contexture` CLI follow Semantic
+> Versioning: compatible additions use minor releases and incompatible public
+> API changes require a new major version. The implementation is aligned with
+> the pinned Contexture 0.16 contract and applicable product rows.
 
 Public entry points are `contexture-mcp`, `contexture-mcp/core`,
 `contexture-mcp/server`, `contexture-mcp/server/surface`,

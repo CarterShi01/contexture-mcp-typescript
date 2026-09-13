@@ -5,6 +5,12 @@ Versioning for public releases.
 
 ## Unreleased
 
+## 1.0.1 - 2026-09-13
+
+- Align the public README and translated product introduction with the Python
+  implementation while documenting TypeScript-specific entry points.
+- Publish the README and package metadata update as the current npm release.
+
 ## 1.0.0 - 2026-09-11
 
 - First public npm release of `contexture-mcp`.
