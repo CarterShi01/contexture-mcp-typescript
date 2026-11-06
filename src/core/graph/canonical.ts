@@ -31,7 +31,14 @@ export const DOMAINS = Object.freeze([
 
 /** Minimal typed failure for this slice; full diagnostic parity is not claimed. */
 export type GraphErrorCode =
-  'schema_invalid' | 'limit_exceeded' | 'reference_not_found' | 'binding_contract_required';
+  | 'schema_invalid'
+  | 'limit_exceeded'
+  | 'reference_not_found'
+  | 'binding_contract_required'
+  | 'unsupported_contract'
+  | 'revision_conflict'
+  | 'identity_conflict'
+  | 'mutation_protected';
 
 export class GraphError extends Error {
   declare readonly code: GraphErrorCode;
