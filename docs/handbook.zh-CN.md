@@ -78,6 +78,66 @@ property 会同时保留在 disclosure 与 validation 中。
 factory 并规范化 application 名称。每个 Role、Skill、Tool 都应通过 factory 声明；编译会
 从这些 factory 创建新的不可变 graph snapshot。
 
+### 可选 presentation 与 locale（增量候选）
+
+根入口及 `core` 导出不可变的 `Presentation`、`NodePresentation`、
+`GatewayPresentation`、`PresentationCatalog`，以及 `normalizeLocale`、
+`resolvePresentation`。通过 `Contexture`／`defineApplication` 的可选 `presentation`
+声明展示信息，不会执行 factory。catalog 使用明确的 `defaultLocale` 和 `locales`
+映射；依次匹配完整语言标签、父标签和默认值，不偏爱某种语言。规范化后重复的 locale/ref、
+未知字段及非法值会被明确拒绝。
+
+`compileRuntimeApplication(declaration, { locale })`、
+`compileStructuralApplication(declaration, { locale })` 和
+`buildServer(declaration, { locale })` 显式选择 Host locale。独立 view 不修改共享 Index；
+selection 与 person navigation 保留同一份文案，不扩大可见范围或绕过 Prompt reservation。
+编译会校验所有语言中的 canonical node ref，包括当前未选中的语言。
+
+所选文案用于 routing、ACTIVE／INSPECT、成员／uses／process 卡片、启动 roster 和
+person／Prompt 导航。MCP initialize 可带显式产品 title/description；gateway title 只有显式配置
+时才添加。机器 name/ref、原始 instructions、schema／validator／handler／effect、
+五个 gateway 名称、描述、schema 与安全注解均不改变。没有 presentation 时保留旧 payload 字节。
+完整声明示例见[英文手册](handbook.md#optional-presentation-and-locales-additive-candidate)。
+
+本地 reference 是 Python 3.12／Unicode 15；兼容其 whitespace/titlecase 规则，不把
+JavaScript `trim`／uppercase 当成 Python `strip`／titlecase。验证结论受记录的
+Python／ICU 版本限定，不冒充所有未来 Unicode 版本的一致性保证。该候选不升级 pinned 0.16、
+不接受 managed schema，也不代表全量 parity 已完成；下面独立的 Catalog／debug 面不替代这些验收。
+
+### Trusted Node Catalog 与 loopback debug（增量候选）
+
+`contexture-mcp/introspection` 导出 `NodeCatalog`、`NodeCatalogSnapshot`、
+`CatalogView`、`CatalogDetail`、`MemberSlot`、不可变 descriptor 类型，以及旧 Catalog profile 的
+`canonicalDigest`／`formatCatalogJson`／`parseCatalogJson`。
+`NodeCatalog.of(index, { view, detail?, locale?, surfaceSelection?, contributors? })`
+只读已有 compiled Index，compiled runtime／structural container 也提供 `catalog(options)`。
+它不另造能力树、不打开 Channels、不调用 business Tool，也不自动注册 MCP endpoint。
+
+`application` 包含 model 和 person／Prompt roots；`model` 排除 Prompt roots；
+`surface` 必须显式选择 `SurfaceSelection`，将后代投影为 root，保留 canonical ref，并重算可见
+parent／ordinal。`summary` 不暴露 program/schema；`definition` 保留 authored/effective program、
+process designation、真实 binding schema/effect；structural Tool 明确为不可执行。
+关系只保留可见端点，snapshot 校验唯一 ref/root、counts、member/parent/ordinal 和双向 uses。
+
+`get`、`children`、`list({ kind?, query? })`、`snapshot` 返回不可变 DTO，不返回 bound node。
+Contributor 是明确的 trusted `{ namespace: 'owner/name', describe(ref, node, index) }` port；
+只对 included node 调用一次，然后验证并分离 JSON。metadata 不产生授权。查询覆盖文案、
+program、schema、extension，并按已记录 reference 版本做完整 Unicode folding。
+
+Canonicalization 保留旧 code-point key order 和 finite-number profile，不冒充 managed JCS。
+显式 native bigint／lossless integer 保持精度：用 `snapshot.toJson` 或 `formatCatalogJson` 输出，
+用 `parseCatalogJson` 在 JS Number 强制转换前读取。普通 `JSON.stringify` 不能编码 bigint，
+普通 `JSON.parse` 会损失大整数精度；`asJson` 是带类型的不可变本地数据。
+`NodeCatalogSnapshot.fromJson` 校验输入 envelope 和 digest。
+
+CLI 支持 `contexture catalog [REF ...] --view model --detail definition --json`，
+以及 `--view surface --select REF --locale TAG`。`compiled.debug(options?)`／
+`contexture-mcp/debug` 的 `CatalogDebugServer` 复用 reference 的只读 UI；
+`start({ host?, port? })` 返回实际 loopback URL 和幂等 `close()`，port 0 选择临时端口。
+`contexture debug --host 127.0.0.1 --port 8787` 等待 Ctrl-C；嵌入 CLI 可显式提供 AbortSignal。
+仅允许 loopback/localhost，校验 Host/Origin，并提供 CSP/no-cache/framing 控制、GET/HEAD/ETag。
+只读 `/api/catalog`／`api/nodes/REF`；不存在 invoke、mutation、特权 authoring 或公开远程绑定。
+
 ### Process member
 
 Role 可通过惰性的 `preProcess` 与 `postProcess` factory 分别指定一个带品牌的
@@ -301,6 +361,20 @@ programmatic consumer 从 `contexture-mcp/cli` 导入 `main`、`CLI_VERSION`、`
 `findProject()` 会停在最近包含 `contexture.app` 的 `package.json`；`loadApplication()` 只接受该 app-only
 原生 declaration，并拒绝词法或 symlink target 逃逸 project root。Python legacy roots/publish/channels key
 映射到导出的 Application declaration，而不是第二套 project config shape。
+
+### 可信离线 managed store 运维
+
+新增 `contexture store doctor|backup|restore` 路由不会加载应用；`contexture store --help`
+列出所需参数。必须提供精确注册的 managed schema 与私有 `--operator-config`，显式声明
+操作权限及软件支持。先停止源 owner；现有 OS writer lock 保护全量只读捕获与原生隔离 backup 验证。
+doctor 不创建 owner 或修复源资产。backup 需要全新的 `--verify-root` 和 `--output`，保留私有、已关闭
+的验证 clone，并输出实际水位/摘要 manifest 的特权回执。restore 要求全新目录、私有备份输入及
+`--allow-write`；绝不替换 live storage 或宣称 serving ready。
+
+程序 API 为 `contexture-mcp/server/managed-graph` 的 `StoreOperations`。
+详情见[英文 API、操作员配置及限制](verification/managed-offline-api-20261107.txt)。
+不支持的文件系统/profile、损坏或缺失历史、未知 schema/software、不安全权限和运行中的 owner
+均 fail closed。生产/TLS/切换、Windows/macOS strict 与真实断电验证属于单独部署资格。
 
 ### 维护中的 Kubernetes demo
 

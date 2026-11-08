@@ -14,6 +14,15 @@ export {
   REFERENCE_SEPARATOR,
 } from './foundation/vocabulary.js';
 export type { GatewayName } from './foundation/vocabulary.js';
+export {
+  GatewayPresentation,
+  NodePresentation,
+  Presentation,
+  PresentationCatalog,
+  normalizeLocale,
+  resolvePresentation,
+} from './presentation.js';
+export type { PresentationSource } from './presentation.js';
 export type {
   BaseNodeDeclaration,
   Factory,

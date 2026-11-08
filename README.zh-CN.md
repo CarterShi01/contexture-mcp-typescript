@@ -175,6 +175,17 @@ console.log(codexConfig(launch)); // ~/.codex/config.toml 的 stanza
 `cliCommands(launch)` 会返回经过安全 shell 引用的 `claude mcp add` 和
 `codex mcp add` 命令。使用自定义 stdio 入口的应用也可复用同一 API。
 
+## 原生 managed accepted-cut 复用
+
+候选 `contexture-mcp/server/managed-graph` 中的 `FileJournalGraphOwner` 只在同一个原生
+Journal 的 accepted watermark 未变化时，复用该 Owner 的 immutable semantic projection。
+每次读写仍核对当前身份、admission、所需 approval 与 Host fence；缓存事实不等于缓存权限。
+新的 accepted record 经 `GraphJournalProjection.extend` 从已验证前缀只校验和归约 suffix；
+失败的 suffix 不改变旧 immutable cut。sequence/origin/hash、receipt/batch 唯一性、Graph/Release
+事实与 blob 闭包仍完整校验。fresh Owner 构建与物理恢复始终完整 replay。原生测试验证前缀/全量
+结果等价、损坏拒绝、撤权与新 Owner 恢复。剩余 history/map 复制和 Journal 工作仍随历史增长，
+不宣称整体 O(delta) 或 10k/100k changing history 容量。
+
 ## 开发与一致性验证
 
 需要 Node.js 20.19 或更新版本，以及 npm 11。
@@ -195,6 +206,26 @@ TypeScript 实现生成真实观察结果，再与这些资产比较。
 application identity ceiling 只能进一步收窄 selection。`Contexture-Roots` 保留为 root-only
 兼容 header，同时发送两个 header 属于无效请求。
 
+## 原生 managed Host 候选
+
+`contexture-mcp/server/managed` 提供 `ManagedHostAdapter`：官方 SDK stdio、
+streamable HTTP、精确 publication REST route，以及显式挂载的 REST navigation。
+调用方必须提供现有 `ManagedRuntime` 和负责认证、绑定当前身份/权限/selection 的
+可信 `ManagedTransportHost.enter`。没有默认 Principal、approval、静态或 head 回退。
+
+它只支持显式协商的 `contexture.native-host-candidate/v1`，**不是已接受的 managed
+wire revision**。MCP 的 `params._meta["contexture/profile"]` 和 HTTP 的
+`Contexture-Managed-Profile` 必须是该候选值。Prompt/Resource get 必须携带 list
+返回的 `contexture/reference`；publication REST 必须携带 `Contexture-Reference`。
+成功 generation 来自真实 serving lease，不来自输入字符串。
+
+Run carrier 互斥：可信 channel/server 的受保护 `RunLeaseContext`，或 HTTP
+`Contexture-Run` 加逐请求可信 `approve` 返回的真实 service context。Run 管理仍是
+`RunLeaseService` 的可信原生操作，不新增远程 approval/command 契约；保留生命周期
+不代表保留权限。内置 listener 只绑定 loopback；生产部署须提供自己的 listener 与
+Host authority。先关闭 adapter，再关闭 run/read/coordinator/Journal owner。
+API 和验证限定见[英文证据](docs/verification/managed-native-host-api-20261107.txt)。
+
 ## 仓库结构
 
 请阅读 [TypeScript 使用手册](docs/handbook.zh-CN.md)、其[英文原文](docs/handbook.md)和
@@ -213,6 +244,15 @@ conformance/              固定规范身份、fixtures 与 golden 数据
 ```
 
 英文是项目第一语言；简体中文文档作为翻译持续维护。
+
+## 原生离线 Journal 运维候选
+
+`contexture-mcp/server/managed-graph` 导出 `StoreOperations`，提供对源目录只读的
+doctor、真实独占锁保护且经原生隔离恢复验证的 backup，以及必须确认的全新目录 restore。
+`contexture store --help` 列出新增 CLI 路由。必须提供私有的显式操作员配置与精确注册的
+managed schema / 软件支持声明；不会加载应用或重放历史授权。backup 输出含实际水位与摘要
+manifest 的特权回执。它仍是 Linux 本地候选，不代表生产切换、Windows/macOS 或硬件断电认证。
+详情以[英文离线 API 与限制](docs/verification/managed-offline-api-20261107.txt)为准。
 
 ## 许可证
 

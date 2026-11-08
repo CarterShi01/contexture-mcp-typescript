@@ -1,4 +1,6 @@
 /** Immutable retained projection, never journal storage, admission or a serving lease. */
+import { List } from 'immutable';
+
 import { freezeJSON, parseCounter, validateID } from './canonical.js';
 import type { GraphDefinition, JSONObject, PublicationContracts } from './model.js';
 import { GraphDefinition as Definition, placements } from './model.js';
@@ -14,6 +16,37 @@ import {
   UnseededState,
 } from './events.js';
 import type { AcceptedState, ApplyEventOptions, ResolvedChange } from './events.js';
+
+const verifiedRecords = new WeakSet<RevisionRecord>();
+interface HistoryData {
+  readonly entries: List<RevisionRecord>;
+  cached?: readonly RevisionRecord[];
+}
+const verifiedHistories = new WeakMap<History, HistoryData>();
+
+function historyData(history: History): HistoryData {
+  const data = verifiedHistories.get(history);
+  if (!data) return eventError('History requires a verified immutable prefix', 'schema_invalid');
+  return data;
+}
+
+function installHistory(
+  history: History,
+  entries: List<RevisionRecord>,
+  cached?: readonly RevisionRecord[],
+): void {
+  const data: HistoryData = { entries };
+  if (cached !== undefined) data.cached = cached;
+  verifiedHistories.set(history, data);
+  Object.defineProperty(history, 'records', {
+    enumerable: true,
+    get: () => {
+      if (data.cached === undefined) data.cached = Object.freeze(data.entries.toArray());
+      return data.cached;
+    },
+  });
+  Object.freeze(history);
+}
 
 export class RevisionRecord {
   readonly state: RevisionState;
@@ -33,17 +66,21 @@ export class RevisionRecord {
       eventError('Expected event object', 'schema_invalid');
     this.event = frozen as JSONObject | null;
     Object.freeze(this);
+    verifiedRecords.add(this);
   }
 }
 export class History {
-  readonly records: readonly RevisionRecord[];
+  readonly records!: readonly RevisionRecord[];
   constructor(records: readonly RevisionRecord[]) {
-    if (!records.length || records.some((r) => !(r instanceof RevisionRecord)))
+    if (
+      !records.length ||
+      records.some((r) => !(r instanceof RevisionRecord) || !verifiedRecords.has(r))
+    )
       eventError('History requires accepted seed', 'schema_invalid');
-    this.records = Object.freeze([...records]);
-    for (let i = 1; i < this.records.length; i++) {
-      const before = this.records[i - 1]!,
-        after = this.records[i]!;
+    const normalized = Object.freeze([...records]);
+    for (let i = 1; i < normalized.length; i++) {
+      const before = normalized[i - 1]!,
+        after = normalized[i]!;
       if (
         parseCounter(after.journalSeq) <= parseCounter(before.journalSeq) ||
         after.state.definition.graph_id !== before.state.definition.graph_id ||
@@ -51,7 +88,7 @@ export class History {
       )
         eventError('Historical sequence/graph/event mismatch');
     }
-    Object.freeze(this);
+    installHistory(this, List(normalized), normalized);
   }
   static seed(state: AcceptedState, options: { journalSeq: string }): History {
     return new History([new RevisionRecord(options.journalSeq, state)]);
@@ -70,24 +107,28 @@ export class History {
     return new History([new RevisionRecord(options.journalSeq, state, event)]);
   }
   get head(): RevisionState {
-    return this.records[this.records.length - 1]!.state;
+    return historyData(this).entries.last()!.state;
   }
   get retainedLowerBound(): string {
-    return this.records[0]!.state.revision;
+    return historyData(this).entries.first()!.state.revision;
   }
   append(event: unknown, options: ApplyEventOptions & { journalSeq: string }): History {
-    if (
-      parseCounter(options.journalSeq) <=
-      parseCounter(this.records[this.records.length - 1]!.journalSeq)
-    )
+    const entries = historyData(this).entries;
+    if (parseCounter(options.journalSeq) <= parseCounter(entries.last()!.journalSeq))
       eventError('Historical sequence must increase');
     const state = applyEvent(this.head, event, options);
-    return new History([...this.records, new RevisionRecord(options.journalSeq, state, event)]);
+    const record = new RevisionRecord(options.journalSeq, state, event);
+    if (state.definition.graph_id !== this.head.definition.graph_id)
+      eventError('Historical graph mismatch');
+    // Constructor validation remains complete for arbitrary public input.
+    const next = Object.create(History.prototype) as History;
+    installHistory(next, entries.push(record));
+    return next;
   }
   at(revision: string): RevisionState {
     parseCounter(revision);
-    for (let i = this.records.length - 1; i >= 0; i--)
-      if (this.records[i]!.state.revision === revision) return this.records[i]!.state;
+    for (const record of historyData(this).entries.toSeq().reverse())
+      if (record.state.revision === revision) return record.state;
     return eventError('Revision outside retained verified history', 'history_unavailable');
   }
   diff(before: string, after: string): DefinitionDiff {

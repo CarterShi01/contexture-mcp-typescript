@@ -5,3 +5,15 @@ package-lock.json
 # Byte-identical snapshots owned by the pinned cross-language specification.
 conformance/fixtures/
 conformance/golden/
+test/fixtures/node-catalog/
+
+# Byte-identical candidate data-behavior corpus, not an accepted static snapshot.
+conformance/managed/portable-binding-primitives.json
+
+# Verbatim source-fingerprinted gate receipts, not formatting inputs.
+docs/verification/ts-combined-graph-presentation-20261107/receipt.json
+docs/verification/ts-static-catalog-debug-20261107/receipt.json
+docs/verification/ts-managed-offline-20261107-1158/*.json
+docs/verification/ts-managed-offline-20261107-1225/*.json
+docs/verification/devbox-final-typescript-20261107-*/*.json
+docs/verification/devbox-unchanged-cut-cache-20261107-*/*.json

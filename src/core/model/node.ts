@@ -58,6 +58,7 @@ export interface GroupedCards {
  * and policy-aware cards for related nodes.
  */
 export interface View<Node extends ContextNode = ContextNode> {
+  presentCard?(node: Node, card: CompiledContext): CompiledContext;
   refOf(node: Node): string;
   cardOf(node: Node): CompiledContext;
   routingCardOf(node: Node): CompiledContext;
@@ -77,11 +78,12 @@ export function routeOf(node: ContextNode): CompiledContext {
 
 /** Render one actionable routing card through its owning view. */
 export function cardOf<Node extends ContextNode>(node: Node, view: View<Node>): CompiledContext {
-  return Object.freeze({
+  const card = Object.freeze({
     ...routeOf(node),
     ref: view.refOf(node),
     ...(node.kind === 'tool' ? view.executionOf(node) : {}),
   });
+  return view.presentCard?.(node, card) ?? card;
 }
 
 /** Render one openable card containing routing facts only. */
@@ -89,7 +91,8 @@ export function routingCardOf<Node extends ContextNode>(
   node: Node,
   view: View<Node>,
 ): CompiledContext {
-  return Object.freeze({ ...routeOf(node), ref: view.refOf(node) });
+  const card = Object.freeze({ ...routeOf(node), ref: view.refOf(node) });
+  return view.presentCard?.(node, card) ?? card;
 }
 
 /** Return direct child Roles without evaluating declaration factories. */

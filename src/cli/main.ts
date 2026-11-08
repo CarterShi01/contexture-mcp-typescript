@@ -10,10 +10,14 @@ import { compileRuntimeApplication } from '../server/application.js';
 import { buildInstructions } from '../server/instructions.js';
 import { buildServer, ContextureOptions, ServeError } from '../server/index.js';
 import { PACKAGE_VERSION, REFERENCE_SEPARATOR } from '../core/foundation/vocabulary.js';
+import { SurfaceSelection } from '../core/model/root-selection.js';
+import { formatCatalogJson } from '../catalog-json.js';
+import type { CatalogDetail, CatalogView } from '../introspection.js';
 
 import { findProject, loadApplication } from './project.js';
 import { newProject } from './scaffold.js';
 import { UsageError } from './usage.js';
+import { commandStore } from './store.js';
 
 /** Compatibility spelling for the canonical framework release version. */
 export const CLI_VERSION = PACKAGE_VERSION;
@@ -26,6 +30,7 @@ export interface CliOutput {
 /** Controlled process facts for native CLI tests and embedding. */
 export interface CliEnvironment {
   readonly cwd?: string;
+  readonly signal?: AbortSignal;
 }
 
 const processOutput: CliOutput = {
@@ -56,6 +61,12 @@ export async function main(
         return await commandCall(arguments_, output, environment);
       case 'inspect':
         return await commandInspect(arguments_, output, environment);
+      case 'catalog':
+        return await commandCatalog(arguments_, output, environment);
+      case 'debug':
+        return await commandDebug(arguments_, output, environment);
+      case 'store':
+        return commandStore(arguments_, output, environment);
       case 'serve':
         return await commandServe(arguments_, output, environment);
       case 'demo':
@@ -304,6 +315,150 @@ async function commandServe(
   return 0;
 }
 
+async function commandCatalog(
+  argv: readonly string[],
+  output: CliOutput,
+  environment: CliEnvironment,
+): Promise<number> {
+  const { refs, json, target, options } = catalogArguments(argv, false);
+  const application = await compiled(target, environment);
+  const catalog = application.catalog(options);
+  if (refs.length !== 0) {
+    const nodes = refs.map((ref) => catalog.get(ref));
+    if (json) output.out(formatCatalogJson(nodes, { indent: 2 }));
+    else
+      for (const node of nodes)
+        output.out(`${node.kind.padEnd(5)}  ${node.ref}  — ${node.description}`);
+    return 0;
+  }
+  const snapshot = catalog.snapshot();
+  if (json) {
+    output.out(snapshot.toJson());
+    return 0;
+  }
+  output.out(
+    `${snapshot.application.name}  ${snapshot.application.mode}  ${options.view}/${options.detail}`,
+  );
+  output.out(`digest  ${snapshot.contentDigest}`);
+  for (const node of snapshot.nodes) {
+    output.out(
+      `${'  '.repeat(node.ref.split('/').length - 1)}${node.kind.padEnd(5)}  ${node.ref}  — ${node.description}`,
+    );
+  }
+  return 0;
+}
+
+async function commandDebug(
+  argv: readonly string[],
+  output: CliOutput,
+  environment: CliEnvironment,
+): Promise<number> {
+  const { target, options, host, port } = catalogArguments(argv, true);
+  const application = await compiled(target, environment);
+  if (environment.signal?.aborted) throw new Error('Catalog debug startup was canceled.');
+  const address = await application.debug(options).start({ host, port });
+  let cleanup: (() => void) | undefined;
+  const stopped = new Promise<void>((resolve) => {
+    const finish = () => resolve();
+    if (environment.signal !== undefined) {
+      environment.signal.addEventListener('abort', finish, { once: true });
+      cleanup = () => environment.signal?.removeEventListener('abort', finish);
+      if (environment.signal.aborted) finish();
+    } else {
+      process.once('SIGINT', finish);
+      process.once('SIGTERM', finish);
+      cleanup = () => {
+        process.off('SIGINT', finish);
+        process.off('SIGTERM', finish);
+      };
+    }
+  });
+  try {
+    output.out(`Contexture Node Catalog: ${address.url}`);
+    await stopped;
+  } finally {
+    cleanup?.();
+    await address.close();
+  }
+  return 0;
+}
+
+function catalogArguments(argv: readonly string[], debug: boolean) {
+  const refs: string[] = [];
+  const selectors: string[] = [];
+  let target: string | undefined;
+  let locale: string | undefined;
+  let view: CatalogView = debug ? 'application' : 'model';
+  let detail: CatalogDetail = debug ? 'definition' : 'summary';
+  let json = false;
+  let host = '127.0.0.1';
+  let port = 8787;
+  for (let index = 0; index < argv.length; index += 1) {
+    const option = argv[index]!;
+    if (option === '--') {
+      refs.push(...argv.slice(index + 1));
+      break;
+    }
+    if (!option.startsWith('-')) {
+      refs.push(option);
+      continue;
+    }
+    if (option === '--json' && !debug) {
+      json = true;
+      continue;
+    }
+    const value = argv[index + 1];
+    if (
+      ![
+        '--target',
+        '--view',
+        '--detail',
+        '--locale',
+        '--select',
+        ...(debug ? ['--host', '--port'] : []),
+      ].includes(option) ||
+      value === undefined ||
+      value.startsWith('--')
+    ) {
+      throw new UsageError(
+        debug
+          ? 'Use contexture debug [--target TARGET] [--view application|model|surface] [--detail summary|definition] [--locale TAG] [--select REF] [--host LOOPBACK] [--port PORT].'
+          : 'Use contexture catalog [REF ...] [--target TARGET] [--view application|model|surface] [--detail summary|definition] [--locale TAG] [--select REF] [--json].',
+      );
+    }
+    if (option === '--target') target = value;
+    if (option === '--locale') locale = value;
+    if (option === '--select') selectors.push(value);
+    if (option === '--host') host = value;
+    if (option === '--port') {
+      port = Number(value);
+      if (!Number.isSafeInteger(port)) throw new UsageError('Debug port must be an integer.');
+    }
+    if (option === '--view') {
+      if (value !== 'application' && value !== 'model' && value !== 'surface')
+        throw new UsageError('Unknown Catalog view.');
+      view = value;
+    }
+    if (option === '--detail') {
+      if (value !== 'summary' && value !== 'definition')
+        throw new UsageError('Unknown Catalog detail.');
+      detail = value;
+    }
+    index += 1;
+  }
+  if ((view === 'surface') !== (selectors.length !== 0)) {
+    throw new UsageError('Only surface Catalogs require one or more --select refs.');
+  }
+  if (debug && refs.length !== 0) throw new UsageError('Debug does not accept positional refs.');
+  const options = {
+    view,
+    detail,
+    ...(locale === undefined ? {} : { locale }),
+    ...(selectors.length === 0 ? {} : { surfaceSelection: SurfaceSelection.only(selectors) }),
+  };
+  return { refs, json, target, options, host, port };
+}
+
 async function commandDemo(argv: readonly string[], output: CliOutput): Promise<number> {
   const { options } = transportArguments(argv, false);
   const handle = await buildServer(demoApplication).start(options);
@@ -352,7 +507,7 @@ async function inputObject(
 }
 
 function usage(): string {
-  return 'Expected contexture new, list, check, call, inspect, serve, or demo.';
+  return 'Expected contexture new, list, check, call, inspect, catalog, debug, serve, or demo.';
 }
 
 function transportArguments(

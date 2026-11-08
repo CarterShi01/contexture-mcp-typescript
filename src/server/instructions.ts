@@ -1,5 +1,7 @@
 import { Disclosure } from '../core/model/disclosure.js';
 import { DISCOVER_GATEWAY_NAME } from '../core/foundation/vocabulary.js';
+import { ModelValidationError } from '../core/foundation/errors.js';
+import type { CompiledNode } from '../core/model/compiler.js';
 
 import { PREAMBLE, REF_RULE } from './messages.js';
 
@@ -82,7 +84,7 @@ function* siblingGroups(
   const visible = disclosure.selection
     .rootsIn(disclosure.index)
     .filter((node) => disclosure.modelCanSee(disclosure.index.refOf(node)));
-  yield visible.map((node) => [disclosure.index.refOf(node), node.description] as const);
+  yield visible.map((node) => presentedEntry(disclosure, node));
 
   const queue = visible.filter((node) => node.kind === 'role');
   while (queue.length > 0) {
@@ -92,8 +94,17 @@ function* siblingGroups(
       disclosure.modelCanSee(disclosure.index.refOf(child)),
     );
     if (children.length > 0) {
-      yield children.map((child) => [disclosure.index.refOf(child), child.description] as const);
+      yield children.map((child) => presentedEntry(disclosure, child));
       queue.push(...children);
     }
+  }
+
+  function presentedEntry(disclosure: Disclosure, node: CompiledNode): readonly [string, string] {
+    const ref = disclosure.index.refOf(node);
+    const card = disclosure.routingCardOf(node);
+    if (typeof card.description !== 'string') {
+      throw new ModelValidationError('A routing card must retain its description.');
+    }
+    return [typeof card.title === 'string' ? `${card.title} (${ref})` : ref, card.description];
   }
 }

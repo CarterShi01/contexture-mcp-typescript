@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
+import type { ServerIdentity } from './host-lifecycle.js';
 
 import { Gateway, normalizeInspectionRefs } from '../core/model/system-api.js';
 import { RootSelection } from '../core/model/root-selection.js';
@@ -14,6 +15,7 @@ import {
   type GatewayName,
 } from '../core/foundation/vocabulary.js';
 import { Publications } from './surface/publications.js';
+import type { GatewayPresentation } from '../core/presentation.js';
 
 export { compileRuntimeApplication, compileStructuralApplication } from './application.js';
 export type { DisclosureApplication, RuntimeApplication } from './application.js';
@@ -121,11 +123,7 @@ export type {
 export { Auth, principalOf, PRINCIPAL_EXTRA } from './identity.js';
 export type { TokenVerifier } from './identity.js';
 
-/** Metadata required to identify a Contexture MCP server. */
-export interface ServerIdentity {
-  readonly name: string;
-  readonly version: string;
-}
+export type { ServerIdentity } from './host-lifecycle.js';
 
 /**
  * Construct the official MCP server adapter without registering capabilities.
@@ -137,7 +135,15 @@ export function createMcpServer(
   identity: ServerIdentity,
   options: { readonly instructions?: string } = {},
 ): McpServer {
-  return new McpServer({ name: identity.name, version: identity.version }, options);
+  return new McpServer(
+    {
+      name: identity.name,
+      version: identity.version,
+      ...(identity.title === undefined ? {} : { title: identity.title }),
+      ...(identity.description === undefined ? {} : { description: identity.description }),
+    },
+    options,
+  );
 }
 
 /** Official-SDK adapter whose only model-controlled tools are Contexture's gateway. */
@@ -152,7 +158,11 @@ export function createContextureMcpServer(
   identity: ServerIdentity,
   gateway: Gateway,
   publications?: Publications,
-  options: { readonly selection?: RootSelection; readonly instructions?: string } = {},
+  options: {
+    readonly selection?: RootSelection;
+    readonly instructions?: string;
+    readonly gatewayPresentation?: GatewayPresentation;
+  } = {},
 ): ContextureMcpServer {
   const selection = options.selection ?? RootSelection.all();
   const server = createMcpServer(
@@ -160,11 +170,16 @@ export function createContextureMcpServer(
     options.instructions === undefined ? {} : { instructions: options.instructions },
   );
   for (const tool of gateway.tools) {
+    const title =
+      options.gatewayPresentation === undefined
+        ? {}
+        : { title: options.gatewayPresentation.titleFor(tool.name) };
     switch (tool.name) {
       case DISCOVER_GATEWAY_NAME:
         server.registerTool(
           tool.name,
           {
+            ...title,
             description: tool.description,
             inputSchema: z.strictObject({}),
             annotations: { readOnlyHint: true },
@@ -176,6 +191,7 @@ export function createContextureMcpServer(
         server.registerTool(
           tool.name,
           {
+            ...title,
             description: tool.description,
             inputSchema: z.strictObject({ refs: z.array(z.string()) }),
             annotations: { readOnlyHint: true },
@@ -192,6 +208,7 @@ export function createContextureMcpServer(
         server.registerTool(
           tool.name,
           {
+            ...title,
             description: tool.description,
             inputSchema: z.strictObject({ ref: z.string() }),
             annotations: { readOnlyHint: true },
@@ -207,6 +224,7 @@ export function createContextureMcpServer(
         server.registerTool(
           tool.name,
           {
+            ...title,
             description: tool.description,
             inputSchema: invocationSchema,
             annotations: { readOnlyHint: true },
@@ -230,6 +248,7 @@ export function createContextureMcpServer(
         server.registerTool(
           tool.name,
           {
+            ...title,
             description: tool.description,
             inputSchema: invocationSchema,
             annotations: { readOnlyHint: false },

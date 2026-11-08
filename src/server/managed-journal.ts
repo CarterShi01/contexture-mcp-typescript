@@ -119,6 +119,12 @@ export interface AppendOptions {
   readonly event_batch_id?: string;
   readonly written_at?: string;
 }
+export interface OfflineJournalBudget {
+  readonly maxFiles: number;
+  readonly maxBytes: number;
+  readonly maxFileBytes: number;
+  readonly maxSnapshotBytes: number;
+}
 
 export class FileJournal {
   readonly root: string;
@@ -135,6 +141,7 @@ export class FileJournal {
   private metadata: Wire = {};
   private accepted: Wire[] = [];
   private receipts = new Map<string, Wire>();
+  private batches = new Set<unknown>();
 
   private constructor(root: string, options: JournalOptions) {
     if (root.split(/[\\/]/u).includes('..')) fail('unsafe_path', 'Dot traversal is forbidden');
@@ -177,6 +184,192 @@ export class FileJournal {
   static open(root: string, options: JournalOptions): FileJournal {
     return this.initialize(root, options);
   }
+  /** Existing private local directory check, shared by offline artifact custody. */
+  static checkLocation(root: string, options: JournalOptions): string {
+    const reader = new FileJournal(root, options);
+    reader.platform();
+    reader.checkPath(reader.root, true);
+    if (!fs.existsSync(reader.root)) fail('store_missing', 'Existing private directory required');
+    return reader.root;
+  }
+  /** Read-only full capture under the EXISTING owner inode. No source recovery or creation.
+   * The synchronous consumer retains exclusive custody through isolated verification.
+   */
+  static withOfflineSnapshot<T>(
+    root: string,
+    options: JournalOptions,
+    budget: OfflineJournalBudget,
+    consume: (snapshot: Uint8Array) => T,
+  ): T {
+    const reader = new FileJournal(root, options);
+    try {
+      reader.platform();
+      reader.checkPath(reader.root, true);
+      if (!fs.existsSync(reader.root)) fail('store_missing', 'Existing store required');
+      const lock = path.join(reader.root, 'writer.lock');
+      reader.checkPath(lock);
+      if (!fs.existsSync(lock)) fail('store_missing', 'Existing owner lock required');
+      const before = fs.lstatSync(lock);
+      const fd = fs.openSync(lock, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+      reader.lockFD = fd;
+      const opened = fs.fstatSync(fd);
+      if (before.dev !== opened.dev || before.ino !== opened.ino)
+        fail('unsafe_path', 'Owner lock changed');
+      try {
+        reader.ops.lock(fd);
+      } catch (error) {
+        if (['EACCES', 'EAGAIN', 'EWOULDBLOCK', 'EDEADLK'].includes(code(error) ?? ''))
+          fail('store_in_use', 'Store has an exclusive lifetime owner');
+        throw error;
+      }
+      const confirmLock = (): void => {
+        reader.checkPath(lock);
+        const current = fs.lstatSync(lock);
+        if (current.dev !== opened.dev || current.ino !== opened.ino)
+          fail('unsafe_path', 'Existing owner lock changed during offline custody');
+      };
+      confirmLock();
+      const contents = new Map<string, Buffer>();
+      let seen = 0,
+        total = 0;
+      const visit = (directory: string): void => {
+        reader.checkPath(directory, true);
+        for (const name of fs.readdirSync(directory).sort()) {
+          if (++seen > budget.maxFiles) fail('limit_exceeded', 'Store entry budget exceeded');
+          const target = path.join(directory, name);
+          reader.checkPath(target);
+          const info = fs.lstatSync(target);
+          const relative = path.relative(reader.root, target);
+          if (relative === 'tmp' && fs.readdirSync(target).length)
+            fail('recovery_required', 'Pending temporary assets require owner recovery');
+          if (
+            directory === reader.root &&
+            ![...directories, 'META.json', 'writer.lock'].includes(name)
+          )
+            fail('format_unsupported', 'Unknown store asset');
+          if (info.isDirectory()) {
+            if (
+              (directory === reader.root && !directories.includes(name)) ||
+              (relative.startsWith('records/') && !/^records\/[0-9]{20}$/u.test(relative)) ||
+              (relative.startsWith('checkpoints/') &&
+                !/^checkpoints\/[0-9]{20}$/u.test(relative)) ||
+              (relative.startsWith('blobs/') &&
+                !/^blobs\/sha256(?:\/[0-9a-f]{2})?$/u.test(relative))
+            )
+              fail('format_unsupported', 'Unknown store directory');
+            visit(target);
+            continue;
+          }
+          if (directory === reader.root && !['META.json', 'writer.lock'].includes(name))
+            fail('corruption', 'Store directory missing');
+          if (info.size > budget.maxFileBytes) fail('limit_exceeded', 'Store file budget exceeded');
+          const assetFD = fs.openSync(target, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+          try {
+            const start = fs.fstatSync(assetFD);
+            if (
+              start.dev !== info.dev ||
+              start.ino !== info.ino ||
+              start.size !== info.size ||
+              start.mtimeMs !== info.mtimeMs
+            )
+              fail('corruption', 'Store asset changed');
+            const raw = Buffer.alloc(start.size);
+            let offset = 0;
+            while (offset < raw.length) {
+              const count = fs.readSync(assetFD, raw, offset, raw.length - offset, offset);
+              if (count <= 0) fail('corruption', 'Store asset shortened');
+              offset += count;
+            }
+            const end = fs.fstatSync(assetFD);
+            const current = fs.lstatSync(target);
+            if (
+              end.size !== start.size ||
+              end.mtimeMs !== start.mtimeMs ||
+              end.ctimeMs !== start.ctimeMs ||
+              current.ino !== start.ino ||
+              current.dev !== start.dev
+            )
+              fail('corruption', 'Store asset changed during capture');
+            total += raw.length;
+            if (total > budget.maxBytes) fail('limit_exceeded', 'Store byte budget exceeded');
+            contents.set(target, raw);
+          } finally {
+            fs.closeSync(assetFD);
+          }
+        }
+      };
+      visit(reader.root);
+      for (const name of directories) {
+        reader.checkPath(path.join(reader.root, name), true);
+        if (!fs.existsSync(path.join(reader.root, name)))
+          fail('corruption', 'Incomplete store layout');
+      }
+      reader.readBytes = (target: string): Buffer => {
+        const raw = contents.get(target);
+        if (!raw) fail('history_unavailable', 'Required captured asset missing');
+        return raw;
+      };
+      if (!contents.has(path.join(reader.root, 'META.json')))
+        fail('corruption', 'Store metadata missing');
+      reader.metadata = reader.readJSON(path.join(reader.root, 'META.json'));
+      reader.validate('FileJournalMeta', reader.metadata);
+      if (reader.metadata.durability !== reader.durability)
+        fail('durability_unsupported', 'Persisted durability must match');
+      reader.recover(true);
+      reader.verifyRestoreOrigin();
+      reader.project(reader.accepted);
+      let checkpoint: Wire | null = null;
+      const blobs: Record<string, string> = {};
+      for (const [target, raw] of contents) {
+        const relative = path.relative(reader.root, target);
+        if (relative.startsWith('blobs/')) {
+          const match = /^blobs\/sha256\/([0-9a-f]{2})\/([0-9a-f]{64})\.blob$/u.exec(relative);
+          if (
+            !match ||
+            match[1] !== match[2]!.slice(0, 2) ||
+            bytesDigest(raw) !== 'sha256:' + match[2]
+          )
+            fail('corruption', 'Invalid immutable blob');
+          blobs['sha256:' + match[2]] = raw.toString('hex');
+        } else if (relative.startsWith('checkpoints/')) {
+          const match = /^checkpoints\/([0-9]{20})\/([0-9a-f]{64})\.json$/u.exec(relative);
+          if (!match) fail('checkpoint_invalid', 'Invalid checkpoint path');
+          const candidate = reader.readJSON(target);
+          if (
+            candidate.last_seq !== String(BigInt(match[1]!)) ||
+            candidate.checkpoint_digest !== 'sha256:' + match[2]
+          )
+            fail('checkpoint_invalid', 'Checkpoint identity differs from path');
+          reader.checkCheckpoint(candidate);
+          if (!checkpoint || parseCounter(candidate.last_seq) > parseCounter(checkpoint.last_seq))
+            checkpoint = candidate;
+        }
+      }
+      const subject = {
+        schema: 'contexture.file-journal-backup/v1',
+        meta: reader.meta,
+        records: reader.accepted.map(copy),
+        blobs,
+        checkpoint,
+      };
+      const snapshot = canonicalJSON({
+        ...subject,
+        backup_digest: canonicalDigest(subject, JOURNAL_BACKUP_DOMAIN),
+      });
+      if (snapshot.length > budget.maxSnapshotBytes)
+        fail('limit_exceeded', 'Backup envelope budget exceeded');
+      confirmLock();
+      const result = consume(snapshot);
+      if (result instanceof Promise) {
+        void result.catch(() => undefined);
+        fail('reentrant_operation', 'Offline custody consumer must be synchronous');
+      }
+      confirmLock();
+      return result;
+    } finally {
+      reader.close();
+    }
+  }
   private static initialize(
     root: string,
     options: JournalOptions,
@@ -185,14 +378,37 @@ export class FileJournal {
     const owner = new FileJournal(root, options);
     try {
       owner.platform();
-      owner.mkdir(owner.root);
+      if (restore === undefined) owner.mkdir(owner.root);
+      else {
+        owner.checkPath(path.dirname(owner.root), true);
+        owner.checkPath(owner.root, true);
+        try {
+          fs.mkdirSync(owner.root, { mode: 0o700 });
+        } catch (error) {
+          if (code(error) === 'EEXIST')
+            fail('restore_conflict', 'Restore destination already exists');
+          throw error;
+        }
+        owner.syncDir(path.dirname(owner.root));
+      }
       const lock = path.join(owner.root, 'writer.lock');
       owner.checkPath(lock);
-      const fd = fs.openSync(
-        lock,
-        fs.constants.O_CREAT | fs.constants.O_RDWR | fs.constants.O_NOFOLLOW,
-        0o600,
-      );
+      let fd: number,
+        existingLock = false;
+      try {
+        fd = fs.openSync(
+          lock,
+          fs.constants.O_CREAT |
+            fs.constants.O_EXCL |
+            fs.constants.O_RDWR |
+            fs.constants.O_NOFOLLOW,
+          0o600,
+        );
+      } catch (error) {
+        if (code(error) !== 'EEXIST') throw error;
+        existingLock = true;
+        fd = fs.openSync(lock, fs.constants.O_RDWR | fs.constants.O_NOFOLLOW);
+      }
       try {
         owner.ops.lock(fd);
       } catch (error) {
@@ -203,6 +419,11 @@ export class FileJournal {
       }
       owner.lockFD = fd;
       owner.checkPath(lock);
+      if (existingLock && !fs.existsSync(path.join(owner.root, 'META.json')))
+        fail(
+          'corruption',
+          'Existing owner store is missing metadata; never seed over partial state',
+        );
       owner.syncDir(owner.root);
       for (const name of directories) owner.mkdir(path.join(owner.root, name));
       // link/unlink publication may have crashed between the two syscalls.
@@ -310,6 +531,10 @@ export class FileJournal {
   }
   get watermark(): string {
     return this.guard(false, () => String(this.accepted.length));
+  }
+  /** Synchronous readiness fence only: no I/O, append, or speculative publication. */
+  assertWritable(): void {
+    this.guard(true, () => undefined);
   }
 
   private checkPath(target: string, directory = false, allowLinks = false): void {
@@ -553,7 +778,8 @@ export class FileJournal {
     } else this.publish(target, raw, 'blob');
     return copy(ref);
   }
-  getBlob(ref: unknown): Buffer {
+  /** Public byte contract; the native Buffer remains implementation-private. */
+  getBlob(ref: unknown): Uint8Array {
     return this.guard(false, () => this.loadBlob(copy(ref)));
   }
   private loadBlob(ref: Wire): Buffer {
@@ -610,7 +836,7 @@ export class FileJournal {
     }
     for (const ref of this.blobRefs(record)) this.loadBlob(ref);
   }
-  private recover(): void {
+  private recover(readOnly = false): void {
     for (const target of this.walk(this.root))
       this.checkPath(target, fs.lstatSync(target).isDirectory());
     if (this.metadata.restored_from !== undefined)
@@ -631,7 +857,7 @@ export class FileJournal {
     }
     paths.sort((a, b) => (a.sequence < b.sequence ? -1 : a.sequence > b.sequence ? 1 : 0));
     let previous: unknown = null;
-    const batches = new Set<unknown>();
+    const batches = this.batches;
     for (const [index, { sequence, target }] of paths.entries()) {
       if (sequence !== BigInt(index + 1))
         fail('corruption', 'Missing or duplicate committed record');
@@ -645,11 +871,12 @@ export class FileJournal {
         if (this.receipts.has(key)) fail('corruption', 'Duplicate accepted receipt key');
         this.receipts.set(key, receipt);
       }
-      this.confirm(target);
+      if (!readOnly) this.confirm(target);
       this.accepted.push(record);
       previous = record.record_hash;
     }
     for (const name of fs.readdirSync(path.join(this.root, 'tmp')).sort()) {
+      if (readOnly) fail('recovery_required', 'Pending temporary assets require owner recovery');
       const source = path.join(this.root, 'tmp', name),
         target = path.join(this.root, 'quarantine', randomUUID() + '.artifact');
       const evidence = {
@@ -714,21 +941,29 @@ export class FileJournal {
       record.payload_digest = canonicalDigest(payload, JOURNAL_PAYLOAD_DOMAIN);
       record.record_hash = canonicalDigest(record, JOURNAL_RECORD_DOMAIN);
       this.verifyRecord(record, sequence, record.prev_record_hash);
-      if (this.accepted.some((r) => r.event_batch_id === record.event_batch_id))
-        fail('schema_invalid', 'Batch already accepted');
+      if (this.batches.has(record.event_batch_id)) fail('schema_invalid', 'Batch already accepted');
       for (const ref of this.blobRefs(record)) this.confirm(this.blobPath(ref.digest));
+      const returned = copy(record);
+      const key =
+        receipt === undefined ? undefined : receiptKey(receipt.actor_ref, receipt.idempotency_key);
       this.publish(this.recordPath(sequence), canonicalJSON(record), 'record');
       try {
-        const next = [...this.accepted, record],
-          receipts = new Map(this.receipts);
-        if (receipt) receipts.set(receiptKey(receipt.actor_ref, receipt.idempotency_key), receipt);
-        this.receipts = receipts;
-        this.accepted = next;
+        this.batches.add(record.event_batch_id);
+        this.hit('record.batch_indexed');
+        if (receipt && key !== undefined) {
+          this.receipts.set(key, receipt);
+          this.hit('record.receipt_indexed');
+        }
+        this.accepted.push(record);
+        this.hit('record.memory_indexed');
       } catch {
         this.unknown = true;
+        Set.prototype.delete.call(this.batches, record.event_batch_id);
+        if (key !== undefined) Map.prototype.delete.call(this.receipts, key);
+        this.accepted.length = Number(sequence - 1n);
         throw new CommitUnknown();
       }
-      return copy(record);
+      return returned;
     });
   }
   private project(records: readonly Wire[]): Wire {
@@ -898,7 +1133,17 @@ export class FileJournal {
       });
     });
   }
-  static restoreSnapshot(root: string, snapshot: Uint8Array, options: JournalOptions): FileJournal {
+  /** Detached full validation shares the production restore verifier; never touches a store. */
+  static verifySnapshot(snapshot: Uint8Array, options: JournalOptions): void {
+    FileJournal.validateSnapshot(snapshot, options);
+  }
+  private static validateSnapshot(
+    snapshot: Uint8Array,
+    options: JournalOptions,
+  ): {
+    records: Wire[];
+    blobs: Map<string, Buffer>;
+  } {
     const value = copy(decodeJSON(snapshot));
     const required = ['schema', 'meta', 'records', 'blobs', 'checkpoint', 'backup_digest'];
     if (
@@ -911,10 +1156,8 @@ export class FileJournal {
     const { backup_digest: digest, ...subject } = value;
     if (digest !== canonicalDigest(subject, JOURNAL_BACKUP_DOMAIN))
       fail('backup_invalid', 'Backup digest mismatch');
-    if (fs.existsSync(path.resolve(root)))
-      fail('restore_conflict', 'Restore destination must not exist');
     // Detached verifier does no destination I/O; it uses actual byte validation.
-    const verifier = new FileJournal(root, options);
+    const verifier = new FileJournal(path.parse(process.cwd()).root, options);
     verifier.metadata = copy(value.meta);
     verifier.validate('FileJournalMeta', verifier.metadata);
     if (verifier.metadata.durability !== verifier.durability)
@@ -957,6 +1200,14 @@ export class FileJournal {
       verifier.loadBlob(object(verifier.metadata.restored_from));
     verifier.accepted = records;
     if (value.checkpoint !== null) verifier.checkCheckpoint(copy(value.checkpoint));
+    if (options.projector) verifier.project(records);
+    verifier.verifyRestoreOrigin();
+    return { records, blobs };
+  }
+  static restoreSnapshot(root: string, snapshot: Uint8Array, options: JournalOptions): FileJournal {
+    if (fs.existsSync(path.resolve(root)))
+      fail('restore_conflict', 'Restore destination must not exist');
+    const { records, blobs } = FileJournal.validateSnapshot(snapshot, options);
     const owner = FileJournal.initialize(root, options, snapshot);
     try {
       for (const raw of blobs.values()) owner.putBlob(raw);

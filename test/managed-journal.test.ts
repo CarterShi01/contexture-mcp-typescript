@@ -70,6 +70,51 @@ function receipt(seq = '1', key = 'key', durability = 'strict'): Wire {
     operation_result: { inline: { answer: 'native-result' } },
   };
 }
+
+for (const stage of ['record.batch_indexed', 'record.receipt_indexed', 'record.memory_indexed']) {
+  test(`partial ${stage} publication preserves the confirmed cut and reopens actual suffix`, () => {
+    const { root, base } = temporary();
+    let armed = false;
+    try {
+      const journal = FileJournal.open(root, {
+        ...options,
+        fault: (current) => {
+          if (armed && current === stage)
+            throw new Error('index publication failed after mutation');
+        },
+      });
+      const first = journal.append([event], { actor_ref: 'actor', command_receipt: receipt() });
+      armed = true;
+      assert.throws(
+        () =>
+          journal.append([event], {
+            actor_ref: 'actor',
+            command_receipt: receipt('2', 'two'),
+            event_batch_id: 'batch-two',
+          }),
+        CommitUnknown,
+      );
+      assert.equal(journal.watermark, '1');
+      assert.deepEqual(journal.records(), [first]);
+      assert.equal(journal.getReceipt('actor', 'two'), null);
+      assert.throws(() => journal.append([event], { actor_ref: 'actor' }), CommitUnknown);
+      journal.close();
+      const reopened = FileJournal.open(root, options);
+      try {
+        assert.equal(reopened.watermark, '2');
+        assert.deepEqual(reopened.getReceipt('actor', 'two'), receipt('2', 'two'));
+        assert.throws(
+          () => reopened.append([event], { actor_ref: 'actor', event_batch_id: 'batch-two' }),
+          rejects('schema_invalid'),
+        );
+      } finally {
+        reopened.close();
+      }
+    } finally {
+      fs.rmSync(base, { recursive: true, force: true });
+    }
+  });
+}
 function temporary(): { base: string; root: string } {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'contexture-ts-journal-'));
   fs.chmodSync(base, 0o700);

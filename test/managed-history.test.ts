@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { List } from 'immutable';
 import { GraphError, canonicalDigest } from '../src/core/graph/canonical.js';
 import {
   behaviorDiff,
@@ -15,7 +16,7 @@ import {
   RevisionState,
   UnseededState,
 } from '../src/core/graph/events.js';
-import { History, revertCandidate } from '../src/core/graph/history.js';
+import { History, RevisionRecord, revertCandidate } from '../src/core/graph/history.js';
 import { GraphDefinition } from '../src/core/graph/model.js';
 import { prepare, PureRevisionState } from '../src/core/graph/transactions.js';
 
@@ -80,6 +81,86 @@ function reject(fn: () => unknown, code?: string): void {
     (e: unknown) => e instanceof GraphError && (code === undefined || String(e.code) === code),
   );
 }
+
+test('append validates only the new link and public construction still validates the full prefix', () => {
+  const state = new RevisionState(definition(), '12');
+  const original = History.seed(state, { journalSeq: '1' });
+  const event = changeEvent(state, resolveFacts(state, state.definition), options);
+  let visitedRecords = 0;
+  const some = Array.prototype.some;
+  Array.prototype.some = function (
+    this: unknown[],
+    predicate: (value: unknown, index: number, array: unknown[]) => unknown,
+    thisArg?: unknown,
+  ) {
+    return some.call(this, (value: unknown, index: number, array: unknown[]) => {
+      if (value instanceof RevisionRecord) visitedRecords++;
+      return predicate.call(thisArg, value, index, array);
+    });
+  };
+  try {
+    let history = original;
+    for (let i = 2; i <= 101; i++)
+      history = history.append(event, { journalSeq: String(i), tombstones: [] });
+    assert.equal(visitedRecords, 0);
+    assert.equal(original.records.length, 1);
+    assert.equal(original.head.revision, '12');
+    assert.equal(new History(history.records).records.length, 101);
+    assert.equal(visitedRecords, 101);
+    reject(() => new History([history.records[1]!, history.records[0]!]));
+  } finally {
+    Array.prototype.some = some;
+  }
+});
+
+test('append refuses forged prefix and records despite frozen prototype-shaped objects', () => {
+  const state = new RevisionState(definition(), '12');
+  const original = History.seed(state, { journalSeq: '1' });
+  const event = changeEvent(state, resolveFacts(state, state.definition), options);
+  const forged = Object.freeze(
+    Object.create(History.prototype, { records: { value: original.records } }),
+  ) as History;
+  reject(() => forged.append(event, { journalSeq: '2', tombstones: [] }), 'schema_invalid');
+  const fakeRecord = Object.freeze(
+    Object.create(RevisionRecord.prototype, {
+      journalSeq: { value: '1' },
+      state: { value: state },
+      event: { value: null },
+    }),
+  ) as RevisionRecord;
+  reject(() => new History([fakeRecord]), 'schema_invalid');
+});
+
+test('persistent history append/head/at do not materialize public arrays', () => {
+  const state = new RevisionState(definition(), '12');
+  const original = History.seed(state, { journalSeq: '1' });
+  const event = changeEvent(state, resolveFacts(state, state.definition), options);
+  let materializations = 0;
+  const toArray = List.prototype.toArray;
+  List.prototype.toArray = function (this: List<RevisionRecord>) {
+    materializations++;
+    return toArray.call(this);
+  };
+  try {
+    let history = original;
+    for (let sequence = 2; sequence <= 1001; sequence++)
+      history = history.append(event, { journalSeq: String(sequence), tombstones: [] });
+    assert.equal(history.head.revision, '12');
+    assert.equal(history.at('12'), history.head);
+    assert.equal(history.retainedLowerBound, '12');
+    assert.equal(materializations, 0);
+    assert.equal(original.records.length, 1);
+    const records = history.records;
+    assert.equal(records.length, 1001);
+    assert.ok(Object.isFrozen(records));
+    assert.equal(history.records, records);
+    assert.equal(materializations, 1);
+    assert.deepEqual(JSON.parse(JSON.stringify(history)).records.length, 1001);
+    assert.equal(materializations, 1);
+  } finally {
+    List.prototype.toArray = toArray;
+  }
+});
 
 test('history bootstrap, append and no-op retain immutable records and noncontiguous store sequences', () => {
   const base = new UnseededState('g'),

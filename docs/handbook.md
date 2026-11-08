@@ -85,6 +85,111 @@ Both preserve lazy factories and normalize the application name. Use a factory
 for every Role, Skill, and Tool: compilation creates a fresh immutable graph
 snapshot from those factories.
 
+### Optional presentation and locales (additive candidate)
+
+`Presentation`, `NodePresentation`, `GatewayPresentation` and
+`PresentationCatalog` are SDK-neutral immutable declarations exported at the
+package root and `core`. Supply `presentation` to `Contexture` or
+`defineApplication`; it does not evaluate factories. A catalog has an explicit
+`defaultLocale` and a `locales` record of `Presentation` instances. The native
+`normalizeLocale`/`resolvePresentation` functions normalize tags, try exact and
+successively broader parent tags, then use that default, without preferring a
+particular language. Normalized duplicate locale/ref keys and invalid values
+are errors, not silent fallback.
+
+```ts
+import { Contexture, NodePresentation, Presentation, PresentationCatalog } from 'contexture-mcp';
+import { buildServer } from 'contexture-mcp/server';
+
+const app = Contexture({
+  name: 'stable-machine-name',
+  roots: [
+    () => ({ kind: 'skill', name: 'read', description: 'Read.', instructions: 'Read first.' }),
+  ],
+  presentation: new PresentationCatalog({
+    defaultLocale: 'en',
+    locales: {
+      en: new Presentation({ title: 'Readable product name' }),
+      fr: new Presentation({ nodes: { read: new NodePresentation({ title: 'Lire' }) } }),
+    },
+  }),
+});
+const server = buildServer(app, { locale: 'fr-CA' }); // selects fr
+```
+
+`compileRuntimeApplication` and `compileStructuralApplication` also accept
+`{ locale }`. Selected copy is request-independent immutable Host configuration;
+independent views do not mutate a shared Index. Selection and person navigation
+retain the same copy without widening their existing visibility/reservation
+ceilings. Unknown refs in **every** declared locale fail compilation, including
+nonselected locales.
+
+Routing cards, nested members/uses, ACTIVE/INSPECT cards and generated bootstrap
+rosters use the selected titles/descriptions. Prompt/person navigation retains
+the same presentation. Instructions, names, canonical refs, schemas, validators,
+handlers and effect classifications are unchanged. MCP initialization carries
+an explicit product title/description and explicitly configured gateway titles;
+the five gateway machine names, descriptions, schemas and safety annotations
+stay fixed. No presentation by default means legacy payloads remain unchanged.
+
+The local Python 3.12 reference uses Unicode 15 classification/casing;
+compatibility includes its whitespace and titlecase exceptions rather than
+equating JavaScript `trim`/uppercase with Python `strip`/titlecase. The verified
+Unicode comparison is qualified to that reference/runtime, not all future ICU
+or Python Unicode versions. This candidate does not upgrade the pinned 0.16
+contract, accept managed schemas, or claim full product parity. The separate
+trusted Catalog/debug interfaces below do not replace those acceptance obligations.
+
+### Trusted Node Catalog and loopback debug (additive candidate)
+
+`contexture-mcp/introspection` exports `NodeCatalog`, `NodeCatalogSnapshot`,
+`CatalogView`, `CatalogDetail`, `MemberSlot`, immutable descriptor types and the
+legacy `canonicalDigest`/`formatCatalogJson`/`parseCatalogJson` helpers.
+`NodeCatalog.of(index, { view, detail?, locale?, surfaceSelection?, contributors? })`
+reads one already compiled Index. Runtime/structural compiled containers also
+expose `catalog(options)`. It does not construct another tree, open Channels,
+invoke business Tools or install an MCP endpoint.
+
+`application` includes both model and person/Prompt roots. `model` omits Prompt
+roots. `surface` requires an explicit `SurfaceSelection` and projects selected
+descendants to roots, keeping canonical refs while recomputing visible
+parent/ordinal facts. `summary` omits programs/schemas; `definition` preserves
+authored/effective programs, process designations and exact bound schema/effect
+facts. Structural Tools explicitly report `execution_available: false`.
+Relations retain declaration order and only visible endpoints. Snapshots validate
+unique refs/roots, counts, member/parent/ordinal agreement and reciprocal uses.
+
+`catalog.get(ref)`, `children(ref)`, `list({ kind?, query? })` and `snapshot()`
+return immutable data, not bound nodes. Contributors are explicit trusted
+`{ namespace: 'owner/name', describe(ref, node, index) }` ports: called once only
+for included nodes, then their JSON is validated/detached. Their metadata grants
+no permission. Search covers descriptions, presentation, programs, schemas and
+extensions with reference-qualified full Unicode folding.
+
+Catalog canonicalization intentionally keeps the legacy code-point-key order
+and finite-number profile, not managed JCS. Explicit native `bigint`/lossless
+integer values remain exact; use `snapshot.toJson()` or `formatCatalogJson` to
+serialize them, and `parseCatalogJson` before JS `Number` coercion. Ordinary
+`JSON.stringify` cannot encode bigint and ordinary `JSON.parse` can lose large
+integer precision. `snapshot.asJson()` exposes typed immutable local data;
+`NodeCatalogSnapshot.fromJson` verifies imported envelope shape and digest.
+
+```bash
+contexture catalog --view model --detail definition --json
+contexture catalog root/leaf --json
+contexture catalog --view surface --select root/leaf --locale fr-CA --json
+contexture debug --view application --detail definition --host 127.0.0.1 --port 8787
+```
+
+`compiled.debug(options?)` and `contexture-mcp/debug`'s `CatalogDebugServer`
+reuse the reference read-only UI assets. `await debug.start({ host?, port? })`
+returns the actual loopback URL and idempotent `close()`; zero chooses a local
+ephemeral port. Only explicit loopback/localhost binds are accepted. Host/Origin
+checks, no-cache/CSP/framing controls, GET/HEAD and exact ETag handling protect the
+immutable `/api/catalog` and `/api/nodes/REF` endpoints. There is no invoke,
+mutation, privileged authoring or remote-public bind route. CLI debug blocks
+until Ctrl-C; embedding CLI callers may supply an explicit `AbortSignal`.
+
 ### Process members
 
 A Role may designate one branded `PreProcessDeclaration` and one branded
@@ -384,6 +489,25 @@ discovery, and scaffold helpers from `contexture-mcp/cli`. `UsageError` is a
 lexical or symlink targets that escape the project root. Legacy Python
 roots/publish/channels keys map into the exported Application declaration rather
 than a second project configuration shape.
+
+### Trusted offline managed store operations
+
+The additive `contexture store doctor|backup|restore` route never loads an application.
+Use `contexture store --help` for required paths. Supply the exact registered managed
+schema and a private `--operator-config` with explicit operation grants and exact native
+software support. Stop the source owner first; its existing OS writer lock is retained
+through full read-only capture and native isolated backup verification. Doctor never
+creates an owner or repairs source assets. Backup needs `--verify-root FRESH_DIR` and
+`--output NEW_FILE`, leaves the verified clone private and closed, and emits a privileged
+watermark/digest manifest. Restore needs a fresh directory, private backup input, and
+`--allow-write`; it never replaces live storage or claims serving readiness.
+
+Programmatic consumers use `StoreOperations` from `contexture-mcp/server/managed-graph`.
+See the [API, operator configuration and limits](verification/managed-offline-api-20261107.txt).
+Unsupported filesystems/profiles, partial/corrupt history, unknown schema/software,
+unsafe permissions and a running owner fail closed. Linux native local storage only
+is implemented; production/TLS/cutover, Windows/macOS strict and genuine power-loss
+validation remain separate deployment qualifications.
 
 ### Maintained Kubernetes demo
 

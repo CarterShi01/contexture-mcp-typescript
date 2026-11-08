@@ -27,14 +27,11 @@ import { ContextureOptions, ServeError, validateBoundHost, validateHttpAccess } 
 import { configureLogging, log } from './logging.js';
 import { Auth, principalOf } from './identity.js';
 import type { RootSelector, SurfaceSelector } from './root-selector.js';
+import type { HttpServerHandle } from './host-lifecycle.js';
 
 export { PACKAGE_VERSION } from '../core/foundation/vocabulary.js';
 
-/** A live streamable-HTTP Contexture server that its caller may close. */
-export interface HttpServerHandle {
-  readonly url: string;
-  close(): Promise<void>;
-}
+export type { HttpServerHandle } from './host-lifecycle.js';
 
 /** One compiled application and its transport-specific MCP assembly. */
 export class ContextureServer {
@@ -58,9 +55,10 @@ export class ContextureServer {
       readonly instructions?: string;
       readonly surfaceSelector?: SurfaceSelector;
       readonly rootSelector?: RootSelector;
+      readonly locale?: string;
     } = {},
   ) {
-    this.application = compileRuntimeApplication(declaration);
+    this.application = compileRuntimeApplication(declaration, options);
     this.name = this.application.index.name;
     this.version = options.version ?? PACKAGE_VERSION;
     this.selection = (options.selection ?? RootSelection.all()).resolve(this.application.index);
@@ -83,11 +81,23 @@ export class ContextureServer {
   /** Build one fresh adapter whose complete public surface is fixed by selection. */
   private buildForSelection(selection: RootSelection): ContextureMcpServer {
     return createContextureMcpServer(
-      { name: this.name, version: this.version },
+      {
+        name: this.name,
+        version: this.version,
+        ...(this.application.presentation.title === undefined
+          ? {}
+          : { title: this.application.presentation.title }),
+        ...(this.application.presentation.description === undefined
+          ? {}
+          : { description: this.application.presentation.description }),
+      },
       new Gateway(this.application.disclosure, this.application.runtime),
       this.application.publications,
       {
         selection,
+        ...(this.application.presentation.gateway === undefined
+          ? {}
+          : { gatewayPresentation: this.application.presentation.gateway }),
         instructions:
           this.instructions ?? buildInstructions(this.application.disclosure.select(selection)),
       },
@@ -332,6 +342,7 @@ export function buildServer(
     readonly instructions?: string;
     readonly surfaceSelector?: SurfaceSelector;
     readonly rootSelector?: RootSelector;
+    readonly locale?: string;
   } = {},
 ): ContextureServer {
   return new ContextureServer(declaration, options);

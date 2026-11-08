@@ -61,6 +61,38 @@
       "types": "./dist/inspection.d.ts",
       "import": "./dist/inspection.js"
     },
+    "./introspection": {
+      "types": "./dist/introspection.d.ts",
+      "import": "./dist/introspection.js"
+    },
+    "./debug": {
+      "types": "./dist/debug.d.ts",
+      "import": "./dist/debug.js"
+    },
+    "./managed": {
+      "types": "./dist/managed.d.ts",
+      "import": "./dist/managed.js"
+    },
+    "./managed/releases": {
+      "types": "./dist/managed-releases.d.ts",
+      "import": "./dist/managed-releases.js"
+    },
+    "./managed/graph": {
+      "types": "./dist/managed-graph.d.ts",
+      "import": "./dist/managed-graph.js"
+    },
+    "./server/managed-graph": {
+      "types": "./dist/server/managed-graph.d.ts",
+      "import": "./dist/server/managed-graph.js"
+    },
+    "./server/managed-releases": {
+      "types": "./dist/server/managed-releases.d.ts",
+      "import": "./dist/server/managed-releases.js"
+    },
+    "./server/managed": {
+      "types": "./dist/server/managed.d.ts",
+      "import": "./dist/server/managed.js"
+    },
     "./demo": {
       "types": "./dist/demo/index.d.ts",
       "import": "./dist/demo/index.js"
@@ -99,6 +131,9 @@
     "@modelcontextprotocol/server": "2.0.0",
     "ajv": "8.20.0",
     "fs-ext": "2.1.1",
+    "immutable": "5.1.9",
+    "lossless-json": "4.3.3",
+    "unicode-case-folding": "1.1.2",
     "zod": "4.5.4"
   },
   "devDependencies": {

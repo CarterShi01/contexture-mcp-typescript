@@ -21,6 +21,15 @@ export {
 } from './core/foundation/vocabulary.js';
 export type { GatewayName } from './core/foundation/vocabulary.js';
 export { Contexture, defineApplication } from './application.js';
+export {
+  GatewayPresentation,
+  NodePresentation,
+  Presentation,
+  PresentationCatalog,
+  normalizeLocale,
+  resolvePresentation,
+} from './core/presentation.js';
+export type { PresentationSource } from './core/presentation.js';
 export type { ApplicationDeclaration, ManagedApplicationDeclaration } from './application.js';
 export { Channels } from './core/model/channels.js';
 export type { ChannelHandle } from './core/model/channels.js';

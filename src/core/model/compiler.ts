@@ -26,6 +26,7 @@ import {
 import { REFERENCE_SEPARATOR } from '../foundation/vocabulary.js';
 import { bindTool, type JsonObject, type ToolBinding } from './binding.js';
 import { compareCodePoints, matchingRefs, type ReferenceMatches } from './reference-queries.js';
+import { PresentationCatalog, type PresentationSource } from '../presentation.js';
 
 interface CompiledNodeBase extends ContextNode {
   readonly uses: readonly string[];
@@ -86,6 +87,7 @@ export interface ReferenceCrossing {
  */
 export interface Index {
   readonly name: string;
+  readonly presentation?: PresentationSource | undefined;
   readonly roots: readonly CompiledNode[];
   readonly modelRoots: readonly CompiledNode[];
   readonly promptRoots: readonly CompiledNode[];
@@ -171,6 +173,21 @@ function compile(application: ApplicationCompilation, bindTools: boolean): Compi
     compileFactory(factory, [], undefined, state),
   );
   validateUses(state.byRef);
+  if (application.presentation !== undefined) {
+    const presentations =
+      application.presentation instanceof PresentationCatalog
+        ? Object.values(application.presentation.locales)
+        : [application.presentation];
+    for (const presentation of presentations) {
+      for (const ref of Object.keys(presentation.nodes)) {
+        if (!state.byRef.has(ref)) {
+          throw new ModelValidationError(
+            `Presentation names an unknown node ref ${JSON.stringify(ref)}.`,
+          );
+        }
+      }
+    }
+  }
   const dependents = deriveDependents(state.byRef);
   return new ImmutableIndex(
     application.name,
@@ -179,6 +196,7 @@ function compile(application: ApplicationCompilation, bindTools: boolean): Compi
     application.channels,
     state,
     dependents,
+    application.presentation,
   );
 }
 
@@ -548,6 +566,7 @@ class ImmutableIndex implements Index {
     readonly channels: ChannelHandle | undefined,
     state: CompilationState,
     dependents: ReadonlyMap<string, readonly string[]>,
+    readonly presentation: PresentationSource | undefined,
   ) {
     this.executionBound = state.bindTools;
     this.modelRoots = Object.freeze([...modelRoots]);

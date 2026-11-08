@@ -38,6 +38,21 @@ export type GraphErrorCode =
   | 'unsupported_contract'
   | 'revision_conflict'
   | 'identity_conflict'
+  | 'binding_contract_invalid'
+  | 'compiler_contract_invalid'
+  | 'resource_preparation_invalid'
+  | 'resource_busy'
+  | 'not_ready'
+  | 'permission_denied'
+  | 'contract_mismatch'
+  | 'journal_corrupt'
+  | 'idempotency_conflict'
+  | 'history_unavailable'
+  | 'approval_stale'
+  | 'too_large'
+  | 'cursor_invalid'
+  | 'resync_required'
+  | 'history_unavailable'
   | 'mutation_protected';
 
 export class GraphError extends Error {

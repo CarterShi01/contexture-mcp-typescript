@@ -9,8 +9,10 @@ import {
 import { REFERENCE_SEPARATOR } from '../foundation/vocabulary.js';
 import { RootOutsideSelectionError, RootSelection } from './root-selection.js';
 import { InMemoryTelemetry, reportTelemetry, type Telemetry } from './telemetry.js';
+import { NodePresentation, Presentation, resolvePresentation } from '../presentation.js';
 import {
   cardOf as nodeCard,
+  routingCardOf as nodeRoutingCard,
   compileNode,
   CompileLevel,
   groupCards,
@@ -48,6 +50,7 @@ export class Disclosure implements View<CompiledNode> {
   readonly telemetry: Telemetry;
   readonly #promptRoots: ReadonlySet<string>;
   readonly #reserved: ReadonlySet<string>;
+  readonly nodePresentations: Readonly<Record<string, NodePresentation>>;
 
   constructor(
     readonly index: CompiledApplication,
@@ -56,6 +59,8 @@ export class Disclosure implements View<CompiledNode> {
       readonly promptRoots?: Iterable<string>;
       readonly reserved?: Iterable<string>;
       readonly telemetry?: Telemetry;
+      readonly locale?: string;
+      readonly nodePresentations?: Readonly<Record<string, NodePresentation>>;
     } = {},
   ) {
     this.selection = (options.selection ?? RootSelection.all()).resolve(index);
@@ -64,6 +69,25 @@ export class Disclosure implements View<CompiledNode> {
     );
     this.#reserved = new Set(options.reserved ?? []);
     this.telemetry = options.telemetry ?? new InMemoryTelemetry();
+    if (
+      options.nodePresentations !== undefined &&
+      (typeof options.nodePresentations !== 'object' ||
+        options.nodePresentations === null ||
+        Array.isArray(options.nodePresentations))
+    ) {
+      throw new ModelValidationError('Node presentations must be a mapping.');
+    }
+    this.nodePresentations = Object.freeze({
+      ...(options.nodePresentations ??
+        resolvePresentation(index.presentation ?? new Presentation(), options.locale)[1].nodes),
+    });
+    for (const [ref, presentation] of Object.entries(this.nodePresentations)) {
+      if (!index.has(ref) || !(presentation instanceof NodePresentation)) {
+        throw new ModelValidationError(
+          'Node presentations require known canonical refs and titles.',
+        );
+      }
+    }
     for (const ref of this.#promptRoots) {
       const node = index.find(ref);
       if (index.parentOf(node) !== undefined) {
@@ -81,6 +105,7 @@ export class Disclosure implements View<CompiledNode> {
       promptRoots: this.#promptRoots,
       reserved: this.#reserved,
       telemetry: this.telemetry,
+      nodePresentations: this.nodePresentations,
     });
   }
 
@@ -90,6 +115,7 @@ export class Disclosure implements View<CompiledNode> {
       promptRoots: [],
       reserved: this.#reserved,
       telemetry: this.telemetry,
+      nodePresentations: this.nodePresentations,
     });
   }
 
@@ -176,12 +202,29 @@ export class Disclosure implements View<CompiledNode> {
   }
 
   routingCardOf(node: CompiledNode): RoutingCard {
-    return Object.freeze({
-      kind: node.kind,
-      name: node.name,
-      description: node.description,
-      ref: this.index.refOf(node),
+    return nodeRoutingCard(node, this);
+  }
+
+  presentCard(node: CompiledNode, card: CompiledContext): CompiledContext {
+    const ref = this.index.refOf(node);
+    if (!Object.hasOwn(this.nodePresentations, ref)) return card;
+    const presentation = this.nodePresentations[ref]!;
+    const entries = Object.entries(card).flatMap(([key, value]) => {
+      if (key === 'name')
+        return [
+          [key, value],
+          ['title', presentation.title],
+        ];
+      return [
+        [
+          key,
+          key === 'description' && presentation.description !== undefined
+            ? presentation.description
+            : value,
+        ],
+      ];
     });
+    return Object.freeze(Object.fromEntries(entries));
   }
 
   cardFor(ref: string): RoutingCard {

@@ -2,6 +2,7 @@ import { Channels } from './core/model/channels.js';
 import type { ChannelHandle, Factory, NodeDeclaration } from './core/model/declarations.js';
 import type { PromptDeclaration, ResourceDeclaration } from './core/foundation/publications.js';
 import type { Telemetry } from './core/model/telemetry.js';
+import { resolvePresentation, type PresentationSource } from './core/presentation.js';
 
 /** The lazy application composition root. */
 export interface ApplicationDeclaration {
@@ -12,6 +13,7 @@ export interface ApplicationDeclaration {
   readonly prompts?: readonly PromptDeclaration[];
   readonly resources?: readonly ResourceDeclaration[];
   readonly telemetry?: Telemetry;
+  readonly presentation?: PresentationSource;
 }
 
 /**
@@ -88,6 +90,7 @@ function snapshotApplication(
   }
   const prompts = snapshotPrompts(declaration.prompts);
   const resources = snapshotResources(declaration.resources);
+  if (declaration.presentation !== undefined) resolvePresentation(declaration.presentation);
   if (
     declaration.telemetry !== undefined &&
     (typeof declaration.telemetry !== 'object' ||
@@ -108,6 +111,7 @@ function snapshotApplication(
     ...(prompts === undefined ? {} : { prompts }),
     ...(resources === undefined ? {} : { resources }),
     ...(declaration.telemetry === undefined ? {} : { telemetry: declaration.telemetry }),
+    ...(declaration.presentation === undefined ? {} : { presentation: declaration.presentation }),
   });
 }
 

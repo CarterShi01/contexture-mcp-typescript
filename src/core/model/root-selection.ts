@@ -209,13 +209,35 @@ function descendantOrSelf(ref: string, ancestor: string): boolean {
 }
 
 function canonical(refs: Iterable<string>): readonly string[] {
-  const ordered = [...new Set(refs)].sort((left, right) => {
-    const depth = left.split(REFERENCE_SEPARATOR).length - right.split(REFERENCE_SEPARATOR).length;
-    return depth === 0 ? compareCodePoints(left, right) : depth;
-  });
-  return ordered.filter(
-    (ref, index) => !ordered.slice(0, index).some((ancestor) => descendantOrSelf(ref, ancestor)),
-  );
+  const ordered = [...new Set(refs)]
+    .map((ref) => ({ ref, parts: ref.split(REFERENCE_SEPARATOR) }))
+    .sort(
+      (left, right) =>
+        left.parts.length - right.parts.length || compareCodePoints(left.ref, right.ref),
+    );
+  interface Prefix {
+    terminal: boolean;
+    children: Map<string, Prefix>;
+  }
+  const root: Prefix = { terminal: false, children: new Map() };
+  const result: string[] = [];
+  for (const { ref, parts } of ordered) {
+    let current = root;
+    for (const part of parts) {
+      if (current.terminal) break;
+      let child = current.children.get(part);
+      if (child === undefined) {
+        child = { terminal: false, children: new Map() };
+        current.children.set(part, child);
+      }
+      current = child;
+    }
+    if (!current.terminal) {
+      current.terminal = true;
+      result.push(ref);
+    }
+  }
+  return result;
 }
 
 function validateSelector(selector: string): void {
